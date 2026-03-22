@@ -693,14 +693,9 @@ async def upload_expert_links(
 
     ingestion_result = None
     if auto_ingest:
-        try:
-            result = await smart_ingest_expert_links(str(dest))
-            ingestion_result = {
-                "articles_created": result.get("created", 0) if isinstance(result, dict) else 0,
-                "status": "completed",
-            }
-        except Exception as e:
-            ingestion_result = {"status": "failed", "error": str(e)}
+        import asyncio
+        asyncio.create_task(_run_expert_links_ingestion(str(dest)))
+        ingestion_result = {"status": "triggered", "message": "Ingestion running in background. Check /ingestion/status for progress."}
 
     return {
         "uploaded": file.filename,
@@ -708,3 +703,12 @@ async def upload_expert_links(
         "saved_to": str(dest),
         "ingestion": ingestion_result,
     }
+
+
+async def _run_expert_links_ingestion(filepath: str):
+    """Run expert links ingestion in background so the upload endpoint returns immediately."""
+    try:
+        result = await smart_ingest_expert_links(filepath)
+        logger.info(f"Background expert links ingestion completed: {result}")
+    except Exception as e:
+        logger.error(f"Background expert links ingestion failed: {e}")
