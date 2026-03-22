@@ -58,7 +58,9 @@ export default function RootLayout() {
     loadVisualConfigFromAPI();
   }, []);
 
-  if (!fontsLoaded) {
+  // On web static export, fonts may not trigger the loaded callback.
+  // Don't block rendering — the app works fine with fallback system fonts.
+  if (!fontsLoaded && Platform.OS !== 'web') {
     return null;
   }
 
