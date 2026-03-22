@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "max_articles_per_luminary_per_run": 5,
+    "max_article_age_days": 30,
+    "feed_timeout_seconds": 15
+  },
+  "luminaries_by_specialization": {
+    "example_specialization": [
+      {
+        "id": "example_source",
+        "name": "Example News Source",
+        "feed_url": "https://example.com/rss/feed",
+        "website": "https://example.com",
+        "description": "Description of the news source and what it covers."
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "settings": {
+    "article_expiration_days": 90,
+    "auto_cleanup_on_startup": true
+  },
+  "industries": [
+    {
+      "id": "example_industry",
+      "name": "Example Industry",
+      "emoji": "🏢",
+      "icon": "briefcase-outline",
+      "color_primary": "#3B82F6",
+      "color_secondary": "#2563EB",
+      "description": "Example industry description",
+      "specializations": [
+        {
+          "id": "example_specialization",
+          "name": "Example Specialization",
+          "description": "Example specialization description",
+          "emoji": "📊",
+          "icon": "chart-line",
+          "color_primary": "#3B82F6"
+        }
+      ]
+    }
+  ]
+}

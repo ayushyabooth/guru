@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Login Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .log {
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #00ff00;
+        }
+        .error { border-left-color: #ff0000; color: #ff0000; }
+        .success { border-left-color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Direct Login Test</h1>
+    <p>This bypasses the React app and tests auth directly</p>
+    
+    <button onclick="testFullFlow()">Run Full Test</button>
+    <button onclick="clearAll()">Clear Storage</button>
+    
+    <div id="logs"></div>
+
+    <script>
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('logs').appendChild(div);
+            console.log(message);
+        }
+
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            log('✅ Storage cleared', 'success');
+        }
+
+        async function testFullFlow() {
+            document.getElementById('logs').innerHTML = '';
+            
+            try {
+                // Step 1: Clear storage
+                log('Step 1: Clearing storage...');
+                clearAll();
+                
+                // Step 2: Login
+                log('Step 2: Logging in with try93@example.com...');
+                const loginResponse = await fetch('http://localhost:8000/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'try93@example.com',
+                        password: 'try123'
+                    })
+                });
+                
+                if (!loginResponse.ok) {
+                    const errorText = await loginResponse.text();
+                    throw new Error(`Login failed (${loginResponse.status}): ${errorText}`);
+                }
+                
+                const loginData = await loginResponse.json();
+                log(`✅ Login successful - User: ${loginData.user_id}`, 'success');
+                log(`   Token: ${loginData.access_token.substring(0, 40)}...`);
+                
+                // Step 3: Store token
+                log('Step 3: Storing token in localStorage...');
+                localStorage.setItem('access_token', loginData.access_token);
+                localStorage.setItem('refresh_token', loginData.refresh_token);
+                
+                const stored = localStorage.getItem('access_token');
+                if (!stored) {
+                    throw new Error('Token storage failed!');
+                }
+                log('✅ Token stored successfully', 'success');
+                
+                // Step 4: Test API with token
+                log('Step 4: Testing catchup-feed API...');
+                const feedResponse = await fetch('http://localhost:8000/api/v1/catchup-feed?filter=core&limit=5', {
+                    headers: {
+                        'Authorization': `Bearer ${stored}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!feedResponse.ok) {
+                    const errorText = await feedResponse.text();
+                    throw new Error(`API failed (${feedResponse.status}): ${errorText}`);
+                }
+                
+                const feedData = await feedResponse.json();
+                log(`✅ API call successful!`, 'success');
+                log(`   Storyboards: ${feedData.storyboards?.length || 0}`);
+                log(`   Total: ${feedData.total}`);
+                log(`   Filter: ${feedData.filter}`);
+                
+                // Step 5: Navigate to main app
+                log('Step 5: Opening main app...');
+                log('✅ ALL TESTS PASSED!', 'success');
+                log('Token is stored and working. Opening main app in 3 seconds...');
+                
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:8081/(tabs)/catchup';
+                }, 3000);
+                
+            } catch (error) {
+                log(`❌ ERROR: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

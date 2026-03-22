@@ -1,0 +1,11 @@
+{
+  "allowed_domains": [
+    "example-trusted-source.com",
+    "another-quality-source.org"
+  ],
+  "blocked_domains": [
+    "spam-site.com",
+    "content-farm.com"
+  ],
+  "notes": "allowed_domains get a quality boost but still must pass structural checks. blocked_domains are rejected immediately pre-scrape."
+}

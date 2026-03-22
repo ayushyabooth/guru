@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Storage and Test Auth</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Auth Debug Tool</h1>
+    
+    <h2>Step 1: Clear All Storage</h2>
+    <button onclick="clearAll()">Clear localStorage & Cookies</button>
+    <div id="clearResult"></div>
+    
+    <h2>Step 2: Check Current Token</h2>
+    <button onclick="checkToken()">Check Token</button>
+    <div id="tokenResult"></div>
+    
+    <h2>Step 3: Test Signup</h2>
+    <input type="email" id="email" placeholder="Email" value="test999@example.com">
+    <input type="password" id="password" placeholder="Password" value="password123">
+    <button onclick="testSignup()">Test Signup</button>
+    <div id="signupResult"></div>
+    
+    <h2>Step 4: Test API Call</h2>
+    <button onclick="testAPI()">Test Catchup Feed API</button>
+    <div id="apiResult"></div>
+
+    <script>
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            document.getElementById('clearResult').innerHTML = '<p class="success">✅ All storage cleared!</p>';
+        }
+
+        function checkToken() {
+            const token = localStorage.getItem('access_token');
+            const result = document.getElementById('tokenResult');
+            if (token) {
+                result.innerHTML = `<p class="error">❌ Token still exists: ${token.substring(0, 30)}...</p>`;
+            } else {
+                result.innerHTML = '<p class="success">✅ No token found (good!)</p>';
+            }
+        }
+
+        async function testSignup() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const result = document.getElementById('signupResult');
+            
+            result.innerHTML = '<p>🔄 Signing up...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                    result.innerHTML = `
+                        <p class="success">✅ Signup successful!</p>
+                        <pre>User ID: ${data.user_id}
+Token: ${data.access_token.substring(0, 30)}...
+Token stored in localStorage</pre>
+                    `;
+                } else {
+                    result.innerHTML = `<p class="error">❌ Signup failed: ${data.detail}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testAPI() {
+            const token = localStorage.getItem('access_token');
+            const result = document.getElementById('apiResult');
+            
+            if (!token) {
+                result.innerHTML = '<p class="error">❌ No token found. Sign up first!</p>';
+                return;
+            }
+            
+            result.innerHTML = '<p>🔄 Testing API...</p>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/catchup-feed?filter=core&limit=5', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <p class="success">✅ API call successful!</p>
+                        <pre>Storyboards: ${data.storyboards?.length || 0}
+Total: ${data.total || 0}
+Filter: ${data.filter}</pre>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    result.innerHTML = `<p class="error">❌ API call failed (${response.status}): ${errorText}</p>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,469 @@
+/**
+ * Interests Screen - Liquid Glass Design
+ *
+ * Features:
+ * - Additional industry interests selection
+ * - 3D glass blob backgrounds
+ * - Optional step with skip functionality
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
+import { router } from 'expo-router';
+import { useOnboarding } from '@/store/user-context';
+import { API_BASE_URL } from '@/constants/config';
+import { getAuthToken } from '@/utils/auth';
+import { OrganicBackground, GlassButton } from '../../../components/ui';
+import Icon from '../../../components/ui/Icon';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+} from '../../../constants/liquidGlass';
+import DarkThemeColors from '../../../constants/darkTheme';
+
+interface Industry {
+  id: string;
+  name: string;
+  emoji: string;
+  color_primary: string;
+  color_secondary: string;
+  description: string;
+}
+
+export default function InterestsScreen() {
+  const { state, setAdditionalInterests, previousStep, nextStep } = useOnboarding();
+  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchIndustries();
+  }, []);
+
+  const fetchIndustries = async () => {
+    try {
+      setLoading(true);
+      const token = await getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/config/industries`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load industries');
+      }
+
+      const data = await response.json();
+      setIndustries(data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load industries. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const availableInterests = industries.filter((industry) => industry.id !== state.coreIndustry);
+
+  const handleInterestToggle = (interestId: string) => {
+    const currentInterests = [...state.additionalInterests];
+    const index = currentInterests.indexOf(interestId);
+
+    if (index > -1) {
+      currentInterests.splice(index, 1);
+    } else {
+      if (currentInterests.length < 2
+          && !currentInterests.includes(interestId)) {
+        currentInterests.push(interestId);
+      }
+    }
+
+    setAdditionalInterests(currentInterests);
+  };
+
+  const handleContinue = () => {
+    nextStep();
+    router.push('/(auth)/onboarding/capacity');
+  };
+
+  const handleBack = () => {
+    previousStep();
+    router.back();
+  };
+
+  const getCoreIndustryName = () => {
+    const coreIndustry = industries.find((i) => i.id === state.coreIndustry);
+    return coreIndustry?.name || state.coreIndustry || 'your industry';
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <OrganicBackground variant="onboarding" />
+
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '60%' }]} />
+          </View>
+          <Text style={styles.progressText}>Step 3 of 5</Text>
+        </View>
+
+        <Text style={styles.title}>Any additional interests?</Text>
+        <Text style={styles.subtitle}>
+          Beyond {getCoreIndustryName()}, select up to 2 other industries you'd like to explore.
+        </Text>
+        <View style={styles.badgeContainer}>
+          <View style={styles.selectionBadge}>
+            <Text style={styles.selectionCount}>{state.additionalInterests.length}/2 selected</Text>
+          </View>
+          <View style={styles.optionalBadge}>
+            <Text style={styles.optionalText}>Optional</Text>
+          </View>
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#38BDF8" />
+          <Text style={styles.loadingText}>Loading industries...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
+          <Text style={styles.errorText}>{error}</Text>
+          <GlassButton title="Try Again" onPress={fetchIndustries} variant="primary" size="md" fullWidth={false} />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.optionsContainer}>
+            {availableInterests.map((interest) => {
+              const isSelected = state.additionalInterests.includes(interest.id);
+              const canSelect = isSelected || state.additionalInterests.length < 2;
+
+              return (
+                <TouchableOpacity
+                  key={interest.id}
+                  style={[
+                    styles.optionCard,
+                    isSelected && styles.optionCardSelected,
+                    !canSelect && styles.optionCardDisabled,
+                  ]}
+                  onPress={() => handleInterestToggle(interest.id)}
+                  disabled={!canSelect || saving}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.optionContent}>
+                    <View style={styles.optionLeft}>
+                      <View
+                        style={[
+                          styles.emojiContainer,
+                          isSelected && { backgroundColor: `${interest.color_primary}20` },
+                        ]}
+                      >
+                        <Text style={styles.optionEmoji}>{interest.emoji}</Text>
+                      </View>
+                      <View style={styles.optionInfo}>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            isSelected && styles.optionTextSelected,
+                            !canSelect && styles.optionTextDisabled,
+                          ]}
+                        >
+                          {interest.name}
+                        </Text>
+                        <Text style={styles.optionDescription}>{interest.description}</Text>
+                      </View>
+                    </View>
+                    {isSelected && (
+                      <View style={styles.checkmark}>
+                        <Text style={styles.checkmarkText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {state.additionalInterests.length === 0 && (
+            <View style={styles.tipCard}>
+              <Icon name="lightbulb-outline" size={20} color="#0E7490" style={styles.tipIcon} />
+              <Text style={styles.tipText}>
+                Adding interests helps us surface cross-industry insights and trends that matter to you.
+              </Text>
+            </View>
+          )}
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      )}
+
+      {/* Footer */}
+      <View style={styles.footerContainer}>
+        <View style={styles.footerButtons}>
+          <GlassButton
+            title="Back"
+            onPress={handleBack}
+            variant="secondary"
+            size="md"
+            fullWidth={false}
+            disabled={saving}
+            style={styles.backButton}
+          />
+          <GlassButton
+            title={state.additionalInterests.length === 0 ? 'Skip' : 'Continue'}
+            onPress={handleContinue}
+            variant="primary"
+            size="md"
+            fullWidth={false}
+            style={styles.continueButton}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: DarkThemeColors.background,
+  },
+  headerContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  progressContainer: {
+    marginBottom: Spacing.lg,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderRadius: 3,
+    marginBottom: Spacing.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#38BDF8',
+    borderRadius: 3,
+  },
+  progressText: {
+    ...Typography.labelMedium,
+    color: '#38BDF8',
+    textAlign: 'center',
+  },
+  title: {
+    ...Typography.displaySmall,
+    color: DarkThemeColors.textPrimary,
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
+  },
+  subtitle: {
+    ...Typography.bodyMedium,
+    color: DarkThemeColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  selectionBadge: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.pill,
+  },
+  selectionCount: {
+    ...Typography.labelMedium,
+    color: '#38BDF8',
+  },
+  optionalBadge: {
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+  },
+  optionalText: {
+    ...Typography.labelSmall,
+    color: DarkThemeColors.textTertiary,
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.lg,
+    paddingTop: Spacing.sm,
+  },
+  optionsContainer: {
+    gap: Spacing.md,
+  },
+  optionCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  optionCardSelected: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderColor: '#38BDF8',
+    shadowColor: '#38BDF8',
+    shadowOpacity: 0.15,
+  },
+  optionCardDisabled: {
+    backgroundColor: 'rgba(248, 250, 252, 0.5)',
+    opacity: 0.5,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.md,
+  },
+  emojiContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionEmoji: {
+    fontSize: 26,
+  },
+  optionInfo: {
+    flex: 1,
+  },
+  optionText: {
+    ...Typography.headlineSmall,
+    color: DarkThemeColors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  optionTextSelected: {
+    color: '#38BDF8',
+  },
+  optionTextDisabled: {
+    color: DarkThemeColors.textTertiary,
+  },
+  optionDescription: {
+    ...Typography.bodySmall,
+    color: DarkThemeColors.textSecondary,
+  },
+  checkmark: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#38BDF8',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  checkmarkText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xxl,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    ...Typography.bodyMedium,
+    color: DarkThemeColors.textSecondary,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xxl,
+  },
+  errorIcon: {
+    marginBottom: Spacing.md,
+  },
+  errorText: {
+    ...Typography.bodyMedium,
+    color: DarkThemeColors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(8, 145, 178, 0.1)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(8, 145, 178, 0.2)',
+  },
+  tipIcon: {
+    marginRight: Spacing.md,
+  },
+  tipText: {
+    flex: 1,
+    ...Typography.bodySmall,
+    color: '#0E7490',
+  },
+  footerContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    paddingTop: Spacing.md,
+    backgroundColor: 'rgba(15, 20, 35, 0.85)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  footerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.md,
+  },
+  backButton: {
+    minWidth: 100,
+  },
+  continueButton: {
+    minWidth: 140,
+  },
+});

@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+backend/venv/
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+mobile/node_modules/
+mobile/dist/
+mobile/.expo/
+mobile/web-build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.log
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Audio storage
+static/audio/
+
+# Backend config (real data — use .example.json versions as templates)
+backend/config/industries-specializations.json
+backend/config/luminaries.json
+backend/config/domain_lists.json
+
+# ML model cache
+.cache/
+.sentence_transformers/
+
+# Strategy & business docs (never commit)
+Guru-BRD*.md
+Guru_BRD_Phase2.md
+guru-ux-wireframes.md
+guru-tech-architecture.md
+storyboard_card_ux_spec.md
+IMPLEMENTATION-STATUS.md
+RECAP_BRD.md
+
+# Expert links (editorial content)
+expert-links/
+expert-links*.md
+Expert_Links_*.md
+
+# Internal dev docs (sign-off notes, test results)
+ARTICLE_SCRAPING_SETUP.md
+DIVEIN_SIGN_OFF.md
+DIVEIN_TEST_RESULTS.md
+E2E_FLOW_VERIFIED.md
+E2E_TEST_RESULTS.md
+MICRO_INTERACTIONS_SIGN_OFF.md
+NAMING_CONVENTION_GUIDE.md
+PHASE1-TEST-RESULTS.md
+PHASE2.1-TEST-RESULTS.md
+PHASE2.2-TEST-RESULTS.md
+PHASE3-STORYBOARD-CARD-IMPLEMENTATION.md
+PLAYTEST_NOTES.md
+PLAYWITH_SESSION_COMPLETE.md
+RAG_QA_SIGN_OFF.md
+READER_VIEW_SIGN_OFF.md
+RELATED_ARTICLES_SIGN_OFF.md
+STATE_MANAGEMENT_SIGN_OFF.md
+TEST_API.md
+WORKING_AUTH_SOLUTION.md
+
+# Debug screenshots
+mobile/*.png

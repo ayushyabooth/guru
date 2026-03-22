@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>E2E Signup Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; margin: 10px; background: #007AFF; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; white-space: pre-wrap; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        .error { background: #ffebee; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <h1>Complete E2E Signup Test</h1>
+    
+    <div class="test">
+        <h2>Test 1: Backend Signup API</h2>
+        <button onclick="testBackendSignup()">Test Backend Signup</button>
+        <div id="backend-result"></div>
+    </div>
+    
+    <div class="test">
+        <h2>Test 2: Frontend Signup (Same as Mobile App)</h2>
+        <input type="email" id="test-email" placeholder="Email" style="width: 300px; padding: 10px; margin: 10px;">
+        <input type="password" id="test-password" placeholder="Password" value="testpass123" style="width: 300px; padding: 10px; margin: 10px;">
+        <br>
+        <button onclick="testFrontendSignup()">Test Frontend Signup</button>
+        <div id="frontend-result"></div>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            element.appendChild(div);
+        }
+        
+        async function testBackendSignup() {
+            const resultId = 'backend-result';
+            document.getElementById(resultId).innerHTML = '';
+            
+            const uniqueEmail = `test.backend.${Date.now()}@example.com`;
+            
+            try {
+                log(resultId, `Testing backend with: ${uniqueEmail}`);
+                
+                const response = await fetch('http://localhost:8000/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: uniqueEmail,
+                        password: 'testpass123'
+                    })
+                });
+                
+                log(resultId, `Response status: ${response.status}`);
+                log(resultId, `Response ok: ${response.ok}`);
+                
+                const text = await response.text();
+                log(resultId, `Raw response: ${text.substring(0, 200)}...`);
+                
+                if (response.ok) {
+                    const data = JSON.parse(text);
+                    log(resultId, `✅ Backend signup successful!`, 'success');
+                    log(resultId, `User ID: ${data.user_id}`, 'success');
+                    log(resultId, `Token length: ${data.access_token.length}`, 'success');
+                } else {
+                    const errorData = JSON.parse(text);
+                    log(resultId, `❌ Backend signup failed: ${errorData.detail}`, 'error');
+                }
+            } catch (error) {
+                log(resultId, `💥 Backend test exception: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFrontendSignup() {
+            const resultId = 'frontend-result';
+            document.getElementById(resultId).innerHTML = '';
+            
+            const email = document.getElementById('test-email').value || `test.frontend.${Date.now()}@example.com`;
+            const password = document.getElementById('test-password').value;
+            
+            try {
+                log(resultId, `Testing frontend signup with: ${email}`);
+                log(resultId, `Password length: ${password.length}`);
+                
+                // Replicate exact frontend logic
+                const apiUrl = 'http://localhost:8000';
+                const fullUrl = `${apiUrl}/auth/signup`;
+                log(resultId, `Making request to: ${fullUrl}`);
+                
+                const response = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                log(resultId, `Response status: ${response.status}`);
+                log(resultId, `Response ok: ${response.ok}`);
+                log(resultId, `Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+
+                const responseText = await response.text();
+                log(resultId, `Raw response: ${responseText}`);
+                
+                if (response.ok) {
+                    log(resultId, `Response is OK, parsing JSON...`);
+                    try {
+                        const data = JSON.parse(responseText);
+                        log(resultId, `Parsed response data: ${JSON.stringify(data, null, 2)}`);
+                        log(resultId, `✅ Frontend signup successful!`, 'success');
+                        log(resultId, `User ID: ${data.user_id}`, 'success');
+                        
+                        // Test token storage (simulated)
+                        log(resultId, `Would store access_token: ${data.access_token.substring(0, 50)}...`, 'success');
+                        log(resultId, `Would store refresh_token: ${data.refresh_token.substring(0, 50)}...`, 'success');
+                        
+                        log(resultId, `✅ Would navigate to onboarding now`, 'success');
+                        
+                    } catch (parseError) {
+                        log(resultId, `💥 JSON parse error: ${parseError.message}`, 'error');
+                        log(resultId, `Raw text that failed to parse: "${responseText}"`, 'error');
+                    }
+                } else {
+                    log(resultId, `Response not OK, parsing error...`);
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        log(resultId, `Error data: ${JSON.stringify(errorData)}`, 'error');
+                        log(resultId, `❌ Frontend signup failed: ${errorData.detail}`, 'error');
+                    } catch (parseError) {
+                        log(resultId, `💥 Error JSON parse error: ${parseError.message}`, 'error');
+                        log(resultId, `Server error (${response.status})`, 'error');
+                    }
+                }
+            } catch (error) {
+                log(resultId, `💥 Frontend test exception: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-generate unique email
+        window.onload = function() {
+            document.getElementById('test-email').value = `test.e2e.${Date.now()}@example.com`;
+        };
+    </script>
+</body>
+</html>

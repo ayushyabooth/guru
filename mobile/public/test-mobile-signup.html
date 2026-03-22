@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Mobile Signup</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; margin: 10px; background: #007AFF; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Mobile App Signup Test</h1>
+    
+    <div class="test-section">
+        <h2>Direct API Test</h2>
+        <button onclick="testDirectAPI()">Test Direct API Call</button>
+        <div id="direct-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Mobile App Console Monitor</h2>
+        <p>Open the mobile app at <a href="http://localhost:19006" target="_blank">http://localhost:19006</a></p>
+        <p>Then open browser console (F12) and try signup. Look for debug logs starting with 🔄, 🖱️, etc.</p>
+        <button onclick="openMobileApp()">Open Mobile App</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Environment Check</h2>
+        <button onclick="checkEnvironment()">Check Environment Variables</button>
+        <div id="env-result"></div>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const div = document.createElement('div');
+            div.className = 'result';
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            element.appendChild(div);
+        }
+        
+        async function testDirectAPI() {
+            const resultId = 'direct-result';
+            document.getElementById(resultId).innerHTML = '';
+            
+            try {
+                const testEmail = `test.direct.${Date.now()}@example.com`;
+                log(resultId, `Testing direct API call with email: ${testEmail}`);
+                
+                const response = await fetch('http://localhost:8000/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'testpass123'
+                    })
+                });
+                
+                log(resultId, `Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(resultId, `✅ Direct API test successful! User ID: ${data.user_id}`);
+                } else {
+                    const errorData = await response.json();
+                    log(resultId, `❌ Direct API test failed: ${errorData.detail}`);
+                }
+            } catch (error) {
+                log(resultId, `💥 Direct API test error: ${error.message}`);
+            }
+        }
+        
+        function openMobileApp() {
+            window.open('http://localhost:19006', '_blank');
+        }
+        
+        function checkEnvironment() {
+            const resultId = 'env-result';
+            document.getElementById(resultId).innerHTML = '';
+            
+            log(resultId, `Current origin: ${window.location.origin}`);
+            log(resultId, `Testing from: ${window.location.href}`);
+            log(resultId, `Expected mobile app URL: http://localhost:19006`);
+            log(resultId, `Backend API URL: http://localhost:8000`);
+            
+            // Test if we can reach the backend
+            fetch('http://localhost:8000/health')
+                .then(response => {
+                    log(resultId, `✅ Backend health check: ${response.status}`);
+                })
+                .catch(error => {
+                    log(resultId, `❌ Backend health check failed: ${error.message}`);
+                });
+        }
+        
+        // Auto-run environment check on load
+        window.onload = function() {
+            checkEnvironment();
+        };
+    </script>
+</body>
+</html>

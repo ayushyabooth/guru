@@ -1,0 +1,167 @@
+import { API_BASE_URL } from '../constants/config';
+import { getAuthToken } from '../utils/auth';
+
+export interface RichSummary {
+  whats_in_article?: string;
+  why_it_matters?: string;
+  between_the_lines?: string;
+  spotlight_quotes?: string[];
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  source: string;
+  url: string;
+  word_count: number;
+  is_paywalled: boolean;
+  created_at: string;
+  is_saved?: boolean;
+  publish_date?: string;
+  rich_summary?: RichSummary | null;
+  socratic_prompts?: string[];
+}
+
+export interface NarrativeArticle {
+  id: string;
+  title: string;
+  url: string;
+  word_count?: number;
+  is_paywalled?: boolean;
+  source?: string;
+  created_at?: string;
+  thumbnail_url?: string;  // For carousel thumbnails
+  visual_url?: string;     // Alternative image URL
+  rich_summary?: RichSummary;
+  socratic_prompts?: string[];
+}
+
+export interface Storyboard {
+  id: string;
+  filter_context: string;
+  industry: string;
+  specializations: string[];
+  summary: string;
+  personal_prompt: string;
+  cluster_narrative?: string;
+  narrative_articles?: NarrativeArticle[];
+  visual_url?: string;
+  visual_source?: string;
+  created_at: string;
+  headline_article: Article;
+  related_articles: Article[];
+  article_count: number;
+  theme?: string;
+}
+
+export interface CatchupFeedResponse {
+  storyboards: Storyboard[];
+  total: number;
+  filter: string;
+  limit: number;
+  offset: number;
+}
+
+export class CatchupService {
+  static async getCatchupFeed(
+    filter: string,
+    limit: number = 5,
+    offset: number = 0
+  ): Promise<CatchupFeedResponse> {
+    const token = await getAuthToken();
+    
+    if (!token) {
+      throw new Error('Not authenticated. Please log in.');
+    }
+    
+    
+    const response = await fetch(
+      `${API_BASE_URL}/catchup-feed?filter=${encodeURIComponent(filter)}&limit=${limit}&offset=${offset}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Unauthorized - Please log in again');
+      }
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch catchup feed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  }
+
+  static async saveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
+    const token = await getAuthToken();
+    
+    const response = await fetch(
+      `${API_BASE_URL}/articles/${articleId}/save`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to save article: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  static async unsaveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
+    const token = await getAuthToken();
+    
+    const response = await fetch(
+      `${API_BASE_URL}/articles/${articleId}/save`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to unsave article: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  static async markNotRelevant(
+    storyboardId: string,
+    filter: string
+  ): Promise<{ message: string }> {
+    const token = await getAuthToken();
+    
+    const response = await fetch(
+      `${API_BASE_URL}/storyboards/${storyboardId}/not-relevant?filter=${encodeURIComponent(filter)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to mark not relevant: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+}

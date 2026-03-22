@@ -1,0 +1,78 @@
+import logging
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.pool import NullPool, QueuePool
+from sqlalchemy.orm import sessionmaker
+from app.config import settings
+from app.db.base import Base
+
+logger = logging.getLogger(__name__)
+
+# Import all models to ensure they are registered with SQLAlchemy
+from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content
+
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+# SQLite needs special handling for multi-threaded access (ingestion runs in background threads)
+# NullPool: each thread gets a fresh connection, no connection sharing — safest for SQLite
+if _is_sqlite:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        echo=False,  # Disabled during profiling (was settings.DEBUG)
+        poolclass=NullPool,
+        connect_args={"check_same_thread": False, "timeout": 30},
+    )
+else:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        echo=settings.DEBUG,
+        poolclass=QueuePool,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+
+# Enable WAL mode for SQLite — allows concurrent reads while one thread writes
+if _is_sqlite:
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")  # Wait up to 30s for locks
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """Dependency to get database session"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def create_tables():
+    """Create all database tables and run lightweight migrations."""
+    Base.metadata.create_all(bind=engine)
+    _run_column_migrations()
+
+
+def _run_column_migrations():
+    """Add columns that create_all() can't add to existing tables."""
+    migrations = [
+        ("recap_journeys", "audio_status", "VARCHAR(30)"),
+        ("recap_journeys", "audio_error", "TEXT"),
+        ("ingestion_runs", "step_timings", "JSON"),
+        ("storyboards", "base_cache_key", "VARCHAR(500)"),
+        ("qa_exchanges", "conversation_id", "VARCHAR(36)"),
+        ("qa_exchanges", "exchange_type", "VARCHAR(20) DEFAULT 'direct'"),
+    ]
+    with engine.connect() as conn:
+        for table, column, col_type in migrations:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+                conn.commit()
+                logger.info(f"Migration: added {table}.{column}")
+            except Exception:
+                conn.rollback()  # Column likely already exists
