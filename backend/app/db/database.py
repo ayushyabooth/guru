@@ -60,10 +60,21 @@ def create_tables():
             try:
                 conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
                 conn.commit()
+                logger.info("PostgreSQL uuid-ossp extension enabled")
             except Exception as e:
                 conn.rollback()
                 logger.warning(f"Could not create uuid-ossp extension: {e}")
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"CRITICAL: Failed to create database tables: {e}")
+        # Try creating tables one by one to identify the problematic model
+        for table in Base.metadata.sorted_tables:
+            try:
+                table.create(bind=engine, checkfirst=True)
+            except Exception as table_err:
+                logger.error(f"  Failed to create table '{table.name}': {table_err}")
     _run_column_migrations()
 
 
