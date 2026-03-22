@@ -91,7 +91,13 @@ class Settings(BaseSettings):
     DEDUP_CONTENT_WINDOW_DAYS: int = 7
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:8081", "http://127.0.0.1:8081", "http://localhost:8100", "http://localhost:3000", "http://localhost:8000", "http://localhost:19006"]
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:8081", "http://127.0.0.1:8081",
+        "http://localhost:8100", "http://localhost:3000",
+        "http://localhost:8000", "http://localhost:19006",
+        "https://dist-guru8.vercel.app",
+        "https://dist-69e8jssok-guru8.vercel.app",
+    ]
     
     class Config:
         env_file = ".env"
