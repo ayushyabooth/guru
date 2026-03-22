@@ -11,7 +11,7 @@ class Storyboard(Base):
 
     id = Column(UUID(), primary_key=True, default=uuid.uuid4)
     industry = Column(String(50), nullable=False, index=True)
-    specializations = Column(JSON, index=True)
+    specializations = Column(JSON)
     filter_context = Column(String(255), nullable=True, index=True)
     headline_article_id = Column(UUID(), ForeignKey("articles.id"), nullable=False)
     summary = Column(String(1000))
