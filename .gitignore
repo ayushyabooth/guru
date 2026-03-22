@@ -89,5 +89,6 @@ STATE_MANAGEMENT_SIGN_OFF.md
 TEST_API.md
 WORKING_AUTH_SOLUTION.md
 
-# Debug screenshots
+# Debug & test screenshots
 mobile/*.png
+backend/tests/screenshots/
