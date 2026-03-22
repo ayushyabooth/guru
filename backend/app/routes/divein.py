@@ -3,7 +3,7 @@ Dive-in feed API routes for saved and essential articles
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, cast, Text
 from typing import List, Optional
 import uuid
 import logging
@@ -284,11 +284,11 @@ def _build_filter_conditions(filter_type, filter_value, user_profile):
             spec_to_use = spec_id if spec_id else spec
             patterns = NameNormalizer.build_sql_like_patterns(spec_to_use)
             for pattern in patterns:
-                conditions.append(ExpertNote.expert_specializations.like(pattern))
+                conditions.append(cast(ExpertNote.expert_specializations, Text).like(pattern))
             if spec_id and spec_id != spec:
                 extra = NameNormalizer.build_sql_like_patterns(spec)
                 for pattern in extra:
-                    conditions.append(ExpertNote.expert_specializations.like(pattern))
+                    conditions.append(cast(ExpertNote.expert_specializations, Text).like(pattern))
 
         industry_id = config.normalize_id(user_profile.core_industry, 'industry')
         industry_to_use = industry_id if industry_id else user_profile.core_industry
@@ -305,11 +305,11 @@ def _build_filter_conditions(filter_type, filter_value, user_profile):
         spec_to_use = spec_id if spec_id else filter_value
         patterns = NameNormalizer.build_sql_like_patterns(spec_to_use)
         for pattern in patterns:
-            conditions.append(ExpertNote.expert_specializations.like(pattern))
+            conditions.append(cast(ExpertNote.expert_specializations, Text).like(pattern))
         if spec_id and spec_id != filter_value:
             extra = NameNormalizer.build_sql_like_patterns(filter_value)
             for pattern in extra:
-                conditions.append(ExpertNote.expert_specializations.like(pattern))
+                conditions.append(cast(ExpertNote.expert_specializations, Text).like(pattern))
 
     elif filter_type == "interest":
         if filter_value:
