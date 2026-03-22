@@ -1,0 +1,401 @@
+{
+  "settings": {
+    "max_articles_per_luminary_per_run": 5,
+    "max_article_age_days": 30,
+    "feed_timeout_seconds": 15
+  },
+  "luminaries_by_specialization": {
+    "food_beverage": [
+      {
+        "id": "food_dive",
+        "name": "Food Dive",
+        "feed_url": "https://www.fooddive.com/feeds/news/",
+        "website": "https://www.fooddive.com",
+        "description": "In-depth journalism on the most impactful news and trends shaping the food and beverage industry."
+      },
+      {
+        "id": "foodnavigator_usa",
+        "name": "FoodNavigator-USA",
+        "feed_url": "https://www.foodnavigator-usa.com/arc/outboundfeeds/rss/",
+        "website": "https://www.foodnavigator-usa.com",
+        "description": "Breaking news on food and beverage development, regulation, markets, and ingredient innovation."
+      },
+      {
+        "id": "grocery_dive",
+        "name": "Grocery Dive",
+        "feed_url": "https://www.grocerydive.com/feeds/news/",
+        "website": "https://www.grocerydive.com",
+        "description": "Covers grocery retail news including CPG product trends, supply chain, and consumer packaged goods."
+      }
+    ],
+    "health_beauty_personal_care": [
+      {
+        "id": "cosmeticsdesign",
+        "name": "CosmeticsDesign.com",
+        "feed_url": "https://www.cosmeticsdesign.com/arc/outboundfeeds/rss/",
+        "website": "https://www.cosmeticsdesign.com",
+        "description": "Breaking news on cosmetics formulation, packaging, ingredients, and regulatory developments."
+      },
+      {
+        "id": "beauty_independent",
+        "name": "Beauty Independent",
+        "feed_url": "https://www.beautyindependent.com/feed/",
+        "website": "https://www.beautyindependent.com",
+        "description": "Daily industry news, trend reports, and data-driven content for the indie beauty community."
+      },
+      {
+        "id": "glossy",
+        "name": "Glossy",
+        "feed_url": "https://www.glossy.co/feed/",
+        "website": "https://www.glossy.co",
+        "description": "How technology is transforming luxury, beauty, and fashion brands."
+      }
+    ],
+    "apparel_footwear": [
+      {
+        "id": "wwd",
+        "name": "WWD (Women's Wear Daily)",
+        "feed_url": "https://wwd.com/feed/",
+        "website": "https://wwd.com",
+        "description": "The authoritative voice of fashion covering designers, trends, and the business of fashion."
+      },
+      {
+        "id": "sourcing_journal",
+        "name": "Sourcing Journal",
+        "feed_url": "https://sourcingjournal.com/feed/",
+        "website": "https://sourcingjournal.com",
+        "description": "Global apparel, textile, and footwear industry news, supply chain analysis, and sustainability."
+      }
+    ],
+    "home_furniture": [
+      {
+        "id": "home_accents_today",
+        "name": "Home Accents Today",
+        "feed_url": "https://www.homeaccentstoday.com/feed/",
+        "website": "https://www.homeaccentstoday.com",
+        "description": "Trade publication covering home furnishings, decor, and accessories for the home goods industry."
+      },
+      {
+        "id": "home_textiles_today",
+        "name": "Home Textiles Today",
+        "feed_url": "https://www.hometextilestoday.com/feed/",
+        "website": "https://www.hometextilestoday.com",
+        "description": "Trends, analysis, and news for the home textiles and housewares business."
+      }
+    ],
+    "general_merchandise_mass_retail": [
+      {
+        "id": "retail_dive",
+        "name": "Retail Dive",
+        "feed_url": "https://www.retaildive.com/feeds/news/",
+        "website": "https://www.retaildive.com",
+        "description": "In-depth journalism on news and trends shaping retail including brick-and-mortar and omnichannel."
+      },
+      {
+        "id": "mckinsey_insights",
+        "name": "McKinsey Insights",
+        "feed_url": "https://www.mckinsey.com/insights/rss",
+        "website": "https://www.mckinsey.com/featured-insights",
+        "description": "McKinsey thought leadership on consumer behavior, retail strategy, and industry transformation."
+      },
+      {
+        "id": "modern_retail",
+        "name": "Modern Retail",
+        "feed_url": "https://www.modernretail.co/feed/",
+        "website": "https://www.modernretail.co",
+        "description": "How established retailers and brands are adapting to disruption and reinventing retail."
+      }
+    ],
+    "specialty_retail_ecommerce": [
+      {
+        "id": "practical_ecommerce",
+        "name": "Practical Ecommerce",
+        "feed_url": "https://www.practicalecommerce.com/feed",
+        "website": "https://www.practicalecommerce.com",
+        "description": "Actionable articles and advice for ecommerce merchants covering SEO, marketing, and DTC strategy."
+      },
+      {
+        "id": "digital_commerce_360",
+        "name": "Digital Commerce 360",
+        "feed_url": "https://www.digitalcommerce360.com/feed/",
+        "website": "https://www.digitalcommerce360.com",
+        "description": "Objective news, data, and analysis across e-retail, B2B, and digital commerce markets."
+      }
+    ],
+    "restaurants_food_service": [
+      {
+        "id": "nrn",
+        "name": "Nation's Restaurant News",
+        "feed_url": "https://www.nrn.com/rss.xml",
+        "website": "https://www.nrn.com",
+        "description": "Leading media platform for the multi-unit restaurant industry covering QSR, casual dining, and food service."
+      },
+      {
+        "id": "restaurant_dive",
+        "name": "Restaurant Dive",
+        "feed_url": "https://www.restaurantdive.com/feeds/news/",
+        "website": "https://www.restaurantdive.com",
+        "description": "In-depth journalism covering top news and trends for restaurant industry leaders."
+      }
+    ],
+    "enterprise_saas_software": [
+      {
+        "id": "saastr",
+        "name": "SaaStr",
+        "feed_url": "https://www.saastr.com/feed/",
+        "website": "https://www.saastr.com",
+        "description": "The world's largest community for SaaS executives covering B2B SaaS strategy and growth."
+      },
+      {
+        "id": "techcrunch_enterprise",
+        "name": "TechCrunch (Enterprise)",
+        "feed_url": "https://techcrunch.com/category/enterprise/feed/",
+        "website": "https://techcrunch.com",
+        "description": "TechCrunch's enterprise category covering B2B software, SaaS funding, and startup news."
+      },
+      {
+        "id": "stratechery",
+        "name": "Stratechery",
+        "feed_url": "https://stratechery.com/feed/",
+        "website": "https://stratechery.com",
+        "description": "Ben Thompson's analysis of strategy and business of technology and software platforms."
+      }
+    ],
+    "consumer_internet_social": [
+      {
+        "id": "the_verge",
+        "name": "The Verge",
+        "feed_url": "https://www.theverge.com/rss/index.xml",
+        "website": "https://www.theverge.com",
+        "description": "Technology, science, art, and culture with extensive coverage of consumer internet and social media."
+      },
+      {
+        "id": "platformer",
+        "name": "Platformer",
+        "feed_url": "https://www.platformer.news/rss/",
+        "website": "https://www.platformer.news",
+        "description": "Casey Newton on the intersection of Big Tech and democracy, social media platforms, and content moderation."
+      },
+      {
+        "id": "benedict_evans",
+        "name": "Benedict Evans",
+        "feed_url": "https://www.ben-evans.com/benedictevans?format=RSS",
+        "website": "https://www.ben-evans.com",
+        "description": "Influential essays on macro trends in consumer technology, mobile platforms, and the internet."
+      }
+    ],
+    "semiconductors_components": [
+      {
+        "id": "semiengineering",
+        "name": "Semiconductor Engineering",
+        "feed_url": "https://semiengineering.com/feed/",
+        "website": "https://semiengineering.com",
+        "description": "Deep technical coverage of semiconductor design, testing, manufacturing, and the chip ecosystem."
+      },
+      {
+        "id": "eetimes",
+        "name": "EE Times",
+        "feed_url": "https://www.eetimes.com/feed/",
+        "website": "https://www.eetimes.com",
+        "description": "Global electronics community's leading news source on semiconductors, components, and electronic design."
+      },
+      {
+        "id": "toms_hardware",
+        "name": "Tom's Hardware",
+        "feed_url": "https://www.tomshardware.com/feeds/all",
+        "website": "https://www.tomshardware.com",
+        "description": "Authoritative hardware publication covering CPUs, GPUs, and semiconductor news with in-depth analysis."
+      }
+    ],
+    "hardware_iot": [
+      {
+        "id": "ars_technica",
+        "name": "Ars Technica",
+        "feed_url": "https://feeds.arstechnica.com/arstechnica/gadgets/",
+        "website": "https://arstechnica.com",
+        "description": "In-depth, technically rigorous coverage of hardware, gadgets, consumer electronics, and connected devices."
+      },
+      {
+        "id": "stacey_on_iot",
+        "name": "Stacey on IoT",
+        "feed_url": "https://staceyoniot.com/feed/",
+        "website": "https://staceyoniot.com",
+        "description": "Expert news and analysis on the Internet of Things, smart home devices, and connected hardware."
+      }
+    ],
+    "cloud_infrastructure_it_services": [
+      {
+        "id": "aws_architecture_blog",
+        "name": "AWS Architecture Blog",
+        "feed_url": "https://aws.amazon.com/blogs/architecture/feed/",
+        "website": "https://aws.amazon.com/blogs/architecture/",
+        "description": "Cloud infrastructure patterns, best practices, and reference architectures for building on AWS."
+      },
+      {
+        "id": "cloudflare_blog",
+        "name": "Cloudflare Blog",
+        "feed_url": "https://blog.cloudflare.com/rss/",
+        "website": "https://blog.cloudflare.com",
+        "description": "Edge computing, web performance, internet security, and cloud infrastructure innovations."
+      }
+    ],
+    "fintech_technology": [
+      {
+        "id": "finextra",
+        "name": "Finextra",
+        "feed_url": "https://www.finextra.com/rss/rss.aspx",
+        "website": "https://www.finextra.com",
+        "description": "Leading independent newswire for the financial technology community covering payments, blockchain, and banking tech."
+      },
+      {
+        "id": "coindesk",
+        "name": "CoinDesk",
+        "feed_url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+        "website": "https://www.coindesk.com",
+        "description": "Cryptocurrency and blockchain news covering digital assets, Web3, DeFi, and financial infrastructure."
+      }
+    ],
+    "media_entertainment_telecom": [
+      {
+        "id": "variety",
+        "name": "Variety",
+        "feed_url": "https://variety.com/feed/",
+        "website": "https://variety.com",
+        "description": "The entertainment industry's premier publication covering film, TV, streaming, gaming, and media business."
+      },
+      {
+        "id": "hollywood_reporter",
+        "name": "The Hollywood Reporter",
+        "feed_url": "https://www.hollywoodreporter.com/feed/",
+        "website": "https://www.hollywoodreporter.com",
+        "description": "In-depth reporting and analysis on film, TV, streaming services, and the media business."
+      }
+    ],
+    "banking_diversified_financials": [
+      {
+        "id": "american_banker",
+        "name": "American Banker",
+        "feed_url": "https://www.americanbanker.com/feed?rss=true",
+        "website": "https://www.americanbanker.com",
+        "description": "Leading daily publication covering commercial banking, consumer banking, regulation, and fintech."
+      },
+      {
+        "id": "naked_capitalism",
+        "name": "Naked Capitalism",
+        "feed_url": "https://www.nakedcapitalism.com/feed",
+        "website": "https://www.nakedcapitalism.com",
+        "description": "Fearless commentary on finance, economics, banking industry practices, and credit markets."
+      }
+    ],
+    "capital_markets_investment_banking": [
+      {
+        "id": "mergers_inquisitions",
+        "name": "Mergers & Inquisitions",
+        "feed_url": "https://mergersandinquisitions.com/feed/",
+        "website": "https://mergersandinquisitions.com",
+        "description": "Leading investment banking blog covering M&A, capital markets, private equity recruiting, and deal analysis."
+      },
+      {
+        "id": "seeking_alpha",
+        "name": "Seeking Alpha",
+        "feed_url": "https://seekingalpha.com/feed.xml",
+        "website": "https://seekingalpha.com",
+        "description": "Investment research platform with stock market analysis, earnings coverage, and capital markets commentary."
+      }
+    ],
+    "asset_wealth_management": [
+      {
+        "id": "wealth_management_mag",
+        "name": "Wealth Management Magazine",
+        "feed_url": "https://www.wealthmanagement.com/rss.xml",
+        "website": "https://www.wealthmanagement.com",
+        "description": "Premier publication for financial advisors covering wealth management strategies and industry trends."
+      },
+      {
+        "id": "avc_fred_wilson",
+        "name": "AVC (Fred Wilson)",
+        "feed_url": "https://avc.com/feed/",
+        "website": "https://avc.com",
+        "description": "Fred Wilson of Union Square Ventures on venture capital, investing, startups, and portfolio management."
+      }
+    ],
+    "insurance": [
+      {
+        "id": "insurance_journal",
+        "name": "Insurance Journal",
+        "feed_url": "https://www.insurancejournal.com/rss/news/",
+        "website": "https://www.insurancejournal.com",
+        "description": "Leading property/casualty insurance news covering commercial lines, personal lines, claims, and regulation."
+      },
+      {
+        "id": "artemis",
+        "name": "Artemis.bm",
+        "feed_url": "https://www.artemis.bm/feed/",
+        "website": "https://www.artemis.bm",
+        "description": "Definitive source for catastrophe bonds, insurance-linked securities, and alternative risk transfer news."
+      },
+      {
+        "id": "reinsurance_news",
+        "name": "Reinsurance News",
+        "feed_url": "https://www.reinsurancene.ws/feed/",
+        "website": "https://www.reinsurancene.ws",
+        "description": "Global reinsurance industry news covering treaties, ILS, catastrophe modeling, and reinsurer strategy."
+      }
+    ],
+    "private_capital_pe_vc": [
+      {
+        "id": "pe_hub",
+        "name": "PE Hub",
+        "feed_url": "https://www.pehub.com/feed/",
+        "website": "https://www.pehub.com",
+        "description": "Premium intelligence on private equity deal-making, buyouts, fundraising, and LP/GP dynamics."
+      },
+      {
+        "id": "techcrunch_fintech",
+        "name": "TechCrunch (FinTech/VC)",
+        "feed_url": "https://techcrunch.com/category/fintech/feed/",
+        "website": "https://techcrunch.com/category/fintech/",
+        "description": "TechCrunch's fintech vertical covering venture capital deals, funding rounds, and emerging fintech companies."
+      }
+    ],
+    "specialty_finance_alternative_lenders": [
+      {
+        "id": "debanked",
+        "name": "deBanked",
+        "feed_url": "https://debanked.com/feed/",
+        "website": "https://debanked.com",
+        "description": "Primary news source for merchant cash advance, alternative small business lending, and non-bank finance."
+      },
+      {
+        "id": "pymnts",
+        "name": "PYMNTS.com",
+        "feed_url": "https://www.pymnts.com/feed/",
+        "website": "https://www.pymnts.com",
+        "description": "Payments innovation, consumer lending trends, BNPL, embedded finance, and alternative credit."
+      },
+      {
+        "id": "tearsheet",
+        "name": "Tearsheet",
+        "feed_url": "https://tearsheet.co/feed/",
+        "website": "https://tearsheet.co",
+        "description": "Modernization of financial services including challenger banks, alternative lending, and embedded finance."
+      }
+    ],
+    "financial_technology_fintech": [
+      {
+        "id": "finextra_headlines",
+        "name": "Finextra Headlines",
+        "feed_url": "https://www.finextra.com/rss/headlines.aspx",
+        "website": "https://www.finextra.com",
+        "description": "Global fintech headlines covering digital banking, payments, regtech, and financial infrastructure."
+      },
+      {
+        "id": "pymnts_fintech",
+        "name": "PYMNTS.com",
+        "feed_url": "https://www.pymnts.com/feed/",
+        "website": "https://www.pymnts.com",
+        "description": "Breaking news and analysis on payments, digital commerce, and fintech innovation."
+      }
+    ]
+  }
+}

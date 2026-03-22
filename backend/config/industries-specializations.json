@@ -1,0 +1,243 @@
+{
+  "settings": {
+    "article_expiration_days": 90,
+    "auto_cleanup_on_startup": true
+  },
+  "industries": [
+    {
+      "id": "consumer",
+      "name": "Consumer",
+      "emoji": "🛍️",
+      "icon": "shopping-outline",
+      "color_primary": "#10B981",
+      "color_secondary": "#059669",
+      "description": "Consumer goods, retail, food service",
+      "specializations": [
+        {
+          "id": "food_beverage",
+          "name": "Food & Beverage",
+          "description": "Food manufacturing, beverage companies, CPG food products",
+          "emoji": "🍔",
+          "icon": "food-apple-outline",
+          "color_primary": "#10B981"
+        },
+        {
+          "id": "health_beauty_personal_care",
+          "name": "Health/Beauty/Personal Care",
+          "description": "Cosmetics, skincare, personal care products, wellness",
+          "emoji": "💄",
+          "icon": "spa-outline",
+          "color_primary": "#EC4899"
+        },
+        {
+          "id": "apparel_footwear",
+          "name": "Apparel & Footwear",
+          "description": "Clothing, shoes, accessories, fashion brands",
+          "emoji": "👟",
+          "icon": "shoe-sneaker",
+          "color_primary": "#A855F7"
+        },
+        {
+          "id": "home_furniture",
+          "name": "Home & Furniture",
+          "description": "Home goods, furniture, home improvement, decor",
+          "emoji": "🏠",
+          "icon": "home-outline",
+          "color_primary": "#F59E0B"
+        },
+        {
+          "id": "general_merchandise_mass_retail",
+          "name": "General Merchandise & Mass Retail",
+          "description": "Big box retailers, department stores, mass merchants",
+          "emoji": "🏬",
+          "icon": "store-outline",
+          "color_primary": "#3B82F6"
+        },
+        {
+          "id": "specialty_retail_ecommerce",
+          "name": "Specialty Retail & E-commerce",
+          "description": "Specialty stores, online retail, direct-to-consumer brands",
+          "emoji": "🛒",
+          "icon": "cart-outline",
+          "color_primary": "#06B6D4"
+        },
+        {
+          "id": "restaurants_food_service",
+          "name": "Restaurants & Food Service",
+          "description": "QSR, casual dining, food service, hospitality",
+          "emoji": "🍽️",
+          "icon": "silverware-fork-knife",
+          "color_primary": "#EF4444"
+        }
+      ]
+    },
+    {
+      "id": "technology",
+      "name": "Technology",
+      "emoji": "🖥️",
+      "icon": "monitor",
+      "color_primary": "#4F46E5",
+      "color_secondary": "#7C3AED",
+      "description": "Software, hardware, internet, media tech",
+      "specializations": [
+        {
+          "id": "enterprise_saas_software",
+          "name": "Enterprise SaaS & Software",
+          "description": "B2B software, enterprise applications, productivity tools",
+          "emoji": "💼",
+          "icon": "briefcase-outline",
+          "color_primary": "#4F46E5"
+        },
+        {
+          "id": "consumer_internet_social",
+          "name": "Consumer Internet & Social Media",
+          "description": "Social platforms, consumer apps, digital marketplaces",
+          "emoji": "📱",
+          "icon": "cellphone",
+          "color_primary": "#3B82F6"
+        },
+        {
+          "id": "semiconductors_components",
+          "name": "Semiconductors & Components",
+          "description": "Chip makers, semiconductor equipment, electronic components",
+          "emoji": "🔌",
+          "icon": "chip",
+          "color_primary": "#6B7280"
+        },
+        {
+          "id": "hardware_iot",
+          "name": "Hardware & IoT",
+          "description": "Consumer electronics, connected devices, smart hardware",
+          "emoji": "📡",
+          "icon": "access-point",
+          "color_primary": "#14B8A6"
+        },
+        {
+          "id": "cloud_infrastructure_it_services",
+          "name": "Cloud Infrastructure & IT Services",
+          "description": "Cloud providers, managed services, IT consulting",
+          "emoji": "☁️",
+          "icon": "cloud-outline",
+          "color_primary": "#7C3AED"
+        },
+        {
+          "id": "fintech_technology",
+          "name": "FinTech (Technology focus)",
+          "description": "Payment technology, blockchain, financial infrastructure",
+          "emoji": "💳",
+          "icon": "credit-card-outline",
+          "color_primary": "#22C55E"
+        },
+        {
+          "id": "media_entertainment_telecom",
+          "name": "Media/Entertainment/Telecom",
+          "description": "Streaming, gaming, telecommunications, content platforms",
+          "emoji": "🎬",
+          "icon": "movie-open-outline",
+          "color_primary": "#EC4899"
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "emoji": "💰",
+      "icon": "chart-line",
+      "color_primary": "#0D9488",
+      "color_secondary": "#1E40AF",
+      "description": "Banking, capital markets, asset management",
+      "specializations": [
+        {
+          "id": "banking_diversified_financials",
+          "name": "Banking & Diversified Financials",
+          "description": "Commercial banks, consumer banking, diversified financial services",
+          "emoji": "🏦",
+          "icon": "bank-outline",
+          "color_primary": "#0D9488"
+        },
+        {
+          "id": "capital_markets_investment_banking",
+          "name": "Capital Markets & Investment Banking",
+          "description": "Investment banks, securities trading, M&A advisory",
+          "emoji": "📈",
+          "icon": "trending-up",
+          "color_primary": "#1E40AF"
+        },
+        {
+          "id": "asset_wealth_management",
+          "name": "Asset & Wealth Management",
+          "description": "Asset managers, wealth advisors, family offices",
+          "emoji": "💎",
+          "icon": "diamond-outline",
+          "color_primary": "#A855F7"
+        },
+        {
+          "id": "insurance",
+          "name": "Insurance",
+          "description": "Life, P&C, health insurance, reinsurance",
+          "emoji": "🛡️",
+          "icon": "shield-outline",
+          "color_primary": "#F59E0B"
+        },
+        {
+          "id": "private_capital_pe_vc",
+          "name": "Private Capital (PE/VC)",
+          "description": "Private equity, venture capital, growth equity",
+          "emoji": "🏢",
+          "icon": "office-building-outline",
+          "color_primary": "#6B7280"
+        },
+        {
+          "id": "specialty_finance_alternative_lenders",
+          "name": "Specialty Finance & Alternative Lenders",
+          "description": "Consumer lending, commercial finance, alternative credit",
+          "emoji": "💵",
+          "icon": "cash-multiple",
+          "color_primary": "#EF4444"
+        },
+        {
+          "id": "financial_technology_fintech",
+          "name": "Financial Technology (FinTech)",
+          "description": "Digital banking, payments, insurtech, wealthtech",
+          "emoji": "📲",
+          "icon": "cellphone-link",
+          "color_primary": "#22C55E"
+        }
+      ]
+    }
+  ],
+  "interests": [
+    {
+      "id": "sustainability",
+      "name": "Sustainability",
+      "description": "ESG, green initiatives, sustainable business practices",
+      "emoji": "🌱",
+      "icon": "leaf",
+      "color_primary": "#22C55E"
+    },
+    {
+      "id": "innovation",
+      "name": "Innovation",
+      "description": "R&D, disruptive technologies, product innovation",
+      "emoji": "💡",
+      "icon": "lightbulb-on-outline",
+      "color_primary": "#A855F7"
+    },
+    {
+      "id": "digital_transformation",
+      "name": "Digital Transformation",
+      "description": "Digitization, automation, modernization strategies",
+      "emoji": "🔄",
+      "icon": "refresh",
+      "color_primary": "#06B6D4"
+    },
+    {
+      "id": "ai_ml",
+      "name": "AI/ML",
+      "description": "Artificial intelligence, machine learning, generative AI",
+      "emoji": "🤖",
+      "icon": "robot-outline",
+      "color_primary": "#7C3AED"
+    }
+  ]
+}
