@@ -454,6 +454,13 @@ def ingest_article(url: str, notes: str = None, priority: str = "Normal", catego
 
         # ── Create Article record ────────────────────────────────────
         article_id = uuid.uuid4()
+
+        # Extract industry/specialization tags from article_data
+        _defaults = IndustriesConfig.get_instance().get_defaults()
+        _raw_industry = article_data.get('industry', _defaults['industry_name']) if article_data else _defaults['industry_name']
+        _industry = IndustriesConfig.get_instance().normalize_industry_name(_raw_industry)
+        _specializations = article_data.get('specializations', [_defaults['specialization_name']]) if article_data else [_defaults['specialization_name']]
+
         new_article = Article(
             id=article_id,
             url=url,
@@ -467,6 +474,8 @@ def ingest_article(url: str, notes: str = None, priority: str = "Normal", catego
             scrape_attempted=True,
             image_source=image_source,
             inline_images=ingestion_data.get('inline_images', []),
+            industries=[_industry],
+            specializations=_specializations,
             ingestion_tier=ingestion_tier,
             quality_score=quality_score,
             luminary_id=article_data.get('luminary_id') if article_data else None,
