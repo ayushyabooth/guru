@@ -17,9 +17,10 @@ python-jose[cryptography]==3.3.0
 
 # AI / ML
 anthropic>=0.39.0
-sentence-transformers>=3.0.0
+fastembed>=0.3.0
 scikit-learn>=1.3.0
 numpy>=1.24.0
+# sentence-transformers is optional (PyTorch fallback) — fastembed used in production for smaller image
 
 # Content ingestion & scraping
 feedparser==6.0.11

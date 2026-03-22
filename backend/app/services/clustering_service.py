@@ -10,7 +10,12 @@ from sqlalchemy import and_, or_, desc
 import logging
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
-from sentence_transformers import SentenceTransformer
+try:
+    from fastembed import TextEmbedding
+    _USE_FASTEMBED = True
+except ImportError:
+    from sentence_transformers import SentenceTransformer
+    _USE_FASTEMBED = False
 import json
 
 from app.db.database import SessionLocal
@@ -33,11 +38,27 @@ _embedding_model = None
 
 
 def get_embedding_model():
-    """Get global sentence transformer model (singleton pattern)"""
+    """Get global embedding model (singleton pattern).
+    Uses fastembed (ONNX, lightweight) if available, falls back to sentence-transformers (PyTorch).
+    """
     global _embedding_model
     if _embedding_model is None:
-        _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        if _USE_FASTEMBED:
+            _embedding_model = TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')
+            logger.info("Loaded fastembed model (ONNX backend)")
+        else:
+            _embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info("Loaded SentenceTransformer model (PyTorch backend)")
     return _embedding_model
+
+
+def encode_texts(model, texts: list) -> list:
+    """Encode texts using whichever backend is available."""
+    if _USE_FASTEMBED:
+        # fastembed returns a generator of numpy arrays
+        return list(model.embed(texts))
+    else:
+        return model.encode(texts)
 
 
 def parse_filter_context(filter_str: str) -> Dict[str, Any]:
@@ -346,7 +367,8 @@ def compute_article_embeddings(articles: List[Article]) -> Dict[uuid.UUID, np.nd
             
             if text.strip():
                 # Compute embedding
-                embedding = model.encode([text])[0]
+                result = encode_texts(model, [text])
+                embedding = np.array(result[0])
                 embeddings[article.id] = embedding
                 logger.debug(f"Computed embedding for article {article.id}")
             else:

@@ -12,9 +12,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the SentenceTransformer embedding model (~90MB)
-# This bakes it into the Docker image so it doesn't download on every startup
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# Pre-download the fastembed ONNX model (~90MB, avoids runtime download)
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')"
 
 # Copy application code
 COPY . .
