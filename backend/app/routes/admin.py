@@ -1,10 +1,12 @@
 """
 Admin routes for ingestion management and monitoring
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any, List
 import logging
+import os
+from pathlib import Path
 from datetime import datetime
 
 from app.db.database import get_db
@@ -651,4 +653,58 @@ async def get_perf_metrics(db: Session = Depends(get_db), current_user: User = D
             "total_articles": total_articles,
             "total_storyboards": total_storyboards,
         },
+    }
+
+
+@router.post("/admin/upload-expert-links")
+async def upload_expert_links(
+    file: UploadFile = File(...),
+    auto_ingest: bool = Query(True, description="Trigger Tier 1 ingestion after upload"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Upload an expert links markdown file and optionally trigger ingestion.
+
+    Security: requires JWT auth. Validates file type and size.
+    """
+    from app.config import settings
+
+    # Validate file type
+    if not file.filename or not file.filename.endswith('.md'):
+        raise HTTPException(status_code=400, detail="Only .md files accepted")
+
+    # Read content and validate size (5MB max)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (5MB max)")
+
+    # Determine upload directory
+    if settings.EXPERT_LINKS_DIR:
+        upload_dir = Path(settings.EXPERT_LINKS_DIR)
+    elif settings.APP_ENV == "production":
+        upload_dir = Path("/app/data/expert-links")
+    else:
+        upload_dir = Path(__file__).parent.parent.parent.parent.parent / "expert-links"
+
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    dest = upload_dir / file.filename
+    dest.write_bytes(content)
+    logger.info(f"Expert links file uploaded: {dest} ({len(content)} bytes)")
+
+    ingestion_result = None
+    if auto_ingest:
+        try:
+            result = await smart_ingest_expert_links(str(dest))
+            ingestion_result = {
+                "articles_created": result.get("created", 0) if isinstance(result, dict) else 0,
+                "status": "completed",
+            }
+        except Exception as e:
+            ingestion_result = {"status": "failed", "error": str(e)}
+
+    return {
+        "uploaded": file.filename,
+        "size_bytes": len(content),
+        "saved_to": str(dest),
+        "ingestion": ingestion_result,
     }

@@ -6,6 +6,7 @@ from app.models.user import User, UserProfile
 from app.schemas.user_schema import UserSignupRequest, UserSignupResponse, UserLoginRequest, UserLoginResponse
 from app.services.auth_service import hash_password, verify_password, generate_jwt, verify_jwt, create_refresh_token
 from app.services.industries_config import IndustriesConfig
+from app.config import settings
 import uuid
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
@@ -31,7 +32,15 @@ def _get_default_industry_and_specialization():
 @router.post("/signup", response_model=UserSignupResponse)
 async def signup(user_data: UserSignupRequest, db: Session = Depends(get_db)):
     """Create a new user account with default profile"""
-    
+
+    # Validate invite code
+    valid_codes = [c.strip().upper() for c in settings.SIGNUP_INVITE_CODES.split(",")]
+    if user_data.invite_code.strip().upper() not in valid_codes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid invite code"
+        )
+
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:

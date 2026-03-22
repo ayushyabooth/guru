@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Pre-download the fastembed ONNX model (~90MB, avoids runtime download)
 RUN python -c "from fastembed import TextEmbedding; TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')"
 
+# Create directory for uploaded expert links
+RUN mkdir -p /app/data/expert-links
+
 # Copy application code
 COPY . .
 

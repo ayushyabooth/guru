@@ -16,11 +16,18 @@ from app.services.industries_config import IndustriesConfig
 
 logger = logging.getLogger(__name__)
 
-# Default directory for expert links files (relative to backend)
-# Located at /Users/ayushya/MatajiKaPrakop/expert-links/
-EXPERT_LINKS_DIR = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "expert-links")
-)
+# Default directory for expert links files
+# Configurable via EXPERT_LINKS_DIR env var (set on Railway to /app/data/expert-links)
+# Falls back to local path relative to backend
+def _get_expert_links_dir() -> str:
+    from app.config import settings
+    if settings.EXPERT_LINKS_DIR:
+        return settings.EXPERT_LINKS_DIR
+    return os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "expert-links")
+    )
+
+EXPERT_LINKS_DIR = _get_expert_links_dir()
 
 
 def find_latest_expert_links_file(directory: str = None) -> Tuple[Optional[str], Optional[str]]:

@@ -37,6 +37,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -46,7 +47,7 @@ export default function SignupScreen() {
     setStatus('idle');
     setErrorMessage('');
 
-    if (!email || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword || !inviteCode) {
       setStatus('error');
       setErrorMessage('Please fill in all fields');
       return;
@@ -76,7 +77,7 @@ export default function SignupScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, invite_code: inviteCode }),
       });
 
       if (response.ok) {
@@ -197,6 +198,19 @@ export default function SignupScreen() {
               secureTextEntry
               autoCapitalize="none"
               icon="lock"
+            />
+
+            {/* Invite Code Input */}
+            <GlassInput
+              placeholder="Invite Code"
+              value={inviteCode}
+              onChangeText={(text) => {
+                setInviteCode(text);
+                if (status === 'error') setStatus('idle');
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              icon="key"
             />
 
             {/* Signup Button */}

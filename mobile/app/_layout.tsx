@@ -58,6 +58,16 @@ export default function RootLayout() {
     loadVisualConfigFromAPI();
   }, []);
 
+  // Load Orbitron font via Google Fonts CSS on web (Expo useFonts hook doesn't work on static export)
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const link = document.createElement('link');
+      link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // On web static export, fonts may not trigger the loaded callback.
   // Don't block rendering — the app works fine with fallback system fonts.
   if (!fontsLoaded && Platform.OS !== 'web') {
