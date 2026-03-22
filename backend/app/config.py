@@ -81,11 +81,11 @@ class Settings(BaseSettings):
     QUALITY_GATE_TIER1: float = 0.35  # Expert links quality threshold
     QUALITY_GATE_TIER2: float = 0.35  # Luminary quality threshold
     QUALITY_GATE_TIER3: float = 0.50  # Web discovery quality threshold
-    QUALITY_MIN_WORD_COUNT: int = 300
+    QUALITY_MIN_WORD_COUNT: int = 150
     QUALITY_MAX_WORD_COUNT: int = 15000
     QUALITY_MAX_LINK_RATIO: float = 0.05
-    QUALITY_MIN_PARAGRAPHS: int = 3
-    QUALITY_MIN_PARAGRAPH_WORDS: int = 30
+    QUALITY_MIN_PARAGRAPHS: int = 2
+    QUALITY_MIN_PARAGRAPH_WORDS: int = 15
     QUALITY_MIN_CONTENT_DENSITY: float = 0.1
 
     # Auto-Essential Detection
