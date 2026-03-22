@@ -474,8 +474,6 @@ def ingest_article(url: str, notes: str = None, priority: str = "Normal", catego
             scrape_attempted=True,
             image_source=image_source,
             inline_images=ingestion_data.get('inline_images', []),
-            industries=[_industry],
-            specializations=_specializations,
             ingestion_tier=ingestion_tier,
             quality_score=quality_score,
             luminary_id=article_data.get('luminary_id') if article_data else None,

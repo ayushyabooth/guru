@@ -593,8 +593,6 @@ def parse_expert_links_md_with_state(filepath: str, ingestion_state_id: str, db:
                 scrape_attempted=True,
                 image_source=image_source,
                 inline_images=ingestion_data.get('inline_images', []),
-                industries=[_industry],
-                specializations=_specializations,
                 ingestion_tier='tier1_expert',
                 quality_score=quality_score,
                 content_hash=content_hash,
