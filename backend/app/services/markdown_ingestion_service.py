@@ -23,6 +23,10 @@ def _get_expert_links_dir() -> str:
     from app.config import settings
     if settings.EXPERT_LINKS_DIR:
         return settings.EXPERT_LINKS_DIR
+    # In production (Docker), use /app/data/expert-links
+    if settings.APP_ENV == "production" or os.path.exists("/app/data/expert-links"):
+        return "/app/data/expert-links"
+    # Local dev: relative to backend directory
     return os.path.normpath(
         os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "expert-links")
     )

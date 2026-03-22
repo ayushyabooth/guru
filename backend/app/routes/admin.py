@@ -656,7 +656,7 @@ async def get_perf_metrics(db: Session = Depends(get_db), current_user: User = D
     }
 
 
-@router.post("/admin/upload-expert-links")
+@router.post("/upload-expert-links")
 async def upload_expert_links(
     file: UploadFile = File(...),
     auto_ingest: bool = Query(True, description="Trigger Tier 1 ingestion after upload"),
