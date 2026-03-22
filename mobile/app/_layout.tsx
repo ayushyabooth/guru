@@ -58,24 +58,8 @@ export default function RootLayout() {
     loadVisualConfigFromAPI();
   }, []);
 
-  // Load Orbitron font via Google Fonts CSS on web (Expo useFonts hook doesn't work on static export)
-  // Also alias Expo font names (Orbitron_400Regular) to CSS font-family (Orbitron)
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const link = document.createElement('link');
-      link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap';
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-
-      // Map Expo font names to Google Fonts CSS names
-      const style = document.createElement('style');
-      style.textContent = `
-        @font-face { font-family: 'Orbitron_400Regular'; src: local('Orbitron'); font-weight: 400; }
-        @font-face { font-family: 'Orbitron_700Bold'; src: local('Orbitron'); font-weight: 700; }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []);
+  // No web font fix needed — Expo bundles the .ttf files in the static export.
+  // The vercel.json rewrite must exclude asset paths to let fonts load correctly.
 
   // On web static export, fonts may not trigger the loaded callback.
   // Don't block rendering — the app works fine with fallback system fonts.
