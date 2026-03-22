@@ -81,10 +81,27 @@ def create_tables():
 def _run_column_migrations():
     """Add columns that create_all() can't add to existing tables."""
     migrations = [
+        # Article columns (may be missing if table was created before model was updated)
+        ("articles", "industries", "JSON"),
+        ("articles", "specializations", "JSON"),
+        ("articles", "ingestion_tier", "VARCHAR(30)"),
+        ("articles", "quality_score", "FLOAT"),
+        ("articles", "luminary_id", "VARCHAR(100)"),
+        ("articles", "discovery_query", "VARCHAR(500)"),
+        ("articles", "content_hash", "VARCHAR(64)"),
+        ("articles", "article_image_url", "VARCHAR(2048)"),
+        ("articles", "scrape_attempted", "BOOLEAN DEFAULT FALSE"),
+        ("articles", "image_source", "VARCHAR(50)"),
+        ("articles", "inline_images", "JSON"),
+        ("articles", "word_count", "INTEGER"),
+        # Storyboard columns
+        ("storyboards", "base_cache_key", "VARCHAR(500)"),
+        # Recap columns
         ("recap_journeys", "audio_status", "VARCHAR(30)"),
         ("recap_journeys", "audio_error", "TEXT"),
+        # Ingestion run columns
         ("ingestion_runs", "step_timings", "JSON"),
-        ("storyboards", "base_cache_key", "VARCHAR(500)"),
+        # QA columns
         ("qa_exchanges", "conversation_id", "VARCHAR(36)"),
         ("qa_exchanges", "exchange_type", "VARCHAR(20) DEFAULT 'direct'"),
     ]
