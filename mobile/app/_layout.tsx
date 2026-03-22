@@ -59,12 +59,21 @@ export default function RootLayout() {
   }, []);
 
   // Load Orbitron font via Google Fonts CSS on web (Expo useFonts hook doesn't work on static export)
+  // Also alias Expo font names (Orbitron_400Regular) to CSS font-family (Orbitron)
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const link = document.createElement('link');
       link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap';
       link.rel = 'stylesheet';
       document.head.appendChild(link);
+
+      // Map Expo font names to Google Fonts CSS names
+      const style = document.createElement('style');
+      style.textContent = `
+        @font-face { font-family: 'Orbitron_400Regular'; src: local('Orbitron'); font-weight: 400; }
+        @font-face { font-family: 'Orbitron_700Bold'; src: local('Orbitron'); font-weight: 700; }
+      `;
+      document.head.appendChild(style);
     }
   }, []);
 
