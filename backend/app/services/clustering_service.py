@@ -6,7 +6,7 @@ import numpy as np
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, desc, cast, Text
 import logging
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
@@ -183,7 +183,7 @@ def get_articles_for_filter(
                 patterns = NameNormalizer.build_sql_like_patterns(spec_to_use)
                 for pattern in patterns:
                     specialization_conditions.append(
-                        ExpertNote.expert_specializations.like(pattern)
+                        cast(ExpertNote.expert_specializations, Text).like(pattern)
                     )
 
                 # Also add patterns for the original spec name in case data uses display names
@@ -191,7 +191,7 @@ def get_articles_for_filter(
                     patterns = NameNormalizer.build_sql_like_patterns(spec)
                     for pattern in patterns:
                         specialization_conditions.append(
-                            ExpertNote.expert_specializations.like(pattern)
+                            cast(ExpertNote.expert_specializations, Text).like(pattern)
                         )
 
             # Get patterns for industry - convert display name to ID first
@@ -250,7 +250,7 @@ def get_articles_for_filter(
             patterns = NameNormalizer.build_sql_like_patterns(spec_to_use)
             logger.info(f"Generated {len(patterns)} patterns for '{spec_to_use}'")
             specialization_conditions = [
-                ExpertNote.expert_specializations.like(pattern) for pattern in patterns
+                cast(ExpertNote.expert_specializations, Text).like(pattern) for pattern in patterns
             ]
 
             # Also add patterns for the original filter value if different
@@ -259,7 +259,7 @@ def get_articles_for_filter(
                 logger.info(f"Adding {len(extra_patterns)} extra patterns for original '{filter_value}'")
                 for pattern in extra_patterns:
                     specialization_conditions.append(
-                        ExpertNote.expert_specializations.like(pattern)
+                        cast(ExpertNote.expert_specializations, Text).like(pattern)
                     )
 
             articles = base_query.join(ExpertNote).filter(
@@ -943,7 +943,7 @@ def _fill_related_articles(
     for spec in specializations:
         patterns = NameNormalizer.build_sql_like_patterns(spec)
         for pattern in patterns:
-            spec_conditions.append(ExpertNote.expert_specializations.like(pattern))
+            spec_conditions.append(cast(ExpertNote.expert_specializations, Text).like(pattern))
 
     if not spec_conditions:
         return
