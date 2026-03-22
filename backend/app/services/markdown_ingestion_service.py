@@ -572,8 +572,14 @@ def parse_expert_links_md_with_state(filepath: str, ingestion_state_id: str, db:
             except Exception as img_err:
                 logger.warning(f"Image scraping failed for {url}: {img_err}")
 
-            # Create Article record with tier tagging and quality score
+            # Create Article record with tier tagging, quality score, and industry tags
             article_id = uuid.uuid4()
+            _defaults = IndustriesConfig.get_instance().get_defaults()
+            _industry = IndustriesConfig.get_instance().normalize_industry_name(
+                article_data.get('industry', _defaults['industry_name'])
+            )
+            _specializations = article_data.get('specializations', [_defaults['specialization_name']])
+
             new_article = Article(
                 id=article_id,
                 url=url,
@@ -587,6 +593,8 @@ def parse_expert_links_md_with_state(filepath: str, ingestion_state_id: str, db:
                 scrape_attempted=True,
                 image_source=image_source,
                 inline_images=ingestion_data.get('inline_images', []),
+                industries=[_industry],
+                specializations=_specializations,
                 ingestion_tier='tier1_expert',
                 quality_score=quality_score,
                 content_hash=content_hash,
