@@ -54,6 +54,15 @@ def get_db():
 
 def create_tables():
     """Create all database tables and run lightweight migrations."""
+    # Enable uuid-ossp extension on PostgreSQL (required for UUID generation)
+    if not _is_sqlite:
+        with engine.connect() as conn:
+            try:
+                conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                logger.warning(f"Could not create uuid-ossp extension: {e}")
     Base.metadata.create_all(bind=engine)
     _run_column_migrations()
 
