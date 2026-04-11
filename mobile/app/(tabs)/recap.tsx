@@ -744,7 +744,7 @@ export default function RecapScreen() {
             </View>
           ) : !hasMinimumActivity && !isInProgress ? (
             <View style={styles.ctaSection}>
-              <Text style={styles.ctaText}>
+              <Text style={[styles.ctaText, { fontSize: 14, fontWeight: '500', color: colors.textSecondary }]}>
                 Read some articles in Catch-up or Dive-in first to unlock your weekly recap.
               </Text>
               <View style={[styles.beginButton, { opacity: 0.4 }]}>
@@ -777,55 +777,59 @@ export default function RecapScreen() {
             { num: 2, name: 'Reflect', desc: 'Answer guided questions to strengthen recall', lockHint: '' },
             { num: 3, name: 'Explore', desc: 'Deep Socratic dialogue to find connections', lockHint: '' },
             { num: 4, name: 'Listen', desc: 'NotebookLM-style audio recap of your week', lockHint: '' },
-          ].map(stage => {
+          ].map((stage, index, arr) => {
             const isCompleted = stage.num <= completedStages;
             const isCurrent = isInProgress && stage.num === completedStages + 1;
             const isLocked = !isCompleted && !isCurrent;
             const tierLocked = false; // No tier gating
 
             return (
-              <TouchableOpacity
-                key={stage.num}
-                style={[
-                  styles.stageItem,
-                  isCurrent && styles.stageItemCurrent,
-                  isLocked && { opacity: 0.4 },
-                ]}
-                disabled={isLocked && !hasCompletedRecap}
-                onPress={() => {
-                  if (isCompleted || isCurrent) {
-                    handleBeginJourney();
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[
-                  styles.stageNumber,
-                  { backgroundColor: isCompleted
-                    ? 'rgba(251, 146, 60, 0.5)'
-                    : isCurrent
-                      ? 'rgba(251, 146, 60, 0.25)'
-                      : 'rgba(251, 146, 60, 0.10)' },
-                  isCurrent && {
-                    borderWidth: 2,
-                    borderColor: '#FB923C',
-                  },
-                ]}>
-                  {isCompleted ? (
-                    <Icon name="check" size={18} color="#FB923C" />
-                  ) : tierLocked ? (
-                    <Icon name="lock" size={16} color="#64748B" />
-                  ) : (
-                    <Text style={styles.stageNumberText}>{stage.num}</Text>
-                  )}
-                </View>
-                <View style={styles.stageContent}>
-                  <Text style={styles.stageName}>{stage.name}</Text>
-                  <Text style={styles.stageDescription}>
-                    {tierLocked && stage.lockHint ? stage.lockHint : stage.desc}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <React.Fragment key={stage.num}>
+                <TouchableOpacity
+                  style={[
+                    styles.stageItem,
+                    isCurrent && styles.stageItemCurrent,
+                    isLocked && { opacity: 0.4 },
+                  ]}
+                  disabled={isLocked && !hasCompletedRecap}
+                  onPress={() => {
+                    if (isCompleted || isCurrent) {
+                      handleBeginJourney();
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    styles.stageNumber,
+                    { backgroundColor: isCompleted
+                      ? 'rgba(251, 146, 60, 0.5)'
+                      : isCurrent
+                        ? 'rgba(251, 146, 60, 0.25)'
+                        : 'rgba(251, 146, 60, 0.10)' },
+                    isCurrent && {
+                      borderWidth: 2,
+                      borderColor: '#FB923C',
+                    },
+                  ]}>
+                    {isCompleted ? (
+                      <Icon name="check" size={18} color="#FB923C" />
+                    ) : tierLocked ? (
+                      <Icon name="lock" size={16} color="#64748B" />
+                    ) : (
+                      <Text style={styles.stageNumberText}>{stage.num}</Text>
+                    )}
+                  </View>
+                  <View style={styles.stageContent}>
+                    <Text style={styles.stageName}>{stage.name}</Text>
+                    <Text style={styles.stageDescription}>
+                      {tierLocked && stage.lockHint ? stage.lockHint : stage.desc}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                {index < arr.length - 1 && (
+                  <View style={styles.stageConnector} />
+                )}
+              </React.Fragment>
             );
           })}
         </View>
@@ -1087,6 +1091,12 @@ const styles = StyleSheet.create({
     ...Typography.labelLarge,
     color: RingColors.recap.primary,
     fontWeight: '700',
+  },
+  stageConnector: {
+    width: 2,
+    height: 20,
+    backgroundColor: 'rgba(251,146,60,0.2)',
+    marginLeft: 23, // centered under the 36px numbered circle (36/2 - 2/2 = 17, but visually 23 aligns with center considering marginRight on stageNumber)
   },
   stageContent: {
     flex: 1,

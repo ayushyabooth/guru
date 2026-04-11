@@ -723,13 +723,13 @@ const styles = StyleSheet.create({
   logoutButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   logoutText: {
-    color: '#EF4444',
+    color: '#94A3B8',
     ...Typography.labelSmall,
     fontWeight: '600',
   },

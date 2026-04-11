@@ -22,7 +22,7 @@ interface RichSummarySectionProps {
 export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
   richSummary,
   fallbackSummary,
-  isDark: _isDarkProp = false,
+  isDark: isDarkProp = false,
   categoryAccent = '#38BDF8',
   onQuotePress
 }) => {
@@ -73,7 +73,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
             {content.spotlight_quotes.slice(0, 3).map((quote, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.quoteCard, { borderLeftColor: categoryAccent, backgroundColor: colors.glassHighlight, borderColor: colors.glassBorder }]}
+                style={[styles.quoteCard, { borderLeftColor: categoryAccent, backgroundColor: colors.glassHighlight, borderColor: isDarkProp ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}
                 onPress={() => onQuotePress?.(quote)}
                 activeOpacity={0.7}
               >

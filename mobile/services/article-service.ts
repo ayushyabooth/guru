@@ -17,6 +17,7 @@ export interface Article {
   is_paywalled: boolean;
   created_at: string;
   is_saved?: boolean;
+  is_essential?: boolean;
   publish_date?: string;
   rich_summary?: RichSummary | null;
   socratic_prompts?: string[];

@@ -11,7 +11,7 @@ from app.db.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
 from app.models.storyboard import Storyboard, StoryboardArticle
-from app.models.article import Article
+from app.models.article import Article, ExpertNote
 from app.models.interaction import UserSavedArticle, UserNotRelevant
 from app.models.article_rich_content import ArticleRichContent
 from app.services.clustering_service import get_or_build_storyboards_for_filter, parse_filter_context
@@ -156,6 +156,14 @@ async def get_catchup_feed(
             ).all()
         )
 
+        # --- BATCH 7: Get essential article IDs (articles flagged by experts) ---
+        essential_ids = set(
+            row[0] for row in db.query(ExpertNote.article_id).filter(
+                ExpertNote.priority == 'Essential',
+                ExpertNote.article_id.in_(rich_content_article_ids)
+            ).all()
+        ) if rich_content_article_ids else set()
+
         # --- Build response from pre-fetched data (no more DB queries) ---
         storyboard_responses = []
 
@@ -251,6 +259,7 @@ async def get_catchup_feed(
                     "word_count": headline_article.word_count,
                     "is_paywalled": headline_article.is_paywalled,
                     "is_saved": headline_article.id in saved_article_ids,
+                    "is_essential": headline_article.id in essential_ids,
                     "created_at": headline_article.created_at.isoformat() if headline_article.created_at else None,
                     "rich_summary": rich_summary,
                     "socratic_prompts": socratic_prompts

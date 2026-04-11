@@ -747,7 +747,7 @@ function GhostRings({ metrics, dimensions }: { metrics: RingMetrics; dimensions:
 // ═══════════════════════════════════════════════════════════════════
 
 const DEFAULT_DIMENSIONS: Record<SizePreset, number> = {
-  hero: 300,
+  hero: 160,
   logo: 80,
   tab: 24,
   indicator: 40,

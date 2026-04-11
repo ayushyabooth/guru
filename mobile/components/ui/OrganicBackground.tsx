@@ -382,7 +382,7 @@ export default function OrganicBackground({
         size={600}
         position={{ top: -300, left: -200 }}
         rotation={-5}
-        opacity={0.4}
+        opacity={0.55}
       />
 
       {/* Purple accent - right */}
@@ -393,7 +393,7 @@ export default function OrganicBackground({
         size={450}
         position={{ top: '25%', right: -250 }}
         rotation={20}
-        opacity={0.35}
+        opacity={0.5}
       />
 
       {/* Amber accent - bottom */}
@@ -404,7 +404,7 @@ export default function OrganicBackground({
         size={400}
         position={{ bottom: -200, left: '20%' }}
         rotation={-10}
-        opacity={0.3}
+        opacity={0.45}
       />
     </>
   );
@@ -422,7 +422,7 @@ export default function OrganicBackground({
       size={450}
       position={{ top: -150, right: -200 }}
       rotation={10}
-      opacity={0.4}
+      opacity={0.55}
     />
   );
 
