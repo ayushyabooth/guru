@@ -208,7 +208,14 @@ const styles = StyleSheet.create({
   },
   inputWrapperFocused: {
     borderWidth: 2,
-    shadowOpacity: 0.08,
+    shadowColor: '#6366F1',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    ...(Platform.OS === 'web' ? {
+      // @ts-ignore — web-only property
+      boxShadow: '0 0 12px rgba(99,102,241,0.2)',
+    } : {}),
   },
   iconContainer: {
     paddingLeft: Spacing.md,

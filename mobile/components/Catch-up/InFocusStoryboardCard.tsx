@@ -231,22 +231,23 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
       : `linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 40%, ${categoryColors.accent}12 100%)`,
     backdropFilter: isDark ? 'blur(40px) saturate(200%)' : 'blur(24px) saturate(180%)',
     WebkitBackdropFilter: isDark ? 'blur(40px) saturate(200%)' : 'blur(24px) saturate(180%)',
-    borderColor: isDark ? 'rgba(255,255,255,0.08)' : `${categoryColors.accent}50`,
+    borderColor: isDark ? 'rgba(255,255,255,0.15)' : `${categoryColors.accent}50`,
     boxShadow: isDark
       ? `0 0 80px ${categoryColors.accent}20, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`
       : `0 4px 32px ${categoryColors.accent}25, 0 16px 64px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 ${categoryColors.accent}15`,
   } : {
     backgroundColor: isDark ? 'rgba(15,20,35,0.75)' : '#FFFFFF',
-    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.6)',
+    borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
   };
 
   return (
-    <View 
+    <View
       style={[
-        styles.card, 
+        styles.card,
         isDark && styles.cardDark,
-        liquidGlassStyle
-      ]} 
+        liquidGlassStyle,
+        ...(!isDark ? [{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }] : []),
+      ]}
       data-testid="in-focus-storyboard-card"
     >
       {/* Accent strip at top for category color pop */}
@@ -314,10 +315,17 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
             {readingTime} min
           </Text>
           <Text style={[styles.metadataText, { color: colors.textSecondary }]}>•</Text>
-          <View style={[styles.badge, { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.glassHighlight }]}>
-            <Icon name={BADGE_CONFIG.Normal.icon} size={12} color={colors.textTertiary} />
-            <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Normal</Text>
-          </View>
+          {(() => {
+            const badgeKey = inFocusArticle.is_essential ? 'Essential' : 'Normal';
+            const cfg = BADGE_CONFIG[badgeKey];
+            const badgeColor = isDark ? cfg.darkColor : cfg.color;
+            return (
+              <View style={[styles.badge, { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: badgeKey === 'Essential' ? badgeColor + '20' : colors.glassHighlight }]}>
+                <Icon name={cfg.icon} size={12} color={badgeColor} />
+                <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeKey}</Text>
+              </View>
+            );
+          })()}
           {inFocusArticle.is_paywalled && (
             <Icon name="lock-outline" size={12} color="#6B7280" />
           )}

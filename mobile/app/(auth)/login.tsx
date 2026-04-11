@@ -18,6 +18,7 @@ import {
   Platform,
   Dimensions,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -173,8 +174,11 @@ export default function LoginScreen() {
           <GlassCard style={styles.card} variant="heavy">
             {/* Error Message */}
             {error ? (
-              <View style={styles.alertBox}>
-                <Text style={[styles.alertText, { color: colors.error }]}>{error}</Text>
+              <View style={[styles.alertBox, { flexDirection: 'row', alignItems: 'center' }]}>
+                <Text style={[styles.alertText, { color: colors.error, flex: 1 }]}>{error}</Text>
+                <TouchableOpacity onPress={() => setError('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={{ color: colors.error, fontSize: 18, fontWeight: '700', marginLeft: 8 }}>{'\u00D7'}</Text>
+                </TouchableOpacity>
               </View>
             ) : null}
 
@@ -207,6 +211,14 @@ export default function LoginScreen() {
               icon="lock"
             />
 
+            {/* Forgot Password Link */}
+            <Text
+              style={styles.forgotPasswordText}
+              onPress={() => {}}
+            >
+              Forgot Password?
+            </Text>
+
             {/* Login Button */}
             <GlassButton
               title="Sign In"
@@ -219,7 +231,7 @@ export default function LoginScreen() {
 
             {/* Create Account Link */}
             <Text
-              style={[styles.createAccountText, { color: colors.textSecondary }]}
+              style={[styles.createAccountText, { color: colors.textSecondary }, ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as any] : [])]}
               onPress={() => router.push('/(auth)/signup')}
             >
               Don't have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign up</Text>
@@ -276,6 +288,14 @@ const styles = StyleSheet.create({
     ...Typography.bodySmall,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  forgotPasswordText: {
+    color: '#6366F1',
+    fontSize: 14,
+    textAlign: 'right',
+    marginTop: -8,
+    marginBottom: 8,
+    textDecorationLine: 'underline',
   },
   loginButton: {
     marginTop: Spacing.md,

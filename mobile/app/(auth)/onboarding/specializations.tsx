@@ -178,6 +178,13 @@ export default function SpecializationsScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.optionContent}>
+                    <View style={styles.optionIcon}>
+                      <Icon
+                        name="tag-outline"
+                        size={22}
+                        color={isSelected ? '#38BDF8' : (!canSelect ? DarkThemeColors.textTertiary : DarkThemeColors.textSecondary)}
+                      />
+                    </View>
                     <View style={styles.optionLeft}>
                       <Text
                         style={[
@@ -306,6 +313,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingTop: Spacing.sm,
+    paddingBottom: 100,
   },
   optionsContainer: {
     gap: Spacing.md,
@@ -336,6 +344,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  optionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
   },
   optionLeft: {
     flex: 1,

@@ -241,7 +241,7 @@ export default function SignupScreen() {
 
             {/* Sign In Link */}
             <Text
-              style={[styles.signInText, { color: colors.textSecondary }]}
+              style={[styles.signInText, { color: colors.textSecondary }, ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as any] : [])]}
               onPress={() => router.push('/(auth)/login')}
             >
               Already have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign in</Text>

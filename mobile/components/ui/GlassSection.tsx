@@ -23,6 +23,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import Icon from './Icon';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -114,9 +115,7 @@ export default function GlassSection({
           activeOpacity={0.7}
         >
           <View style={styles.headerLeft}>{header}</View>
-          <Text style={[styles.chevron, { color: chevronColor }]}>
-            {isExpanded ? '▲' : '▼'}
-          </Text>
+          <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={chevronColor} />
         </TouchableOpacity>
       ) : (
         <View style={styles.nonCollapsibleHeader}>

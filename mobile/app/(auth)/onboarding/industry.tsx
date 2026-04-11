@@ -375,6 +375,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     paddingTop: Spacing.md,
+    paddingBottom: 100,
   },
   gridContainer: {
     flexDirection: 'row',

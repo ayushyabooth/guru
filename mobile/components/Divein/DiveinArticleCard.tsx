@@ -72,6 +72,9 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   const industryIcon = categoryColors.icon;
   const industryConfig = getIndustryConfig(article.industry);
 
+  const cleanSource = (source: string) =>
+    source.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -160,21 +163,16 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
         {/* Liquid glass overlay */}
         <View style={styles.heroOverlay}>
           <View style={styles.glassOverlay}>
-            <Text style={styles.heroTitle} numberOfLines={2}>{article.headline}</Text>
+            <Text style={styles.heroTitle} numberOfLines={3}>{article.headline}</Text>
             <Text style={styles.heroMeta}>
-              {article.source} • {article.readingTime} min read • {formatDate(article.publishDate)}
+              {cleanSource(article.source)} • {article.readingTime} min read • {formatDate(article.publishDate)}
             </Text>
           </View>
         </View>
       </View>
 
-      {/* What's in the article section */}
+      {/* Article summary */}
       <View style={styles.contentSection}>
-        <View style={styles.contentHeader}>
-          <Icon name="clipboard-text-outline" size={14} color={colors.textTertiary} />
-          <Text style={[styles.contentHeaderText, { color: colors.textPrimary }]}>What's in the article</Text>
-        </View>
-        <View style={[styles.contentDivider, { backgroundColor: colors.glassSectionBorder }]} />
         <Text style={[styles.contentText, { color: colors.textSecondary }]} numberOfLines={4}>
           {whatsInArticle}
         </Text>
@@ -363,7 +361,9 @@ const styles = StyleSheet.create({
   ctaSecondary: {
     ...DarkGlassMaterials.button,
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
   },
   ctaSecondaryText: {
     ...Typography.labelLarge,
