@@ -596,6 +596,8 @@ def parse_expert_links_md_with_state(filepath: str, ingestion_state_id: str, db:
                 ingestion_tier='tier1_expert',
                 quality_score=quality_score,
                 content_hash=content_hash,
+                industries=[_industry] if _industry else [],
+                specializations=_specializations if _specializations else [],
             )
 
             db.add(new_article)
