@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   articleChipText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: '#FB923C',
     fontWeight: '500',
   },

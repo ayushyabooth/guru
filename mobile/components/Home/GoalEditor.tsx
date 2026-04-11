@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#F1F5F9',
   },
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#94A3B8',
   },
   saveButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#fff',
   },
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   goalSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   goalValueContainer: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   encouragementText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#EC4899',
     fontWeight: '500',
     flex: 1,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryBreakdown: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
   },
 });

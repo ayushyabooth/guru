@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { API_BASE_URL } from '../constants/config';
 import { getAuthToken } from '../utils/auth';
+import { Spacing } from '@/constants/liquidGlass';
 
 // --- Types matching /admin/perf-metrics response ---
 
@@ -314,7 +315,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(56, 189, 248, 0.85)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
   },
   toggleText: {
     color: '#fff',
@@ -329,15 +330,15 @@ const s = StyleSheet.create({
     left: 12,
     zIndex: 101,
     backgroundColor: 'rgba(15, 15, 20, 0.95)',
-    borderRadius: 16,
+    borderRadius: Spacing.md,
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.3)',
     maxHeight: 500,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: Spacing.sm },
     shadowOpacity: 0.4,
-    shadowRadius: 16,
+    shadowRadius: Spacing.md,
     elevation: 25,
     ...Platform.select({
       web: {
@@ -365,8 +366,8 @@ const s = StyleSheet.create({
   },
   refreshBtn: {
     backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: 6,
   },
   refreshText: {
@@ -376,9 +377,9 @@ const s = StyleSheet.create({
   },
   closeBtn: {
     color: '#64748B',
-    fontSize: 16,
+    fontSize: Spacing.md,
     fontWeight: '700',
-    padding: 4,
+    padding: Spacing.xs,
   },
   scroll: {
     maxHeight: 420,
@@ -387,13 +388,13 @@ const s = StyleSheet.create({
     color: '#EF4444',
     fontSize: 11,
     textAlign: 'center',
-    marginVertical: 8,
+    marginVertical: Spacing.sm,
   },
 
   // Stats row
   statsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     marginBottom: 12,
   },
   statBox: {
@@ -420,7 +421,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
@@ -430,7 +431,7 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
   sectionContent: {
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   badge: {
     color: '#fff',
@@ -438,7 +439,7 @@ const s = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: Spacing.xs,
     overflow: 'hidden',
   },
 
@@ -446,18 +447,18 @@ const s = StyleSheet.create({
   endpointRow: {
     marginBottom: 6,
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: Spacing.sm,
+    padding: Spacing.sm,
   },
   endpointPath: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 11,
     fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   timingRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     alignItems: 'center',
   },
   timingVal: {
@@ -475,7 +476,7 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     fontSize: 10,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
 
   // Recent calls
@@ -483,7 +484,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
@@ -506,7 +507,7 @@ const s = StyleSheet.create({
   },
   recentRight: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     alignItems: 'center',
   },
   recentMs: {
@@ -519,22 +520,22 @@ const s = StyleSheet.create({
   recentAgo: {
     color: 'rgba(255,255,255,0.3)',
     fontSize: 9,
-    width: 48,
+    width: Spacing.xxl,
     textAlign: 'right',
   },
 
   // Ingestion
   ingestionTier: {
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 8,
-    padding: 8,
+    borderRadius: Spacing.sm,
+    padding: Spacing.sm,
     marginBottom: 6,
   },
   ingestionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   tierName: {
     color: 'rgba(255,255,255,0.8)',
@@ -547,14 +548,14 @@ const s = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: Spacing.xs,
     overflow: 'hidden',
     textTransform: 'uppercase',
   },
   ingestionStats: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   ingestionStat: {
     color: 'rgba(255,255,255,0.5)',
@@ -564,8 +565,8 @@ const s = StyleSheet.create({
   stepTimings: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 4,
-    marginTop: 4,
+    paddingTop: Spacing.xs,
+    marginTop: Spacing.xs,
   },
   stepRow: {
     flexDirection: 'row',
@@ -585,12 +586,12 @@ const s = StyleSheet.create({
   ingestionTime: {
     color: 'rgba(255,255,255,0.3)',
     fontSize: 9,
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   emptyText: {
     color: 'rgba(255,255,255,0.3)',
     fontSize: 11,
     textAlign: 'center',
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
 });

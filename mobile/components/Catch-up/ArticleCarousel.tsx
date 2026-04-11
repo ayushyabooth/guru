@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: '#E2E8F0',
     lineHeight: 18,

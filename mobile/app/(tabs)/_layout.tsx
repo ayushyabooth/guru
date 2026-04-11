@@ -66,7 +66,7 @@ function TabsWithMetrics() {
               progress={catchupProgress}
               focused={focused}
               color={color}
-              dimensions={28}
+              dimensions={30}
             />
           ),
         }}
@@ -82,7 +82,7 @@ function TabsWithMetrics() {
               progress={diveinProgress}
               focused={focused}
               color={color}
-              dimensions={28}
+              dimensions={30}
             />
           ),
         }}
@@ -98,7 +98,7 @@ function TabsWithMetrics() {
               progress={recapProgress}
               focused={focused}
               color={color}
-              dimensions={28}
+              dimensions={30}
             />
           ),
         }}

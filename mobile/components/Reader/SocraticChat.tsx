@@ -5,6 +5,7 @@ import { getAuthToken } from '../../utils/auth';
 import Icon from '../ui/Icon';
 import { OrganicBackground } from '../ui';
 import GuruRings from '../ui/GuruRings';
+import { Spacing } from '@/constants/liquidGlass';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -109,10 +110,10 @@ const renderInlineMarkdown = (text: string, isUser: boolean): React.ReactNode[] 
 
 const markdownStyles = StyleSheet.create({
   paragraph: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#E2E8F0',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   userText: {
     color: '#FFFFFF',
@@ -128,17 +129,17 @@ const markdownStyles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     marginBottom: 6,
-    paddingLeft: 4,
+    paddingLeft: Spacing.xs,
   },
   listNumber: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#38BDF8',
     fontWeight: '600',
     width: 24,
   },
   bullet: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#38BDF8',
     fontWeight: '600',
@@ -146,7 +147,7 @@ const markdownStyles = StyleSheet.create({
   },
   listText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#E2E8F0',
   },
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'web' ? 12 : 50,
     backgroundColor: 'rgba(15, 20, 35, 0.85)',
@@ -466,19 +467,19 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   backButton: {
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
   },
   backButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#38BDF8',
     fontWeight: '500',
   },
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   guruLogoSmall: {
     width: 28,
@@ -499,7 +500,7 @@ const styles = StyleSheet.create({
     color: '#F1F5F9',
   },
   closeButton: {
-    padding: 8,
+    padding: Spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 20,
   },
@@ -511,7 +512,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginHorizontal: Spacing.md,
     marginTop: 12,
     padding: 12,
     backgroundColor: 'rgba(56,189,248,0.06)',
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   articleContextAction: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#38BDF8',
     fontWeight: '600',
   },
@@ -556,15 +557,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 20,
-    paddingBottom: 24,
+    paddingBottom: Spacing.lg,
     maxWidth: 680,
     alignSelf: 'center',
     width: '100%',
   },
   messageWrapper: {
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
@@ -593,7 +594,7 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     borderRadius: 20,
-    padding: 16,
+    padding: Spacing.md,
     flex: 1,
   },
   userBubble: {
@@ -619,8 +620,8 @@ const styles = StyleSheet.create({
     // Container for rendered markdown
   },
   messageText: {
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: Spacing.lg,
   },
   userText: {
     color: '#FFFFFF',
@@ -629,23 +630,23 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
   },
   citationsContainer: {
-    marginTop: 16,
+    marginTop: Spacing.md,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(56,189,248,0.15)',
   },
   citationsLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#38BDF8',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   citationText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
     lineHeight: 20,
-    marginBottom: 4,
-    paddingLeft: 8,
+    marginBottom: Spacing.xs,
+    paddingLeft: Spacing.sm,
     borderLeftWidth: 2,
     borderLeftColor: 'rgba(56,189,248,0.3)',
   },
@@ -653,7 +654,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     paddingLeft: 46,
     gap: 12,
   },
@@ -663,12 +664,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   promptsContainer: {
-    marginTop: 16,
+    marginTop: Spacing.md,
     marginLeft: 46,
-    marginRight: 16,
+    marginRight: Spacing.md,
     backgroundColor: 'rgba(251,191,36,0.08)',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: Spacing.md,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(251,191,36,0.2)',
   },
@@ -676,13 +677,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    gap: 8,
+    gap: Spacing.sm,
   },
   promptsIcon: {
     // Kept for backward compat
   },
   promptsLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#FBBF24',
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -691,9 +692,9 @@ const styles = StyleSheet.create({
   promptButton: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: 'rgba(251,191,36,0.2)',
   },
@@ -730,8 +731,8 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 16,
-    paddingBottom: Platform.OS === 'web' ? 16 : 32,
+    padding: Spacing.md,
+    paddingBottom: Platform.OS === 'web' ? Spacing.md : Spacing.xl,
     gap: 12,
     maxWidth: 680,
     alignSelf: 'center',
@@ -740,19 +741,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
+    borderRadius: Spacing.lg,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    fontSize: 15,
+    fontSize: 16,
     color: '#F1F5F9',
     maxHeight: 120,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: Spacing.xxl,
+    height: Spacing.xxl,
+    borderRadius: Spacing.lg,
     backgroundColor: '#38BDF8',
     alignItems: 'center',
     justifyContent: 'center',

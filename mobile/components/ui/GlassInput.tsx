@@ -13,6 +13,7 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import Svg, { Path, G, Circle, Rect } from 'react-native-svg';
 import {
@@ -210,6 +211,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingRight: Spacing.md,
     ...Typography.bodyMedium,
+    // For web, override autofill background to stay dark-themed
+    ...(Platform.OS === 'web' ? { WebkitTextFillColor: '#F1F5F9', WebkitBoxShadow: '0 0 0px 1000px #1F2937 inset' } : {}),
   },
   inputNoIcon: {
     paddingLeft: Spacing.md,

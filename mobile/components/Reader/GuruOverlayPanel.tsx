@@ -399,24 +399,24 @@ const s = StyleSheet.create({
   // Text
   bodyText: { fontSize: 14, lineHeight: 20, color: '#444', fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
   emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 32, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 8, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
+  sectionLabel: { fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 8, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
 
   // Spotlight quotes
   quotesRow: { marginTop: 12 },
   quotesScroll: { flexDirection: 'row' },
   quoteCard: { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 10, padding: 12, marginRight: 10, width: 200 },
-  quoteText: { fontSize: 13, fontStyle: 'italic', color: '#555', lineHeight: 18, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
+  quoteText: { fontSize: 12, fontStyle: 'italic', color: '#555', lineHeight: 18, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
 
   // Annotations
   annotationCard: { borderLeftWidth: 3, borderRadius: 8, padding: 12, marginVertical: 6 },
   annotationHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   annotationType: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize', flex: 1, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
   exploreBtn: { marginTop: 10, alignSelf: 'flex-end' },
-  exploreBtnText: { fontSize: 13, fontWeight: '600', color: '#38BDF8', fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
+  exploreBtnText: { fontSize: 12, fontWeight: '600', color: '#38BDF8', fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
 
   // Highlights / Notes
   highlightCard: { backgroundColor: 'rgba(250,204,21,0.08)', borderRadius: 8, padding: 12, marginVertical: 6 },
-  noteText: { fontSize: 13, color: '#666', marginTop: 4, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
+  noteText: { fontSize: 12, color: '#666', marginTop: 4, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
   timestampText: { fontSize: 11, color: '#aaa', marginTop: 6, fontFamily: Platform.OS === 'web' ? 'system-ui' : undefined },
 
   // Ask Guru

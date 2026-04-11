@@ -1,6 +1,17 @@
 import { getAuthToken } from '../utils/auth';
 import { API_BASE_URL } from '../constants/config';
 
+/** Format a minute value as "Xh Ym" when >= 60, or "Xm" when < 60 */
+export function formatMinutes(m: number): string {
+  const rounded = Math.round(m);
+  if (rounded >= 60) {
+    const h = Math.floor(rounded / 60);
+    const rem = rounded % 60;
+    return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+  }
+  return `${rounded}m`;
+}
+
 export interface MetricsResponse {
   metrics: {
     catchup: {

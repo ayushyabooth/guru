@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import Icon from '../ui/Icon';
+import { Spacing } from '@/constants/liquidGlass';
 
 interface EarlierArticle {
   id: string;
@@ -351,16 +352,16 @@ export const MicroInteractions: React.FC<MicroInteractionsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 24,
+    marginTop: Spacing.lg,
   },
   section: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 12,
     padding: 20,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
     shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: Spacing.sm,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
@@ -372,14 +373,14 @@ const styles = StyleSheet.create({
   },
   prompt: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: Spacing.lg,
     color: '#E2E8F0',
     marginBottom: 20,
   },
   suggestionCard: {
     backgroundColor: 'rgba(15,20,35,0.55)',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: Spacing.sm,
+    padding: Spacing.md,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -388,40 +389,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#F1F5F9',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
     lineHeight: 22,
   },
   suggestionMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   suggestionSource: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
   },
   suggestionDivider: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#ccc',
     marginHorizontal: 6,
   },
   suggestionTime: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   responseButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: Spacing.sm,
     justifyContent: 'space-between',
   },
   responseButton: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
     alignItems: 'center',
-    minHeight: 48,
+    minHeight: Spacing.xxl,
     justifyContent: 'center',
   },
   noButton: {
@@ -439,16 +440,16 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   progressText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: Spacing.sm,
     marginBottom: 12,
   },
   skipButton: {
     alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
   },
   skipButtonText: {
     fontSize: 14,
@@ -457,16 +458,16 @@ const styles = StyleSheet.create({
   },
   textInput: {
     backgroundColor: 'rgba(15,20,35,0.55)',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: Spacing.sm,
+    padding: Spacing.md,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: Spacing.lg,
     color: '#E2E8F0',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     minHeight: 100,
     textAlignVertical: 'top',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   emojiSection: {
     marginBottom: 20,
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
   emojiButton: {
     flex: 1,
     backgroundColor: 'rgba(15,20,35,0.55)',
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
     padding: 12,
     alignItems: 'center',
     borderWidth: 2,
@@ -497,8 +498,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#e7f6f8',
   },
   emojiText: {
-    fontSize: 32,
-    marginBottom: 4,
+    fontSize: Spacing.xl,
+    marginBottom: Spacing.xs,
   },
   emojiLabelText: {
     fontSize: 11,
@@ -513,9 +514,9 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#38BDF8',
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    minHeight: 48,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Spacing.sm,
+    minHeight: Spacing.xxl,
     justifyContent: 'center',
   },
   submitButtonDisabled: {

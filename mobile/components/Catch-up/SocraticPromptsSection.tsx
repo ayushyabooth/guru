@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   promptText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#E2E8F0',
     marginRight: 12,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   reflectionLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#F1F5F9',
     marginBottom: 12,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 8,
     padding: 12,
-    fontSize: 15,
+    fontSize: 16,
     minHeight: 80,
     textAlignVertical: 'top',
     backgroundColor: 'rgba(255,255,255,0.04)',

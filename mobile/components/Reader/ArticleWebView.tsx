@@ -207,7 +207,7 @@ function WebIframeView({ url, onMessage, onScroll, onLoadComplete, onError, high
       {iframeBlocked && (
         <View style={styles.blockedContainer}>
           <View style={styles.blockedCard}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: '#1E293B', textAlign: 'center' as const, marginBottom: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: '#1E293B', textAlign: 'center' as const, marginBottom: 8 }}>
               This article can't be displayed inline
             </div>
             <div style={{ fontSize: 14, color: '#64748B', textAlign: 'center' as const, lineHeight: '20px', marginBottom: 20 }}>
@@ -217,7 +217,7 @@ function WebIframeView({ url, onMessage, onScroll, onLoadComplete, onError, high
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontSize: 15, fontWeight: 600, color: '#6366F1', textDecoration: 'none', padding: '10px 20px' }}
+              style={{ fontSize: 16, fontWeight: 600, color: '#6366F1', textDecoration: 'none', padding: '10px 20px' }}
             >
               Read on {domain} ↗
             </a>
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   blockedTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1E293B',
     textAlign: 'center',
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   openLink: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#6366F1',
     paddingVertical: 10,

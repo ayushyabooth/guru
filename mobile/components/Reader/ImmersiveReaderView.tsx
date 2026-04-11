@@ -5,6 +5,7 @@ import { WebView } from 'react-native-webview';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import Icon from '../ui/Icon';
+import { Spacing } from '@/constants/liquidGlass';
 
 export interface ArticleData {
   id: string;
@@ -512,13 +513,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     backgroundColor: 'rgba(15,20,35,0.55)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   backButton: {
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     paddingHorizontal: 12,
   },
   backButtonText: {
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: Spacing.md,
   },
   timeText: {
     fontSize: 14,
@@ -537,9 +538,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Spacing.sm,
     borderWidth: 1,
     borderColor: '#38BDF8',
   },
@@ -573,7 +574,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: Spacing.lg,
     paddingBottom: 12,
   },
   source: {
@@ -591,25 +592,25 @@ const styles = StyleSheet.create({
     color: '#F1F5F9',
     lineHeight: 36,
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   inlineQuestionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderLeftWidth: 4,
+    borderLeftWidth: Spacing.xs,
     borderLeftColor: '#F59E0B',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
     gap: 12,
   },
   questionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: Spacing.xl,
+    height: Spacing.xl,
+    borderRadius: Spacing.md,
     backgroundColor: 'rgba(15,20,35,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -619,7 +620,7 @@ const styles = StyleSheet.create({
   },
   inlineQuestionText: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     color: '#F59E0B',
     fontWeight: '600',
     lineHeight: 22,
@@ -631,7 +632,7 @@ const styles = StyleSheet.create({
   webViewContainer: {
     height: 600,
     marginHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: 'rgba(15,20,35,0.55)',
@@ -641,35 +642,35 @@ const styles = StyleSheet.create({
   },
   articleTextContainer: {
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   sectionHeading: {
     fontSize: 22,
     lineHeight: 30,
     fontWeight: '700' as const,
     color: '#F1F5F9',
-    marginTop: 16,
+    marginTop: Spacing.md,
     marginBottom: 12,
   },
   articleText: {
-    fontSize: 17,
+    fontSize: 18,
     lineHeight: 28,
     color: '#E2E8F0',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   listItem: {
     flexDirection: 'row' as const,
-    paddingLeft: 8,
+    paddingLeft: Spacing.sm,
     marginBottom: 6,
   },
   listBullet: {
-    fontSize: 17,
+    fontSize: 18,
     lineHeight: 28,
     color: '#94A3B8',
     width: 20,
   },
   listNumber: {
-    fontSize: 17,
+    fontSize: 18,
     lineHeight: 28,
     color: '#94A3B8',
     fontWeight: '600' as const,
@@ -677,22 +678,22 @@ const styles = StyleSheet.create({
   },
   listItemText: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 18,
     lineHeight: 28,
     color: '#E2E8F0',
   },
   relatedSection: {
     paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 24,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
     backgroundColor: 'rgba(255,255,255,0.04)',
-    marginTop: 24,
+    marginTop: Spacing.lg,
   },
   relatedTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: '#F1F5F9',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   relatedSubtitle: {
     fontSize: 14,
@@ -702,7 +703,7 @@ const styles = StyleSheet.create({
   relatedCard: {
     backgroundColor: 'rgba(15,20,35,0.55)',
     borderRadius: 12,
-    padding: 16,
+    padding: Spacing.md,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -716,7 +717,7 @@ const styles = StyleSheet.create({
   contextBadge: {
     backgroundColor: 'rgba(50, 176, 198, 0.08)',
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: Spacing.xs,
     borderRadius: 6,
   },
   contextBadgeText: {
@@ -735,13 +736,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#F1F5F9',
     lineHeight: 22,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   relatedSource: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   relatedTeaser: {
     fontSize: 14,
@@ -759,8 +760,8 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'rgba(15,20,35,0.55)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: Spacing.lg,
+    borderTopRightRadius: Spacing.lg,
     paddingBottom: 40,
     maxHeight: '80%',
   },
@@ -768,7 +769,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
@@ -782,15 +783,15 @@ const styles = StyleSheet.create({
     // Kept for backward compat
   },
   modalBody: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
   },
   questionModalText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#F1F5F9',
     lineHeight: 26,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   contextTag: {
     alignSelf: 'flex-start',
@@ -798,7 +799,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   contextTagText: {
     fontSize: 12,
@@ -815,7 +816,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   relatedModalHeadline: {
     fontSize: 20,
@@ -831,10 +832,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   relatedModalTeaser: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#4B5563',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   readArticleButton: {
     flexDirection: 'row',
@@ -842,9 +843,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#38BDF8',
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: Spacing.lg,
     borderRadius: 12,
-    gap: 8,
+    gap: Spacing.sm,
   },
   readArticleButtonText: {
     fontSize: 16,

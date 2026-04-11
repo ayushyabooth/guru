@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
   },
   summaryMobile: {
-    fontSize: 13,
+    fontSize: 12,
   },
   
   // Personal prompt
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   
   // Cluster narrative text
   clusterNarrative: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     lineHeight: 18,
     marginBottom: 8,
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
   },
   narrativeItem: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     color: '#94A3B8',
     lineHeight: 18,

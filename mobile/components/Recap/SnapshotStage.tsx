@@ -4,6 +4,7 @@ import { Spacing, Typography, BorderRadius, RingColors, getBackdropBlur } from '
 import DarkThemeColors from '../../constants/darkTheme';
 import Icon from '../ui/Icon';
 import { SnapshotData } from '../../services/recap-service';
+import { formatMinutes } from '../../services/metric-service';
 
 interface SnapshotStageProps {
   snapshot: SnapshotData;
@@ -59,7 +60,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
             {isWidened && <Text style={{ color: DarkThemeColors.textTertiary }}>Recent activity{'\u00A0\u00B7\u00A0'}</Text>}
             Your peak day was <Text style={styles.highlight}>{reading_pattern.peak_day}</Text>
             {reading_pattern.deepest_dive?.article_title !== 'N/A' && (
-              <> {'\u00B7'} Deepest dive: <Text style={styles.highlight}>{reading_pattern.deepest_dive.time_spent_minutes} min</Text> on "{reading_pattern.deepest_dive.article_title}"</>
+              <> {'\u00B7'} Deepest dive: <Text style={styles.highlight}>{formatMinutes(reading_pattern.deepest_dive.time_spent_minutes)}</Text> on "{reading_pattern.deepest_dive.article_title}"</>
             )}
           </Text>
         ) : (
@@ -123,7 +124,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
                     color={DarkThemeColors.textSecondary}
                   />
                   <Text style={styles.engagementText}>
-                    {article.time_spent_minutes}m
+                    {formatMinutes(article.time_spent_minutes)}
                   </Text>
                 </View>
               </View>

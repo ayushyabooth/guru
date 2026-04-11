@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   contextText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#374151',
     lineHeight: 20,
   },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   narrativeHeader: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   narrativeItemText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: '#38BDF8',
     fontFamily: 'monospace',
     textDecorationLine: 'underline',
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   toggleText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#38BDF8',
     fontWeight: '500',
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     marginBottom: 2,
     color: '#F1F5F9',

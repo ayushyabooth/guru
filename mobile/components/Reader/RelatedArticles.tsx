@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   emptyText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#64748B',
     fontStyle: 'italic',
     paddingHorizontal: 16,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   seeAllText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#38BDF8',
     fontWeight: '600',
     textDecorationLine: 'underline',
