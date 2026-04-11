@@ -61,6 +61,13 @@ const LockIcon = ({ size = 20, color = DarkThemeColors.textTertiary }) => (
   </Svg>
 );
 
+const KeyIcon = ({ size = 20, color = DarkThemeColors.textTertiary }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx="15" cy="9" r="5" stroke={color} strokeWidth={1.5} />
+    <Path d="M11 13L4 20M4 20L7 20M4 20L4 17" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const MailIcon = ({ size = 20, color = DarkThemeColors.textTertiary }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Rect
@@ -87,7 +94,7 @@ interface GlassInputProps extends TextInputProps {
   error?: string;
   filterContext?: string;
   containerStyle?: ViewStyle;
-  icon?: 'user' | 'lock' | 'email' | 'none';
+  icon?: 'user' | 'lock' | 'email' | 'key' | 'none';
 }
 
 export default function GlassInput({
@@ -131,6 +138,8 @@ export default function GlassInput({
         return <LockIcon color={iconColor} />;
       case 'email':
         return <MailIcon color={iconColor} />;
+      case 'key':
+        return <KeyIcon color={iconColor} />;
       default:
         return null;
     }
@@ -210,9 +219,13 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: Spacing.md,
     paddingRight: Spacing.md,
-    ...Typography.bodyMedium,
+    ...Typography.bodyLarge,
     // For web, override autofill background to stay dark-themed
-    ...(Platform.OS === 'web' ? { WebkitTextFillColor: '#F1F5F9', WebkitBoxShadow: '0 0 0px 1000px #1F2937 inset' } : {}),
+    ...(Platform.OS === 'web' ? {
+      WebkitTextFillColor: '#F1F5F9',
+      WebkitBoxShadow: '0 0 0px 1000px #1F2937 inset',
+      transition: 'background-color 5000s ease-in-out 0s',
+    } : {}),
   },
   inputNoIcon: {
     paddingLeft: Spacing.md,

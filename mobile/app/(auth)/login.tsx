@@ -175,7 +175,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="off"
-              icon="user"
+              icon="email"
             />
 
             {/* Password Input */}
@@ -207,7 +207,7 @@ export default function LoginScreen() {
               style={[styles.createAccountText, { color: colors.textSecondary }]}
               onPress={() => router.push('/(auth)/signup')}
             >
-              Create Account
+              Don't have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign up</Text>
             </Text>
           </GlassCard>
         </ScrollView>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   brandName: {
-    fontFamily: 'Orbitron_400Regular',
+    fontFamily: 'Orbitron_700Bold',
     fontSize: 42,
     letterSpacing: 12,
   },

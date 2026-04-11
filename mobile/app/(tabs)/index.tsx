@@ -53,7 +53,7 @@ function useHomeColors() {
     error: colors.error,
     errorBg: 'rgba(239, 68, 68, 0.1)',
     glassBorder: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.8)',
-    progressBarBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    progressBarBg: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.08)',
     isDark,
   };
 }
@@ -482,8 +482,8 @@ function HomeContent() {
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={styles.logoutButton} onPress={toggleTheme}>
-                  <Text style={styles.logoutText}>{isDark ? '☀️' : '🌙'}</Text>
+                <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                   <Text style={styles.logoutText}>Logout</Text>
@@ -598,7 +598,7 @@ function HomeContent() {
         {displayMetrics.lastUpdated && (
           <View style={styles.footer}>
             <Text style={[styles.lastUpdated, { color: COLORS.textTertiary }]}>
-              Last updated: {new Date(displayMetrics.lastUpdated).toLocaleTimeString()}
+              Updated {(() => { const d = Math.round((Date.now() - new Date(displayMetrics.lastUpdated).getTime()) / 60000); return d < 1 ? 'just now' : d < 60 ? `${d}m ago` : `${Math.floor(d/60)}h ago`; })()}
             </Text>
           </View>
         )}
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerBrandName: {
-    fontFamily: 'Orbitron_400Regular',
+    fontFamily: 'Orbitron_700Bold',
     fontSize: 20,
     color: DarkThemeColors.textPrimary,
     letterSpacing: 6,
@@ -708,6 +708,17 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.displaySmall,
     color: DarkThemeColors.textPrimary,
+  },
+  themeToggle: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  themeToggleText: {
+    fontSize: 16,
   },
   logoutButton: {
     paddingHorizontal: Spacing.md,
