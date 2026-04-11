@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
+import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken } from '../../utils/auth';
@@ -171,7 +172,7 @@ function DebugPanel({ metrics, onUpdateMetrics, onReset }: DebugPanelProps) {
         onValueChange={handleCatchupChange}
         color="#38BDF8"
         label="Catch-up"
-        displayValue={`${metrics.catchup.dailyProgress}/${metrics.catchup.dailyGoal}m`}
+        displayValue={`${formatMinutes(metrics.catchup.dailyProgress)}/${formatMinutes(metrics.catchup.dailyGoal)}`}
       />
 
       <SliderBar
@@ -179,7 +180,7 @@ function DebugPanel({ metrics, onUpdateMetrics, onReset }: DebugPanelProps) {
         onValueChange={handleDiveinChange}
         color="#EC4899"
         label="Dive-in"
-        displayValue={`${metrics.divein.dailyProgress || metrics.divein.weeklyProgress}/${metrics.divein.dailyGoal || metrics.divein.weeklyGoal}m`}
+        displayValue={`${formatMinutes(metrics.divein.dailyProgress || metrics.divein.weeklyProgress)}/${formatMinutes(metrics.divein.dailyGoal || metrics.divein.weeklyGoal)}`}
       />
 
       <SliderBar
@@ -514,56 +515,70 @@ function HomeContent() {
         <View style={styles.goalsSection}>
           <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Your Week</Text>
           <View style={[styles.goalsCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
-            <View style={styles.goalItem}>
-              <View style={styles.goalHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#38BDF8' }} />
-                  <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Catch-up</Text>
+            {(() => {
+              const catchupGoal = displayMetrics.catchup.dailyGoal * 7;
+              const catchupExceeded = displayMetrics.catchup.weeklyTotal > catchupGoal && catchupGoal > 0;
+              return (
+                <View style={styles.goalItem}>
+                  <View style={styles.goalHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: catchupExceeded ? DarkThemeColors.success : '#38BDF8' }} />
+                      <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Catch-up</Text>
+                      {catchupExceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+                    </View>
+                    <Text style={[styles.goalValue, { color: catchupExceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                      {displayMetrics.catchup.weeklyTotal}m / {catchupGoal}m
+                    </Text>
+                  </View>
+                  <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
+                    <View style={[
+                      styles.goalProgressFill,
+                      { backgroundColor: catchupExceeded ? DarkThemeColors.success : RingColors.catchup.primary },
+                      { width: `${Math.min(100, (displayMetrics.catchup.weeklyTotal / Math.max(catchupGoal, 1)) * 100)}%` }
+                    ]} />
+                  </View>
                 </View>
-                <Text style={[styles.goalValue, { color: COLORS.textSecondary }]}>
-                  {displayMetrics.catchup.weeklyTotal}m / {displayMetrics.catchup.dailyGoal * 7}m
-                </Text>
-              </View>
-              <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
-                <View style={[
-                  styles.goalProgressFill,
-                  styles.goalProgressTeal,
-                  { width: `${Math.min(100, (displayMetrics.catchup.weeklyTotal / Math.max(displayMetrics.catchup.dailyGoal * 7, 1)) * 100)}%` }
-                ]} />
-              </View>
-            </View>
-            <View style={styles.goalItem}>
-              <View style={styles.goalHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EC4899' }} />
-                  <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Dive-in</Text>
+              );
+            })()}
+            {(() => {
+              const diveinExceeded = displayMetrics.divein.weeklyProgress > displayMetrics.divein.weeklyGoal && displayMetrics.divein.weeklyGoal > 0;
+              return (
+                <View style={styles.goalItem}>
+                  <View style={styles.goalHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: diveinExceeded ? DarkThemeColors.success : '#EC4899' }} />
+                      <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Dive-in</Text>
+                      {diveinExceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+                    </View>
+                    <Text style={[styles.goalValue, { color: diveinExceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                      {displayMetrics.divein.weeklyProgress}m / {displayMetrics.divein.weeklyGoal}m
+                    </Text>
+                  </View>
+                  <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
+                    <View style={[
+                      styles.goalProgressFill,
+                      { backgroundColor: diveinExceeded ? DarkThemeColors.success : RingColors.divein.primary },
+                      { width: `${Math.min(100, (displayMetrics.divein.weeklyProgress / Math.max(displayMetrics.divein.weeklyGoal, 1)) * 100)}%` }
+                    ]} />
+                  </View>
                 </View>
-                <Text style={[styles.goalValue, { color: COLORS.textSecondary }]}>
-                  {displayMetrics.divein.weeklyProgress}m / {displayMetrics.divein.weeklyGoal}m
-                </Text>
-              </View>
-              <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
-                <View style={[
-                  styles.goalProgressFill,
-                  styles.goalProgressPurple,
-                  { width: `${Math.min(100, (displayMetrics.divein.weeklyProgress / Math.max(displayMetrics.divein.weeklyGoal, 1)) * 100)}%` }
-                ]} />
-              </View>
-            </View>
+              );
+            })()}
             <View style={styles.goalItem}>
               <View style={styles.goalHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FB923C' }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : '#FB923C' }} />
                   <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Recap</Text>
+                  {displayMetrics.recap.status === 'completed' && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
                 </View>
-                <Text style={[styles.goalValue, { color: COLORS.textSecondary }]}>
+                <Text style={[styles.goalValue, { color: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : COLORS.textSecondary }]}>
                   {displayMetrics.recap.status === 'completed' ? 'Done' : displayMetrics.recap.status === 'in_progress' ? 'In Progress' : 'Not Started'}
                 </Text>
               </View>
               <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
                 <View style={[
                   styles.goalProgressFill,
-                  styles.goalProgressGold,
+                  { backgroundColor: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : RingColors.recap.primary },
                   { width: displayMetrics.recap.status === 'completed' ? '100%' : displayMetrics.recap.status === 'in_progress' ? '50%' : '0%' }
                 ]} />
               </View>
@@ -679,7 +694,8 @@ const styles = StyleSheet.create({
     letterSpacing: 6,
   },
   greeting: {
-    ...Typography.bodySmall,
+    ...Typography.bodyMedium,
+    fontSize: 16,
     color: DarkThemeColors.textSecondary,
     marginBottom: Spacing.xs,
   },
@@ -780,15 +796,6 @@ const styles = StyleSheet.create({
   goalProgressFill: {
     height: '100%',
     borderRadius: 4,
-  },
-  goalProgressTeal: {
-    backgroundColor: RingColors.catchup.primary,
-  },
-  goalProgressPurple: {
-    backgroundColor: RingColors.divein.primary,
-  },
-  goalProgressGold: {
-    backgroundColor: RingColors.recap.primary,
   },
   footer: {
     padding: Spacing.lg,

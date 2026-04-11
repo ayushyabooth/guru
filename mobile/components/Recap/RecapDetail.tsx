@@ -18,6 +18,7 @@ import {
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import { recapService } from '../../services/recap-service';
+import { formatMinutes } from '../../services/metric-service';
 
 interface RecapDetailProps {
   journeyId: string;
@@ -155,7 +156,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{Math.round(activity.total_time_minutes)}m</Text>
+            <Text style={styles.statValue}>{formatMinutes(activity.total_time_minutes)}</Text>
             <Text style={styles.statLabel}>reading</Text>
           </View>
           <View style={styles.statDivider} />

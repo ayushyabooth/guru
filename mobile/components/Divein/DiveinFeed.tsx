@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#64748B',
@@ -316,21 +316,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   source: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#94A3B8',
   },
   metaDivider: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.15)',
     marginHorizontal: 6,
   },
   date: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   readingTime: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   headline: {

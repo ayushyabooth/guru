@@ -21,6 +21,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import Svg, {
   Circle,
@@ -64,6 +65,13 @@ const RING_RGB = {
   catchup: [56, 189, 248] as const,
   divein: [236, 72, 153] as const,
   recap: [251, 146, 60] as const,
+};
+
+// Tab icon names for distinguishability (MaterialIcons)
+const TAB_INNER_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
+  catchup: 'auto-stories',   // book/newspaper feel
+  divein: 'explore',          // compass/explore feel
+  recap: 'event-note',        // journal/recap feel
 };
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -326,7 +334,7 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
             <Path d={arcStrokePath(rCx, rCy, outerR, 0, fillAngle)}
               fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth={1.2} strokeLinecap="round" />
             <Path d={arcStrokePath(rCx, rCy, outerR, fillAngle, 359.9)}
-              fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={1.0} strokeLinecap="round" />
+              fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1.0} strokeLinecap="round" />
           </G>
         ) : (
           <Circle cx={rCx} cy={rCy} r={outerR}
@@ -872,6 +880,15 @@ function TabRing({ ring, progress = 0, focused = false, color = '#64748B', dimen
             strokeWidth={strokeW * 0.35} strokeLinecap="round" />
         )}
       </Svg>
+
+      {/* Inner icon for distinguishability */}
+      <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', width: containerSize, height: containerSize }}>
+        <MaterialIcons
+          name={TAB_INNER_ICON[ring]}
+          size={Math.round(dimensions * 0.38)}
+          color={focused ? ringColor : color}
+        />
+      </View>
     </View>
   );
 }
@@ -986,12 +1003,12 @@ function GhostRings({ metrics, dimensions }: { metrics: RingMetrics; dimensions:
             <Path d={arcStrokePath(rCx, rCy, outerR, 0, fillAngle)}
               fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.2} strokeLinecap="round" />
             <Path d={arcStrokePath(rCx, rCy, outerR, fillAngle, 359.9)}
-              fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1.0} strokeLinecap="round" />
+              fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={1.0} strokeLinecap="round" />
           </G>
         ) : (
           <Circle cx={rCx} cy={rCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.2} />
         )}
-        <Circle cx={rCx} cy={rCy} r={innerR} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={0.8} />
+        <Circle cx={rCx} cy={rCy} r={innerR} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={0.8} />
       </G>
     );
   };
@@ -1136,6 +1153,6 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
   changeGoalsLink: { marginTop: 8, paddingVertical: 8, paddingHorizontal: 16 },
-  changeGoalsText: { fontSize: 14, color: '#38BDF8', fontWeight: '600' },
+  changeGoalsText: { fontSize: 14, color: '#38BDF8', fontWeight: '600', textDecorationLine: 'underline' as const, textDecorationColor: 'rgba(56, 189, 248, 0.5)' },
   glassHalo: { position: 'absolute', borderWidth: 1 },
 });

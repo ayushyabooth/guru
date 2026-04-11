@@ -21,6 +21,7 @@ import Icon from '../ui/Icon';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { trackInteraction } from '../../services/interaction-tracker';
+import { Spacing } from '@/constants/liquidGlass';
 
 interface TextSelectionMenuProps {
   articleId: string;
@@ -367,8 +368,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(15, 20, 35, 0.95)',
     borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     ...Platform.select({
@@ -378,11 +379,11 @@ const styles = StyleSheet.create({
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       } as any,
       default: {
-        elevation: 8,
+        elevation: Spacing.sm,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: Spacing.xs },
         shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowRadius: Spacing.sm,
       },
     }),
   },
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   menuButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#E2E8F0',
   },
@@ -418,11 +419,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: Spacing.lg,
   },
   noteContainer: {
     backgroundColor: '#0F1423',
-    borderRadius: 16,
+    borderRadius: Spacing.md,
     padding: 20,
     width: '100%',
     maxWidth: 400,
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontStyle: 'italic',
     lineHeight: 20,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
     paddingLeft: 12,
     borderLeftWidth: 2,
     borderLeftColor: '#FBBF24',
@@ -449,13 +450,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 10,
     padding: 14,
-    fontSize: 15,
+    fontSize: 16,
     color: '#F1F5F9',
     minHeight: 100,
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
   },
   noteActions: {
     flexDirection: 'row',
@@ -465,24 +466,24 @@ const styles = StyleSheet.create({
   noteCancelButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: Spacing.sm,
   },
   noteCancelText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#94A3B8',
     fontWeight: '500',
   },
   noteSaveButton: {
     paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Spacing.sm,
     backgroundColor: '#38BDF8',
   },
   noteSaveDisabled: {
     backgroundColor: 'rgba(56, 189, 248, 0.3)',
   },
   noteSaveText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
   },

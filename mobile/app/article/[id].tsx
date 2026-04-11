@@ -380,7 +380,7 @@ export default function ArticleDetailScreen() {
         {activeTab === 2 && (
           <View style={{ padding: 16 }}>
             <TextInput
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, minHeight: 100, fontSize: 15, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', textAlignVertical: 'top' }}
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, minHeight: 100, fontSize: 16, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', textAlignVertical: 'top' }}
               placeholder="Add a note about this article..."
               placeholderTextColor="#94A3B8"
               multiline
@@ -409,7 +409,7 @@ export default function ArticleDetailScreen() {
               }}
               disabled={!noteInput.trim() || savingNote}
             >
-              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>{savingNote ? 'Saving...' : 'Save Note'}</Text>
+              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 16 }}>{savingNote ? 'Saving...' : 'Save Note'}</Text>
             </TouchableOpacity>
             {savedNotes.length > 0 && (
               <View style={{ marginTop: 20 }}>
@@ -463,7 +463,7 @@ export default function ArticleDetailScreen() {
             )}
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
-                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, fontSize: 15, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}
+                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, fontSize: 16, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}
                 placeholder="Ask Guru about this article..."
                 placeholderTextColor="#94A3B8"
                 value={guruInput}
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   webBackText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#6366F1',
     fontWeight: '500',
   },
@@ -553,13 +553,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   webReadingTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#F1F5F9',
     marginBottom: 6,
   },
   webReadingMeta: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
   },
   webTabBar: {
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#6366F1',
   },
   webTabText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
     color: '#64748B',
   },
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   webSectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#F1F5F9',
     marginBottom: 8,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   webQuoteText: {
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: 'italic',
     color: '#94A3B8',
     lineHeight: 20,
@@ -640,12 +640,12 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
   },
   webEmptyText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#64748B',
     marginBottom: 8,
   },
   webEmptySubtext: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
     lineHeight: 20,
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   webPromptText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#FB923C',
   },
   webActions: {
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   webBannerText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#818CF8',
     lineHeight: 18,
   },
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   webBannerBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#fff',
   },

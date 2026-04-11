@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     maxHeight: 100,
-    fontSize: 15,
+    fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
     borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.2)',

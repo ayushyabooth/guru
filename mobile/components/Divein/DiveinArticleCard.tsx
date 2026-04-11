@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   contentHeaderText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#F1F5F9',
   },

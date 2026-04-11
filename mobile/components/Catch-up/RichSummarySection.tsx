@@ -47,7 +47,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
           defaultExpanded={true}
           style={styles.section}
         >
-          <Text style={styles.sectionBody}>{content.whats_in_article}</Text>
+          <Text style={styles.sectionBody} numberOfLines={4}>{content.whats_in_article}</Text>
         </GlassSection>
       )}
 
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fallbackText: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
     color: '#E2E8F0',
     paddingHorizontal: 16,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   sectionBody: {
     fontSize: 15,
-    lineHeight: 24,
+    lineHeight: 22,
     color: '#CBD5E1',
     fontWeight: '400',
   },
