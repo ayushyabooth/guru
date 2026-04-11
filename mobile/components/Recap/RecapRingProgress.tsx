@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { RingColors, Typography } from '../../constants/liquidGlass';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 
 interface RecapRingProgressProps {
@@ -11,6 +12,7 @@ interface RecapRingProgressProps {
 }
 
 export default function RecapRingProgress({ progress, size = 44, insightCount = 0 }: RecapRingProgressProps) {
+  const { isDark } = useTheme();
   const strokeWidth = 4;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -18,30 +20,35 @@ export default function RecapRingProgress({ progress, size = 44, insightCount = 
   const cx = size / 2;
   const cy = size / 2;
 
+  // Theme-aware track color (matching triskelion style)
+  const trackColor = isDark ? '#2A2E37' : '#D1D5DB';
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <Svg width={size} height={size}>
-        {/* Background track */}
-        <Circle
-          cx={cx} cy={cy} r={radius}
-          fill="rgba(15, 20, 35, 0.42)"
-          stroke="rgba(251, 146, 60, 0.15)"
-          strokeWidth={strokeWidth}
-        />
-        {/* Progress arc */}
+        {/* Background track — stroked ring, no fill (matches triskelion style) */}
         <Circle
           cx={cx} cy={cy} r={radius}
           fill="none"
-          stroke={RingColors.recap.primary}
+          stroke={trackColor}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          transform={`rotate(-90 ${cx} ${cy})`}
         />
+        {/* Progress arc */}
+        {progress > 0 && (
+          <Circle
+            cx={cx} cy={cy} r={radius}
+            fill="none"
+            stroke={RingColors.recap.primary}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+          />
+        )}
       </Svg>
       {/* Percentage text */}
-      <Text style={styles.percentText}>
+      <Text style={[styles.percentText, { color: isDark ? RingColors.recap.primary : '#9A3412' }]}>
         {Math.round(progress * 100)}%
       </Text>
       {insightCount > 0 && (
@@ -65,7 +72,6 @@ const styles = StyleSheet.create({
   percentText: {
     position: 'absolute',
     ...Typography.labelSmall,
-    color: RingColors.recap.primary,
     fontWeight: '700',
     fontSize: 10,
   },

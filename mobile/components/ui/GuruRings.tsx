@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
+import { useTheme } from '../../contexts/ThemeContext';
 import Svg, {
   Circle,
   Defs,
@@ -243,6 +244,7 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
   const prog = computeProgress(metrics);
   const hasProgress = prog.catchup > 0 || prog.divein > 0 || prog.recap > 0;
   const anim = useLiquidAnimation(hasProgress);
+  const { isDark } = useTheme();
 
   // Figma spec: viewBox 200, ring radius 70, stroke 9, center offset 35
   const vb = 200;
@@ -265,7 +267,7 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
     divein: '#EC4899',
     recap: '#FB923C',
   };
-  const DIM = '#2A2E37'; // unfilled ring color per Figma spec
+  const DIM = isDark ? '#2A2E37' : '#D1D5DB'; // unfilled track: dark gray in dark mode, light gray in light mode
 
   // Circumference for stroke-dasharray progress
   const circumference = 2 * Math.PI * R;

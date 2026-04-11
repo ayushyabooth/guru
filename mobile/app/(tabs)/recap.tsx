@@ -769,8 +769,8 @@ export default function RecapScreen() {
         </View>
 
         {/* Journey Stages — interactive */}
-        <View style={styles.stagesPreview}>
-          <Text style={styles.stagesTitle}>Journey Stages</Text>
+        <View style={[styles.stagesPreview, { backgroundColor: isDark ? 'rgba(15,20,35,0.42)' : 'rgba(255,255,255,0.85)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}>
+          <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
             { num: 1, name: 'Your Week', desc: 'Review the articles and insights you explored', lockHint: '' },
