@@ -73,13 +73,28 @@ export default function LoginScreen() {
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const fullUrl = `${apiUrl}/auth/login`;
 
-      const response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      let response: Response;
+      try {
+        response = await fetch(fullUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          setError('Server is taking too long. Please try again.');
+        } else {
+          setError('Unable to connect. Check your internet connection.');
+        }
+        setLoading(false);
+        return;
+      }
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
