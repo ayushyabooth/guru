@@ -11,7 +11,6 @@ import {
 import { useRouter } from 'expo-router';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
-import { DarkTheme } from '../../constants/darkTheme';
 import {
   Spacing,
   Typography,
@@ -65,7 +64,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   filterContext = 'core',
 }) => {
   const router = useRouter();
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
   
   // Use centralized color config from theme.ts
   const categoryColors = getFilterColors(article.industry);
@@ -133,7 +132,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
             <Text style={[styles.badgeLabel, { color: badge.color }]}>{badge.label}</Text>
           </View>
         )}
-        <View style={styles.categoryChip}>
+        <View style={[styles.categoryChip, { backgroundColor: colors.glassHighlight }]}>
           <Icon name={industryIcon} size={14} color={categoryColors.accent} />
           <Text style={[styles.categoryText, { color: categoryColors.accent }]}>
             {article.context || article.industry}
@@ -172,11 +171,11 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
       {/* What's in the article section */}
       <View style={styles.contentSection}>
         <View style={styles.contentHeader}>
-          <Icon name="clipboard-text-outline" size={14} color={DarkTheme.textTertiary} />
-          <Text style={styles.contentHeaderText}>What's in the article</Text>
+          <Icon name="clipboard-text-outline" size={14} color={colors.textTertiary} />
+          <Text style={[styles.contentHeaderText, { color: colors.textPrimary }]}>What's in the article</Text>
         </View>
-        <View style={styles.contentDivider} />
-        <Text style={styles.contentText} numberOfLines={4}>
+        <View style={[styles.contentDivider, { backgroundColor: colors.glassSectionBorder }]} />
+        <Text style={[styles.contentText, { color: colors.textSecondary }]} numberOfLines={4}>
           {whatsInArticle}
         </Text>
       </View>
@@ -199,8 +198,8 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
           activeOpacity={0.7}
         >
           <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-            <Icon name="close" size={16} color={DarkTheme.textTertiary} />
-            <Text style={styles.ctaSecondaryText}>Not Relevant</Text>
+            <Icon name="close" size={16} color={colors.textTertiary} />
+            <Text style={[styles.ctaSecondaryText, { color: colors.textSecondary }]}>Not Relevant</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -251,7 +250,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.md,
-    backgroundColor: DarkTheme.glassHighlight,
   },
   categoryEmoji: {
     fontSize: 12,
@@ -290,26 +288,26 @@ const styles = StyleSheet.create({
   },
   glassOverlay: {
     padding: 10,
-    backgroundColor: DarkTheme.glassHeavy,
+    backgroundColor: 'rgba(0,0,0,0.55)',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(16px) saturate(180%)',
         WebkitBackdropFilter: 'blur(16px) saturate(180%)',
         borderTopWidth: 1,
-        borderTopColor: DarkTheme.glassSectionBorder,
+        borderTopColor: 'rgba(255,255,255,0.06)',
       },
     }),
   },
   heroTitle: {
     ...Typography.bodyLarge,
     fontWeight: '700',
-    color: DarkTheme.textPrimary,
+    color: '#F1F5F9',
     lineHeight: 22,
     marginBottom: Spacing.xs,
   },
   heroMeta: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
+    color: '#94A3B8',
   },
   contentSection: {
     paddingHorizontal: Spacing.md,
@@ -326,17 +324,14 @@ const styles = StyleSheet.create({
   },
   contentHeaderText: {
     ...Typography.labelMedium,
-    color: DarkTheme.textPrimary,
   },
   contentDivider: {
     height: 1,
-    backgroundColor: DarkTheme.glassSectionBorder,
     marginBottom: 10,
   },
   contentText: {
     ...Typography.bodyMedium,
     lineHeight: 21,
-    color: DarkTheme.textSecondary,
   },
   ctaRow: {
     flexDirection: 'row',
@@ -372,7 +367,6 @@ const styles = StyleSheet.create({
   },
   ctaSecondaryText: {
     ...Typography.labelLarge,
-    color: DarkTheme.textSecondary,
   },
 });
 

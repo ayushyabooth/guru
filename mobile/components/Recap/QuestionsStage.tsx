@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import Icon from '../ui/Icon';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { GuidedQuestion } from '../../services/recap-service';
 
 interface QuestionsStageProps {
@@ -82,6 +82,7 @@ export default function QuestionsStage({
   onSkipToSocratic,
 }: QuestionsStageProps) {
   const router = useRouter();
+  const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
 
   // Initialize threads from questions
@@ -175,7 +176,7 @@ export default function QuestionsStage({
 
     return (
       <View key={idx} style={[styles.bubble, isUser ? styles.userBubble : styles.systemBubble]}>
-        <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.systemBubbleText]}>
+        <Text style={[styles.bubbleText, { color: colors.textPrimary }]}>
           {parts.map((part, pIdx) =>
             typeof part === 'string' ? (
               <Text key={pIdx}>{part}</Text>
@@ -222,7 +223,7 @@ export default function QuestionsStage({
       {/* Header with progress */}
       <View style={styles.header}>
         <View style={styles.progressRow}>
-          <Text style={styles.progressText}>
+          <Text style={[styles.progressText, { color: colors.textSecondary }]}>
             Question {currentIndex + 1} of {questions.length}
           </Text>
           <View style={styles.progressDots}>
@@ -259,7 +260,7 @@ export default function QuestionsStage({
         {isLoading && (
           <View style={[styles.bubble, styles.systemBubble]}>
             <ActivityIndicator size="small" color={RingColors.recap.primary} />
-            <Text style={styles.loadingText}>Reflecting...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Reflecting...</Text>
           </View>
         )}
       </ScrollView>
@@ -274,7 +275,7 @@ export default function QuestionsStage({
                 style={[styles.chip, selectedChip === chip && styles.chipSelected]}
                 onPress={() => setSelectedChip(chip)}
               >
-                <Text style={[styles.chipText, selectedChip === chip && styles.chipTextSelected]}>
+                <Text style={[styles.chipText, { color: colors.textPrimary }, selectedChip === chip && styles.chipTextSelected]}>
                   {chip}
                 </Text>
               </TouchableOpacity>
@@ -283,11 +284,11 @@ export default function QuestionsStage({
         ) : (
           <View style={styles.inputRow}>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, { color: colors.textPrimary }]}
               value={inputText}
               onChangeText={setInputText}
               placeholder={currentThread.answered ? 'Reply to follow-up...' : 'Share your thoughts...'}
-              placeholderTextColor={DarkThemeColors.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               multiline
               maxLength={1000}
             />
@@ -352,7 +353,6 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
   },
   progressDots: {
     flexDirection: 'row',
@@ -413,12 +413,7 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
     lineHeight: 22,
   },
-  systemBubbleText: {
-    color: DarkThemeColors.textPrimary,
-  },
-  userBubbleText: {
-    color: DarkThemeColors.textPrimary,
-  },
+  // bubbleText color now applied inline via `colors.textPrimary`
   articleRef: {
     color: RingColors.recap.primary,
     fontWeight: '600',
@@ -448,7 +443,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
     marginLeft: Spacing.sm,
   },
   inputArea: {
@@ -470,7 +464,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     maxHeight: 100,
     fontSize: 16,
-    color: DarkThemeColors.textPrimary,
     borderColor: 'rgba(251, 146, 60, 0.2)',
   },
   sendButton: {
@@ -505,7 +498,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textPrimary,
   },
   chipTextSelected: {
     color: RingColors.recap.primary,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions, Platform } from 'react-native';
 import Icon from '../ui/Icon';
-import { DarkTheme } from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   Spacing,
   Typography,
@@ -46,9 +46,10 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
   articles,
   currentInFocusId,
   onSelectArticle,
-  isDark = false,
+  isDark: _isDarkProp = false,
   categoryAccent = '#38BDF8'
 }) => {
+  const { colors, isDark } = useTheme();
   if (!articles || articles.length === 0) return null;
 
   const getReadingTime = (wordCount?: number): number => {
@@ -63,12 +64,12 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
   };
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <View style={[styles.container, { borderTopColor: colors.glassSectionBorder }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerText, isDark && styles.headerTextDark]}>
+        <Text style={[styles.headerText, { color: colors.textPrimary }]}>
           Also in this story
         </Text>
-        <Text style={[styles.countBadge, isDark && styles.countBadgeDark]}>
+        <Text style={[styles.countBadge, { color: colors.textSecondary, backgroundColor: colors.glassHighlight }]}>
           {articles.length} articles
         </Text>
       </View>
@@ -90,19 +91,19 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
               key={article.id}
               style={[
                 styles.card,
-                isDark && styles.cardDark,
+                { backgroundColor: colors.glassHighlight },
                 isCurrentFocus && styles.cardActive,
-                Platform.OS === 'web' && styles.cardWeb,
+                Platform.OS === 'web' && { backgroundColor: colors.glassLight, backdropFilter: 'blur(12px)', borderWidth: 1, borderColor: colors.glassBorder } as any,
                 { borderLeftColor: article.category_accent || categoryAccent, borderLeftWidth: 4 }
               ]}
               onPress={() => !isCurrentFocus && onSelectArticle(article.id)}
               activeOpacity={isCurrentFocus ? 1 : 0.7}
               disabled={isCurrentFocus}
             >
-              <View 
+              <View
                 style={[
-                  styles.thumbnail, 
-                  isDark && styles.thumbnailDark,
+                  styles.thumbnail,
+                  { backgroundColor: colors.glassBorder },
                   !article.thumbnail_url && { backgroundColor: CARD_GRADIENTS[index % CARD_GRADIENTS.length].primary }
                 ]}
               >
@@ -129,14 +130,14 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
               </View>
               
               <View style={styles.cardContent}>
-                <Text 
-                  style={[styles.cardTitle, isDark && styles.cardTitleDark]}
+                <Text
+                  style={[styles.cardTitle, { color: colors.textPrimary }]}
                   numberOfLines={2}
                 >
                   {truncateTitle(article.title, 60)}
                 </Text>
                 <View style={styles.cardMeta}>
-                  <Text style={[styles.cardSource, isDark && styles.cardSourceDark]} numberOfLines={1}>
+                  <Text style={[styles.cardSource, { color: colors.textSecondary }]} numberOfLines={1}>
                     {article.source || 'Unknown'}
                   </Text>
                   <Text style={styles.cardTime}>
@@ -149,7 +150,7 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
         })}
       </ScrollView>
       
-      <Text style={[styles.hint, isDark && styles.hintDark]}>
+      <Text style={[styles.hint, { color: colors.textTertiary }]}>
         Tap to bring into focus
       </Text>
     </View>
@@ -160,11 +161,6 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: DarkTheme.glassSectionBorder,
-    backgroundColor: 'transparent',
-  },
-  containerDark: {
-    borderTopColor: DarkTheme.glassBorder,
     backgroundColor: 'transparent',
   },
   header: {
@@ -176,22 +172,12 @@ const styles = StyleSheet.create({
   },
   headerText: {
     ...Typography.labelLarge,
-    color: DarkTheme.textPrimary,
-  },
-  headerTextDark: {
-    color: DarkTheme.textPrimary,
   },
   countBadge: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
-    backgroundColor: DarkTheme.glassHighlight,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 10,
-  },
-  countBadgeDark: {
-    color: DarkTheme.textSecondary,
-    backgroundColor: DarkTheme.glassBorder,
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
@@ -217,16 +203,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  cardWeb: {
-    backgroundColor: DarkTheme.glassLight,
-    // @ts-ignore - backdropFilter is valid for web but not in RN types
-    backdropFilter: 'blur(12px)',
-    borderWidth: 1,
-    borderColor: DarkTheme.glassBorder,
-  },
-  cardDark: {
-    backgroundColor: DarkTheme.glassHighlight,
-  },
+  // cardWeb and cardDark colors now applied inline via `colors`
   cardActive: {
     borderWidth: 2,
     borderColor: RingColors.catchup.primary,
@@ -234,13 +211,9 @@ const styles = StyleSheet.create({
   },
   thumbnail: {
     height: 80,
-    backgroundColor: DarkTheme.glassHighlight,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-  },
-  thumbnailDark: {
-    backgroundColor: DarkTheme.glassBorder,
   },
   thumbnailImage: {
     width: '100%',
@@ -265,7 +238,7 @@ const styles = StyleSheet.create({
   },
   placeholderLine: {
     height: 4,
-    backgroundColor: DarkTheme.glassLight,
+    backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 2,
     width: '100%',
   },
@@ -289,12 +262,8 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...Typography.bodySmall,
     fontWeight: '500',
-    color: DarkTheme.textPrimary,
     lineHeight: 18,
     minHeight: 36,
-  },
-  cardTitleDark: {
-    color: DarkTheme.textPrimary,
   },
   cardMeta: {
     flexDirection: 'row',
@@ -304,12 +273,8 @@ const styles = StyleSheet.create({
   },
   cardSource: {
     ...Typography.labelSmall,
-    color: DarkTheme.textSecondary,
     flex: 1,
     marginRight: Spacing.sm,
-  },
-  cardSourceDark: {
-    color: DarkTheme.textSecondary,
   },
   cardTime: {
     ...Typography.labelSmall,
@@ -318,12 +283,8 @@ const styles = StyleSheet.create({
   },
   hint: {
     ...Typography.labelSmall,
-    color: DarkTheme.textTertiary,
     textAlign: 'center',
     marginTop: Spacing.sm,
     fontStyle: 'italic',
-  },
-  hintDark: {
-    color: DarkTheme.textTertiary,
   },
 });

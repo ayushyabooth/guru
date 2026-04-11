@@ -5,7 +5,7 @@ import { useCatchupFeed } from '../../hooks/useCatchupFeed';
 import { CatchupService } from '../../services/article-service';
 import { InFocusStoryboardCard } from './InFocusStoryboardCard';
 import { StoryboardSkeleton } from './StoryboardSkeleton';
-import { DarkTheme } from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   Spacing,
   Typography,
@@ -26,6 +26,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   onArticleSave,
   onNotRelevant,
 }) => {
+  const { colors } = useTheme();
   const {
     storyboards,
     isLoading,
@@ -58,15 +59,15 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   if (error && storyboards.length === 0) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load stories</Text>
-        <Text style={styles.errorSubtext}>{error}</Text>
+        <Text style={[styles.errorText, { color: colors.error }]}>Failed to load stories</Text>
+        <Text style={[styles.errorSubtext, { color: colors.textTertiary }]}>{error}</Text>
         {error.includes('Unauthorized') && (
-          <Text style={styles.authHint}>
+          <Text style={[styles.authHint, { color: colors.textSecondary }]}>
             Please sign up or log in to access your personalized feed
           </Text>
         )}
         <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-          <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={[styles.retryButtonText, { color: colors.textPrimary }]}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -79,12 +80,12 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   if (storyboards.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No stories available</Text>
-        <Text style={styles.emptySubtext}>
+        <Text style={[styles.emptyText, { color: colors.textPrimary }]}>No stories available</Text>
+        <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
           Check back later for new content in this category
         </Text>
         <TouchableOpacity style={styles.refreshButton} onPress={refresh}>
-          <Text style={styles.refreshButtonText}>Refresh</Text>
+          <Text style={[styles.refreshButtonText, { color: colors.textSecondary }]}>Refresh</Text>
         </TouchableOpacity>
       </View>
     );
@@ -114,20 +115,20 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
       
       {error && storyboards.length > 0 && (
         <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>Failed to load more stories</Text>
+          <Text style={[styles.errorBannerText, { color: colors.error }]}>Failed to load more stories</Text>
         </View>
       )}
-      
+
       {hasMore && !isLoading && (
-        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { ...getDarkBackdropBlur(12), boxShadow: `0 0 16px ${DarkTheme.catchupGlow}, inset 0 1px 0 ${DarkTheme.glassHighlight}` } as any]} onPress={loadMore}>
-          <Text style={styles.loadMoreButtonText}>Load More Stories</Text>
+        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { ...getDarkBackdropBlur(12), boxShadow: `0 0 16px ${colors.catchupGlow}, inset 0 1px 0 ${colors.glassHighlight}` } as any]} onPress={loadMore}>
+          <Text style={[styles.loadMoreButtonText, { color: colors.textPrimary }]}>Load More Stories</Text>
         </TouchableOpacity>
       )}
-      
+
       {isLoading && storyboards.length > 0 && (
         <View style={styles.loadingMore}>
           <ActivityIndicator size="small" color={RingColors.catchup.primary} />
-          <Text style={styles.loadingMoreText}>Loading more...</Text>
+          <Text style={[styles.loadingMoreText, { color: colors.textSecondary }]}>Loading more...</Text>
         </View>
       )}
       
@@ -158,7 +159,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: Spacing.md,
     ...Typography.bodyLarge,
-    color: DarkTheme.textSecondary,
     textAlign: 'center',
   },
   errorContainer: {
@@ -169,13 +169,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.headlineSmall,
-    color: DarkTheme.error,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   errorSubtext: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textTertiary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
@@ -186,7 +184,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   retryButtonText: {
-    color: DarkTheme.textPrimary,
     ...Typography.labelLarge,
   },
   emptyContainer: {
@@ -197,13 +194,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...Typography.headlineSmall,
-    color: DarkTheme.textPrimary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptySubtext: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textTertiary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
@@ -213,7 +208,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   refreshButtonText: {
-    color: DarkTheme.textSecondary,
     ...Typography.labelLarge,
   },
   errorBanner: {
@@ -224,7 +218,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorBannerText: {
-    color: DarkTheme.error,
     ...Typography.bodyMedium,
     fontWeight: '500',
   },
@@ -238,7 +231,6 @@ const styles = StyleSheet.create({
     borderColor: `${RingColors.catchup.light}59`,
   },
   loadMoreButtonText: {
-    color: DarkTheme.textPrimary,
     ...Typography.labelLarge,
   },
   loadingMore: {
@@ -250,7 +242,6 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textSecondary,
   },
   endMessage: {
     padding: Spacing.lg,
@@ -267,7 +258,6 @@ const styles = StyleSheet.create({
   },
   authHint: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.md,
     fontStyle: 'italic',

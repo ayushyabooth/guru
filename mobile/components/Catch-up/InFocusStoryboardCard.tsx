@@ -21,7 +21,6 @@ import { InFocusActionButtons } from './InFocusActionButtons';
 import SocraticQAModal from './SocraticQAModal';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
-import { DarkTheme } from '../../constants/darkTheme';
 import {
   Spacing,
   Typography,
@@ -73,7 +72,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
   onNotRelevant,
 }) => {
   const router = useRouter();
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
   const { width } = Dimensions.get('window');
   const isMobile = width < 500;
 
@@ -295,8 +294,8 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           activeOpacity={0.7}
           style={styles.headlineContainer}
         >
-          <Text 
-            style={[styles.headline, isDark && styles.headlineDark, isMobile && styles.headlineMobile]} 
+          <Text
+            style={[styles.headline, { color: colors.textPrimary }, isMobile && styles.headlineMobile]}
             numberOfLines={3}
           >
             {inFocusArticle.title}
@@ -306,18 +305,18 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
         {/* Metadata Row */}
         <View style={styles.metadata}>
           <TouchableOpacity onPress={() => Linking.openURL(inFocusArticle.url)} activeOpacity={0.7}>
-            <Text style={[styles.metadataLink, isDark && styles.metadataTextDark]}>
+            <Text style={[styles.metadataLink, { color: colors.textPrimary }]}>
               {inFocusArticle.source}
             </Text>
           </TouchableOpacity>
-          <Text style={[styles.metadataText, isDark && styles.metadataTextDark]}>•</Text>
-          <Text style={[styles.metadataText, isDark && styles.metadataTextDark]}>
+          <Text style={[styles.metadataText, { color: colors.textSecondary }]}>•</Text>
+          <Text style={[styles.metadataText, { color: colors.textSecondary }]}>
             {readingTime} min
           </Text>
-          <Text style={[styles.metadataText, isDark && styles.metadataTextDark]}>•</Text>
-          <View style={[styles.badge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-            <Icon name={BADGE_CONFIG.Normal.icon} size={12} color="#6B7280" />
-            <Text style={styles.badgeText}>Normal</Text>
+          <Text style={[styles.metadataText, { color: colors.textSecondary }]}>•</Text>
+          <View style={[styles.badge, { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.glassHighlight }]}>
+            <Icon name={BADGE_CONFIG.Normal.icon} size={12} color={colors.textTertiary} />
+            <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Normal</Text>
           </View>
           {inFocusArticle.is_paywalled && (
             <Icon name="lock-outline" size={12} color="#6B7280" />
@@ -446,11 +445,7 @@ const styles = StyleSheet.create({
   headline: {
     ...Typography.headlineLarge,
     fontSize: 22,
-    color: DarkTheme.textPrimary,
     lineHeight: 30,
-  },
-  headlineDark: {
-    color: DarkTheme.textPrimary,
   },
   headlineMobile: {
     ...Typography.headlineSmall,
@@ -466,25 +461,19 @@ const styles = StyleSheet.create({
   metadataText: {
     ...Typography.labelMedium,
     fontSize: 13,
-    color: DarkTheme.textSecondary,
   },
   metadataLink: {
     ...Typography.labelMedium,
     color: RingColors.catchup.primary,
     textDecorationLine: 'underline',
   },
-  metadataTextDark: {
-    color: DarkTheme.textPrimary,
-  },
   badge: {
-    backgroundColor: DarkTheme.glassHighlight,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.xs,
   },
   badgeText: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
   },
   paywalledIcon: {
     fontSize: 12,

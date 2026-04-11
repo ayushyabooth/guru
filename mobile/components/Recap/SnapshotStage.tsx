@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 import { SnapshotData } from '../../services/recap-service';
 import { formatMinutes } from '../../services/metric-service';
@@ -47,6 +47,7 @@ function getFilterBorder(filterContext: string): string {
 }
 
 export default function SnapshotStage({ snapshot, onContinue }: SnapshotStageProps) {
+  const { colors } = useTheme();
   const { articles_engaged, qa_highlights, reading_pattern, topic_clusters } = snapshot;
   const hasActivity = articles_engaged.length > 0;
   const isWidened = (snapshot as any).widened_window === true;
@@ -56,15 +57,15 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
       {/* Reading pattern header */}
       <View style={styles.patternHeader}>
         {hasActivity ? (
-          <Text style={styles.patternText}>
-            {isWidened && <Text style={{ color: DarkThemeColors.textTertiary }}>Recent activity{'\u00A0\u00B7\u00A0'}</Text>}
+          <Text style={[styles.patternText, { color: colors.textSecondary }]}>
+            {isWidened && <Text style={{ color: colors.textTertiary }}>Recent activity{'\u00A0\u00B7\u00A0'}</Text>}
             Your peak day was <Text style={styles.highlight}>{reading_pattern.peak_day}</Text>
             {reading_pattern.deepest_dive?.article_title !== 'N/A' && (
               <> {'\u00B7'} Deepest dive: <Text style={styles.highlight}>{formatMinutes(reading_pattern.deepest_dive.time_spent_minutes)}</Text> on "{reading_pattern.deepest_dive.article_title}"</>
             )}
           </Text>
         ) : (
-          <Text style={styles.patternText}>
+          <Text style={[styles.patternText, { color: colors.textSecondary }]}>
             No reading activity this week yet
           </Text>
         )}
@@ -74,8 +75,8 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
       {!hasActivity && (
         <View style={styles.emptyState}>
           <Icon name="book-open-page-variant" size={48} color="rgba(251, 146, 60, 0.3)" />
-          <Text style={styles.emptyTitle}>Your week is just getting started</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Your week is just getting started</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
             Read articles in Catch-up or Dive-in to build your weekly snapshot. You can still continue to reflect on your reading.
           </Text>
         </View>
@@ -109,7 +110,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
             ]}
           >
             <View style={styles.articleHeader}>
-              <Text style={styles.articleTitle} numberOfLines={2}>{article.title}</Text>
+              <Text style={[styles.articleTitle, { color: colors.textPrimary }]} numberOfLines={2}>{article.title}</Text>
               <View style={styles.engagementBadge}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                   <Icon
@@ -121,20 +122,20 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
                         : 'book-open-page-variant'
                     }
                     size={13}
-                    color={DarkThemeColors.textSecondary}
+                    color={colors.textSecondary}
                   />
-                  <Text style={styles.engagementText}>
+                  <Text style={[styles.engagementText, { color: colors.textSecondary }]}>
                     {formatMinutes(article.time_spent_minutes)}
                   </Text>
                 </View>
               </View>
             </View>
             {article.source && (
-              <Text style={styles.articleSource}>{article.source}</Text>
+              <Text style={[styles.articleSource, { color: colors.textTertiary }]}>{article.source}</Text>
             )}
             {article.key_quote && (
               <View style={styles.quoteContainer}>
-                <Text style={styles.quoteText}>"{article.key_quote}"</Text>
+                <Text style={[styles.quoteText, { color: colors.textSecondary }]}>"{article.key_quote}"</Text>
               </View>
             )}
           </View>
@@ -143,14 +144,14 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
         {/* Q&A highlights */}
         {qa_highlights.length > 0 && (
           <View style={styles.qaSection}>
-            <Text style={styles.qaSectionTitle}>Questions You Asked</Text>
+            <Text style={[styles.qaSectionTitle, { color: colors.textPrimary }]}>Questions You Asked</Text>
             {qa_highlights.map((qa, idx) => (
               <View key={idx} style={styles.qaCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
-                  <Icon name="help-circle-outline" size={14} color={DarkThemeColors.textPrimary} style={{ marginTop: 2 }} />
-                  <Text style={[styles.qaQuestion, { flex: 1 }]}>{qa.question}</Text>
+                  <Icon name="help-circle-outline" size={14} color={colors.textPrimary} style={{ marginTop: 2 }} />
+                  <Text style={[styles.qaQuestion, { flex: 1, color: colors.textPrimary }]}>{qa.question}</Text>
                 </View>
-                <Text style={styles.qaArticle}>from "{qa.article_title}"</Text>
+                <Text style={[styles.qaArticle, { color: colors.textTertiary }]}>from "{qa.article_title}"</Text>
               </View>
             ))}
           </View>
@@ -177,7 +178,6 @@ const styles = StyleSheet.create({
   },
   patternText: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
   },
   highlight: {
@@ -222,7 +222,6 @@ const styles = StyleSheet.create({
   },
   articleTitle: {
     ...Typography.labelLarge,
-    color: DarkThemeColors.textPrimary,
     flex: 1,
     marginRight: Spacing.sm,
   },
@@ -234,11 +233,9 @@ const styles = StyleSheet.create({
   },
   engagementText: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
   },
   articleSource: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textTertiary,
     marginTop: 4,
   },
   quoteContainer: {
@@ -249,7 +246,6 @@ const styles = StyleSheet.create({
   },
   quoteText: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     fontStyle: 'italic',
   },
   qaSection: {
@@ -257,7 +253,6 @@ const styles = StyleSheet.create({
   },
   qaSectionTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     marginBottom: Spacing.md,
   },
   qaCard: {
@@ -267,12 +262,10 @@ const styles = StyleSheet.create({
   },
   qaQuestion: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textPrimary,
     fontWeight: '500',
   },
   qaArticle: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textTertiary,
     marginTop: 4,
   },
   continueButton: {
@@ -304,13 +297,11 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     marginTop: Spacing.lg,
     textAlign: 'center',
   },
   emptySubtitle: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     marginTop: Spacing.sm,
     textAlign: 'center',
     lineHeight: 20,

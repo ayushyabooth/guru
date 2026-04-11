@@ -18,7 +18,7 @@ import {
   DarkGlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import type { ScriptSegment } from '../../services/recap-service';
 
 const { width } = Dimensions.get('window');
@@ -40,6 +40,7 @@ export default function AudioPlayerStage({
   textOnly = false,
   onDismiss,
 }: AudioPlayerStageProps) {
+  const { colors } = useTheme();
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
@@ -196,7 +197,7 @@ export default function AudioPlayerStage({
   // ─── Text-only mode ─────────────────────────────────────────
   if (textOnly && script && script.length > 0) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Weekly Recap</Text>
           <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
@@ -246,7 +247,7 @@ export default function AudioPlayerStage({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.overlay }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Audio Recap</Text>
@@ -395,7 +396,6 @@ function estimateCurrentSegment(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DarkThemeColors.overlay,
     paddingTop: 60,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: DarkThemeColors.glassBorder,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   progressFill: {

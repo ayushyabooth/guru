@@ -17,7 +17,7 @@ import {
   DarkGlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { recapService } from '../../services/recap-service';
 import { formatMinutes } from '../../services/metric-service';
 
@@ -53,6 +53,7 @@ interface JourneySummary {
 }
 
 export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
+  const { colors } = useTheme();
   const [summary, setSummary] = useState<JourneySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +91,12 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Recap</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Recap</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
@@ -107,16 +108,16 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
 
   if (error || !summary) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Recap</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Recap</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{error || 'No data found'}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{error || 'No data found'}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchSummary}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
@@ -129,13 +130,13 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   const { activity, insights, commitment } = summary;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onClose} style={styles.backButton}>
           <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Recap</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Your Recap</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -145,7 +146,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
         showsVerticalScrollIndicator={false}
       >
         {/* Date Range */}
-        <Text style={styles.dateRange}>
+        <Text style={[styles.dateRange, { color: colors.textPrimary }]}>
           {formatDateRange(summary.week_start, summary.week_end)}
         </Text>
 
@@ -153,22 +154,22 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{activity.articles_read}</Text>
-            <Text style={styles.statLabel}>articles</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>articles</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{formatMinutes(activity.total_time_minutes)}</Text>
-            <Text style={styles.statLabel}>reading</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>reading</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{activity.qa_count}</Text>
-            <Text style={styles.statLabel}>questions</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>questions</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{insights.length}</Text>
-            <Text style={styles.statLabel}>insights</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>insights</Text>
           </View>
         </View>
 
@@ -177,7 +178,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           <View style={styles.commitmentCard}>
             <View style={styles.sectionHeader}>
               <Icon name="flag-outline" size={16} color={RingColors.recap.primary} />
-              <Text style={styles.sectionTitle}>Your Commitment</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Commitment</Text>
             </View>
             <Text style={styles.commitmentText}>"{commitment}"</Text>
           </View>
@@ -188,12 +189,12 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Icon name="star-four-points" size={16} color={RingColors.recap.primary} />
-              <Text style={styles.sectionTitle}>Key Insights</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Key Insights</Text>
             </View>
             {insights.map((insight, i) => (
               <View key={insight.id} style={styles.insightItem}>
                 <View style={styles.insightDot} />
-                <Text style={styles.insightText}>{insight.insight_text}</Text>
+                <Text style={[styles.insightText, { color: colors.textPrimary }]}>{insight.insight_text}</Text>
               </View>
             ))}
           </View>
@@ -204,9 +205,9 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Icon name="microphone-outline" size={16} color={RingColors.recap.primary} />
-              <Text style={styles.sectionTitle}>Your Weekly Recap</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Weekly Recap</Text>
             </View>
-            <Text style={styles.podcastSubtitle}>A personalized recap of your learning week</Text>
+            <Text style={[styles.podcastSubtitle, { color: colors.textSecondary }]}>A personalized recap of your learning week</Text>
 
             {script.map((segment, i) => (
               <View key={i} style={styles.scriptEntry}>
@@ -221,7 +222,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
                     {segment.speaker === 'narrator' ? 'Narrator' : 'Analyst'}
                   </Text>
                 </View>
-                <Text style={styles.scriptText}>{segment.text}</Text>
+                <Text style={[styles.scriptText, { color: colors.textPrimary }]}>{segment.text}</Text>
               </View>
             ))}
           </View>
@@ -237,7 +238,6 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DarkThemeColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
   },
   headerSpacer: {
     minWidth: 44,
@@ -268,7 +267,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.error,
     textAlign: 'center',
   },
   retryButton: {
@@ -290,7 +288,6 @@ const styles = StyleSheet.create({
   },
   dateRange: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
@@ -313,13 +310,11 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: DarkThemeColors.glassBorder,
   },
   commitmentCard: {
     ...DarkGlassMaterials.cardLight,
@@ -339,7 +334,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textPrimary,
     fontWeight: '600',
   },
   commitmentText: {
@@ -364,13 +358,11 @@ const styles = StyleSheet.create({
   },
   insightText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textPrimary,
     flex: 1,
     lineHeight: 22,
   },
   podcastSubtitle: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     marginBottom: Spacing.md,
   },
   scriptEntry: {
@@ -394,14 +386,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   narratorText: {
-    color: DarkThemeColors.catchup,
+    color: '#38BDF8',
   },
   analystText: {
-    color: DarkThemeColors.recap,
+    color: '#FB923C',
   },
   scriptText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textPrimary,
     lineHeight: 24,
   },
 });
