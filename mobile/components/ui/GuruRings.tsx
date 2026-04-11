@@ -148,6 +148,60 @@ function useLiquidAnimation(enabled: boolean): AnimValues {
   return values;
 }
 
+// ─── Organic Ring Generator ─────────────────────────────────────
+// Creates a smooth closed path with controlled irregularity using cubic beziers.
+// Each ring has a deterministic seed so it looks the same every render.
+
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function generateOrganicRingPath(
+  cx: number, cy: number, baseRadius: number,
+  seed: number, points: number = 12, irregularity: number = 0.12,
+): string {
+  const rng = seededRandom(seed);
+  const angleStep = (Math.PI * 2) / points;
+
+  // Generate control points with radius variation
+  const pts: { x: number; y: number }[] = [];
+  for (let i = 0; i < points; i++) {
+    const angle = i * angleStep;
+    const r = baseRadius + (rng() - 0.5) * baseRadius * irregularity * 2;
+    pts.push({
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    });
+  }
+
+  // Build smooth closed cubic bezier path
+  const path: string[] = [`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`];
+  for (let i = 0; i < points; i++) {
+    const p0 = pts[(i - 1 + points) % points];
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % points];
+    const p3 = pts[(i + 2) % points];
+
+    // Catmull-Rom to cubic bezier control points (tension 0.35)
+    const tension = 0.35;
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+    path.push(`C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`);
+  }
+  path.push('Z');
+  return path.join(' ');
+}
+
+// Deterministic seeds for each ring (never changes)
+const RING_SEEDS = { catchup: 42, divein: 137, recap: 293 };
+
 // ─── SVG Path Helpers ────────────────────────────────────────────
 
 function annulusPath(cx: number, cy: number, outerR: number, innerR: number): string {
@@ -272,7 +326,7 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
   // Circumference for stroke-dasharray progress
   const circumference = 2 * Math.PI * R;
 
-  // Render a single ring with progress fill
+  // Render a single ring with liquid glass fill effects
   const renderRing = (rCx: number, rCy: number, key: RingName, progress: number) => {
     const color = RING_COLORS_MAP[key];
     const fillLength = circumference * Math.min(progress, 1);
@@ -280,25 +334,61 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
 
     return (
       <G>
-        {/* Unfilled track */}
+        {/* Unfilled track — clean circle */}
         <Circle cx={rCx} cy={rCy} r={R} fill="none" stroke={DIM} strokeWidth={SW} />
-        {/* Filled arc — clockwise from 12 o'clock */}
+
+        {/* Liquid glass fill — gradient-tinted arc */}
         {progress > 0 && (
           <Circle cx={rCx} cy={rCy} r={R} fill="none"
             stroke={color} strokeWidth={SW} strokeLinecap="round"
             strokeDasharray={`${fillLength} ${gapLength}`}
             strokeDashoffset={0}
             transform={`rotate(-90 ${rCx} ${rCy})`}
+            opacity={0.9}
           />
         )}
-        {/* Shimmer on filled portion */}
+
+        {/* Inner glow layer — brighter, slightly thinner */}
+        {progress > 0 && (
+          <Circle cx={rCx} cy={rCy} r={R} fill="none"
+            stroke="rgba(255,255,255,0.3)" strokeWidth={SW - 4}
+            strokeDasharray={`${fillLength} ${gapLength}`}
+            strokeDashoffset={0}
+            transform={`rotate(-90 ${rCx} ${rCy})`}
+            opacity={anim.pulseOpacity * 0.5}
+          />
+        )}
+
+        {/* Shimmer sweep — bright highlight moving along fill */}
         {progress > 0.1 && hasProgress && (
           <Circle cx={rCx} cy={rCy} r={R} fill="none"
-            stroke="rgba(255,255,255,0.25)" strokeWidth={SW - 2}
-            strokeDasharray={`${fillLength * 0.15} ${circumference - fillLength * 0.15}`}
-            strokeDashoffset={-fillLength * anim.shimmer[0] * 8}
+            stroke="rgba(255,255,255,0.6)" strokeWidth={SW - 2}
+            strokeDasharray={`${fillLength * 0.12} ${circumference - fillLength * 0.12}`}
+            strokeDashoffset={-fillLength * anim.shimmer[0] * 10}
             transform={`rotate(-90 ${rCx} ${rCy})`}
-            opacity={anim.pulseOpacity * 0.6}
+            opacity={anim.pulseOpacity * 0.8}
+          />
+        )}
+
+        {/* Meniscus glow at fill edge — bright wobbling line */}
+        {progress > 0.05 && progress < 1 && (
+          <Circle cx={rCx} cy={rCy} r={R} fill="none"
+            stroke="rgba(255,255,255,0.5)" strokeWidth={SW + 2}
+            strokeDasharray={`${3 + anim.wobbleA * 4} ${circumference}`}
+            strokeDashoffset={-fillLength + 1}
+            transform={`rotate(-90 ${rCx} ${rCy})`}
+            opacity={0.7}
+          />
+        )}
+
+        {/* Outer glow behind filled portion */}
+        {progress > 0.2 && (
+          <Circle cx={rCx} cy={rCy} r={R} fill="none"
+            stroke={color} strokeWidth={SW + 6}
+            strokeDasharray={`${fillLength} ${gapLength}`}
+            strokeDashoffset={0}
+            transform={`rotate(-90 ${rCx} ${rCy})`}
+            opacity={0.12}
           />
         )}
       </G>
