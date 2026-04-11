@@ -674,13 +674,15 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
 // ═══════════════════════════════════════════════════════════════════
 
 function LogoRings({ dimensions }: { dimensions: number }) {
-  // Clean, simple logo — no glow halos, no specular crescents, no nexus effects.
-  // Works crisp at any size from 24px to 200px.
-  const vb = 200;
-  const cx = 100, cy = 100;
-  const outerR = 44, innerR = 24;
-  const offset = 26;
+  // Matches Figma EDL Option 2: three simple stroked ring outlines, overlapping.
+  // Blue top, pink bottom-left, orange bottom-right. No fills, just clean strokes.
+  const vb = 100;
+  const r = 18; // ring radius
+  const sw = 3; // stroke width
+  const offset = 12;
 
+  // Triangle layout: top, bottom-left, bottom-right
+  const cx = 50, cy = 48;
   const tCx = cx, tCy = cy - offset;
   const pCx = cx - offset * 0.866, pCy = cy + offset * 0.5;
   const gCx = cx + offset * 0.866, gCy = cy + offset * 0.5;
@@ -688,35 +690,18 @@ function LogoRings({ dimensions }: { dimensions: number }) {
   return (
     <View style={[styles.centerBox, { width: dimensions, height: dimensions }]}>
       <Svg width={dimensions} height={dimensions} viewBox={`0 0 ${vb} ${vb}`}>
-        <Defs>
-          <LinearGradient id="lg_sky" x1="30%" y1="0%" x2="70%" y2="100%">
-            <Stop offset="0%" stopColor="#7DD3FC" />
-            <Stop offset="100%" stopColor="#0284C7" />
-          </LinearGradient>
-          <LinearGradient id="lg_mag" x1="70%" y1="0%" x2="30%" y2="100%">
-            <Stop offset="0%" stopColor="#F472B6" />
-            <Stop offset="100%" stopColor="#BE185D" />
-          </LinearGradient>
-          <LinearGradient id="lg_cor" x1="30%" y1="20%" x2="70%" y2="100%">
-            <Stop offset="0%" stopColor="#FDBA74" />
-            <Stop offset="100%" stopColor="#EA580C" />
-          </LinearGradient>
-        </Defs>
+        {/* Blue ring (Catch-up) — top */}
+        <Circle cx={tCx} cy={tCy} r={r} fill="none" stroke="#38BDF8" strokeWidth={sw} />
+        {/* Pink ring (Dive-in) — bottom-left */}
+        <Circle cx={pCx} cy={pCy} r={r} fill="none" stroke="#EC4899" strokeWidth={sw} />
+        {/* Orange ring (Recap) — bottom-right */}
+        <Circle cx={gCx} cy={gCy} r={r} fill="none" stroke="#FB923C" strokeWidth={sw} />
 
-        {/* Catch-up (top, blue) */}
-        <Path d={annulusPath(tCx, tCy, outerR, innerR)} fill="url(#lg_sky)" opacity={0.92} />
-        <Circle cx={tCx} cy={tCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
-
-        {/* Dive-in (bottom-left, pink) */}
-        <Path d={annulusPath(pCx, pCy, outerR, innerR)} fill="url(#lg_mag)" opacity={0.92} />
-        <Circle cx={pCx} cy={pCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
-
-        {/* Recap (bottom-right, orange) */}
-        <Path d={annulusPath(gCx, gCy, outerR, innerR)} fill="url(#lg_cor)" opacity={0.92} />
-        <Circle cx={gCx} cy={gCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
-
-        {/* Borromean overpaint — blue goes over orange at bottom-right overlap */}
-        <Path d={annulusArcPath(tCx, tCy, outerR, innerR, 105, 175)} fill="url(#lg_sky)" opacity={0.9} />
+        {/* Borromean weave: blue passes OVER orange on the right side */}
+        <Path
+          d={arcStrokePath(tCx, tCy, r, 60, 120)}
+          fill="none" stroke="#38BDF8" strokeWidth={sw} strokeLinecap="round"
+        />
       </Svg>
     </View>
   );
