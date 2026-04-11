@@ -11,6 +11,14 @@ import {
 import { useRouter } from 'expo-router';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
+import { DarkTheme } from '../../constants/darkTheme';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+  DarkGlassMaterials,
+  RingColors,
+} from '../../constants/liquidGlass';
 import Icon from '../ui/Icon';
 import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -92,7 +100,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
       return { icon: '◈', label: 'SAVED', color: '#F59E0B' };
     }
     if (article.isEssential) {
-      return { icon: '★', label: 'ESSENTIAL', color: '#38BDF8' };
+      return { icon: '★', label: 'ESSENTIAL', color: RingColors.divein.primary };
     }
     return null;
   };
@@ -164,7 +172,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
       {/* What's in the article section */}
       <View style={styles.contentSection}>
         <View style={styles.contentHeader}>
-          <Icon name="clipboard-text-outline" size={14} color="#6B7280" />
+          <Icon name="clipboard-text-outline" size={14} color={DarkTheme.textTertiary} />
           <Text style={styles.contentHeaderText}>What's in the article</Text>
         </View>
         <View style={styles.contentDivider} />
@@ -191,7 +199,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
           activeOpacity={0.7}
         >
           <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-            <Icon name="close" size={16} color="#6B7280" />
+            <Icon name="close" size={16} color={DarkTheme.textTertiary} />
             <Text style={styles.ctaSecondaryText}>Not Relevant</Text>
           </View>
         </TouchableOpacity>
@@ -202,13 +210,11 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 8,
-    marginTop: 12,
+    marginHorizontal: Spacing.sm,
+    marginTop: Spacing.md,
+    ...DarkGlassMaterials.card,
     borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
-    elevation: 6,
   },
   accentStrip: {
     height: 3,
@@ -218,24 +224,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
     paddingBottom: 6,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
   badgeIcon: {
-    fontSize: 12,
+    ...Typography.labelMedium,
     fontWeight: '700',
-    marginRight: 4,
+    marginRight: Spacing.xs,
   },
   badgeLabel: {
-    fontSize: 11,
+    ...Typography.labelSmall,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -243,22 +249,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    backgroundColor: DarkTheme.glassHighlight,
   },
   categoryEmoji: {
     fontSize: 12,
     marginRight: 4,
   },
   categoryText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...Typography.labelMedium,
   },
   heroContainer: {
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderRadius: 12,
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.md,
     overflow: 'hidden',
     aspectRatio: 16 / 10,
     maxHeight: 140,
@@ -274,7 +279,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroPlaceholderEmoji: {
-    fontSize: 32,
+    ...Typography.displayMedium,
     opacity: 0.5,
   },
   heroOverlay: {
@@ -285,91 +290,89 @@ const styles = StyleSheet.create({
   },
   glassOverlay: {
     padding: 10,
-    backgroundColor: 'rgba(15,20,35,0.75)',
+    backgroundColor: DarkTheme.glassHeavy,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(16px) saturate(180%)',
         WebkitBackdropFilter: 'blur(16px) saturate(180%)',
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.06)',
+        borderTopColor: DarkTheme.glassSectionBorder,
       },
     }),
   },
   heroTitle: {
-    fontSize: 16,
+    ...Typography.bodyLarge,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: DarkTheme.textPrimary,
     lineHeight: 22,
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   heroMeta: {
-    fontSize: 12,
-    color: '#94A3B8',
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
   },
   contentSection: {
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   contentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   contentHeaderEmoji: {
     fontSize: 14,
     marginRight: 6,
   },
   contentHeaderText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#F1F5F9',
+    ...Typography.labelMedium,
+    color: DarkTheme.textPrimary,
   },
   contentDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: DarkTheme.glassSectionBorder,
     marginBottom: 10,
   },
   contentText: {
-    fontSize: 14,
+    ...Typography.bodyMedium,
     lineHeight: 21,
-    color: '#CBD5E1',
+    color: DarkTheme.textSecondary,
   },
   ctaRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 12,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+    gap: Spacing.md,
   },
   ctaButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ctaPrimary: {
     elevation: 2,
     borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.35)',
+    borderColor: `${RingColors.divein.light}59`,
     ...Platform.select({
       web: { backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' },
       default: {},
     }),
   },
   ctaPrimaryText: {
-    fontSize: 14,
+    ...Typography.labelLarge,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   ctaSecondary: {
+    ...DarkGlassMaterials.button,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.12)',
   },
   ctaSecondaryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelLarge,
+    color: DarkTheme.textSecondary,
   },
 });
 

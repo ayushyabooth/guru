@@ -21,6 +21,14 @@ import { InFocusActionButtons } from './InFocusActionButtons';
 import SocraticQAModal from './SocraticQAModal';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
+import { DarkTheme } from '../../constants/darkTheme';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+  DarkGlassMaterials,
+  RingColors,
+} from '../../constants/liquidGlass';
 import Icon from '../ui/Icon';
 import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -371,17 +379,13 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 24,
-    backgroundColor: 'rgba(15,20,35,0.55)',
-    elevation: 8,
+    marginHorizontal: Spacing.md,
+    marginVertical: Spacing.md,
+    ...DarkGlassMaterials.card,
     overflow: 'hidden',
     maxWidth: 720,
     alignSelf: 'center',
     width: '100%',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   cardDark: {
     // dark is now default, handled by liquidGlassStyle
@@ -391,20 +395,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   heroSection: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    borderRadius: BorderRadius.md,
     overflow: 'hidden',
   },
   heroImage: {
     width: '100%',
     height: 180,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
   },
   heroPlaceholder: {
     width: '100%',
     height: 140,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -416,73 +420,71 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginHorizontal: 16,
-    marginTop: 12,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     gap: 6,
   },
   categoryEmoji: {
     fontSize: 14,
   },
   categoryText: {
+    ...Typography.labelMedium,
     fontSize: 13,
-    fontWeight: '600',
   },
   categoryDot: {
-    fontSize: 12,
+    ...Typography.labelMedium,
   },
   inFocusSection: {
     paddingTop: 8,
   },
   headlineContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
   },
   headline: {
+    ...Typography.headlineLarge,
     fontSize: 22,
-    fontWeight: '700',
-    color: '#F1F5F9',
+    color: DarkTheme.textPrimary,
     lineHeight: 30,
   },
   headlineDark: {
-    color: '#F1F5F9',
+    color: DarkTheme.textPrimary,
   },
   headlineMobile: {
-    fontSize: 18,
-    lineHeight: 24,
+    ...Typography.headlineSmall,
   },
   metadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     flexWrap: 'wrap',
     gap: 6,
   },
   metadataText: {
+    ...Typography.labelMedium,
     fontSize: 13,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: DarkTheme.textSecondary,
   },
   metadataLink: {
-    fontSize: 12,
-    color: '#38BDF8',
+    ...Typography.labelMedium,
+    color: RingColors.catchup.primary,
     textDecorationLine: 'underline',
   },
   metadataTextDark: {
-    color: '#D1D5DB',
+    color: DarkTheme.textPrimary,
   },
   badge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingHorizontal: 8,
+    backgroundColor: DarkTheme.glassHighlight,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: BorderRadius.xs,
   },
   badgeText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
   },
   paywalledIcon: {
     fontSize: 12,

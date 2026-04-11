@@ -27,6 +27,7 @@ import {
   Spacing,
   Typography,
   BorderRadius,
+  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -132,7 +133,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, getDarkBackdropBlur(40)]}>
       {/* Organic blob backgrounds */}
       <OrganicBackground variant="login" />
 
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: Spacing.md,
   },
   brandName: {
     fontFamily: 'Orbitron_400Regular',

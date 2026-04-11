@@ -152,6 +152,6 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
   },
   filterWrapper: {
-    paddingTop: 12,
+    paddingTop: Spacing.md,
   },
 });

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from '../ui/Icon';
-import { Spacing, Typography, BorderRadius, RingColors, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import { GuidedQuestion } from '../../services/recap-service';
 
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   },
   systemBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(20, 25, 40, 0.85)',
+    backgroundColor: DarkGlassMaterials.cardHeavy.backgroundColor,
     borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.2)',
   },
@@ -414,10 +414,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   systemBubbleText: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: DarkThemeColors.textPrimary,
   },
   userBubbleText: {
-    color: 'rgba(255, 255, 255, 0.95)',
+    color: DarkThemeColors.textPrimary,
   },
   articleRef: {
     color: RingColors.recap.primary,
@@ -465,14 +465,12 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: BorderRadius.lg,
+    ...DarkGlassMaterials.input,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     maxHeight: 100,
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1,
+    color: DarkThemeColors.textPrimary,
     borderColor: 'rgba(251, 146, 60, 0.2)',
   },
   sendButton: {
@@ -494,12 +492,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: DarkGlassMaterials.button.backgroundColor,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: DarkGlassMaterials.button.borderColor,
   },
   chipSelected: {
     backgroundColor: 'rgba(251, 146, 60, 0.15)',

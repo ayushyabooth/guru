@@ -1,6 +1,14 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Dimensions, Platform } from 'react-native';
 import Icon from '../ui/Icon';
+import { DarkTheme } from '../../constants/darkTheme';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+  DarkGlassMaterials,
+  RingColors,
+} from '../../constants/liquidGlass';
 
 interface CarouselArticle {
   id: string;
@@ -150,50 +158,49 @@ export const ArticleCarousel: React.FC<ArticleCarouselProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: DarkTheme.glassSectionBorder,
     backgroundColor: 'transparent',
   },
   containerDark: {
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: DarkTheme.glassBorder,
     backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
   },
   headerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#E2E8F0',
+    ...Typography.labelLarge,
+    color: DarkTheme.textPrimary,
   },
   headerTextDark: {
-    color: '#E5E7EB',
+    color: DarkTheme.textPrimary,
   },
   countBadge: {
-    fontSize: 12,
-    color: '#94A3B8',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 8,
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
+    backgroundColor: DarkTheme.glassHighlight,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 10,
   },
   countBadgeDark: {
-    color: '#CBD5E1',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    color: DarkTheme.textSecondary,
+    backgroundColor: DarkTheme.glassBorder,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     gap: CARD_GAP,
   },
   card: {
     width: CARD_WIDTH,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 8,
+    ...DarkGlassMaterials.cardLight,
+    borderRadius: BorderRadius.sm,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -211,30 +218,29 @@ const styles = StyleSheet.create({
     }),
   },
   cardWeb: {
-    // Liquid glass effect for web
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: DarkTheme.glassLight,
     // @ts-ignore - backdropFilter is valid for web but not in RN types
     backdropFilter: 'blur(12px)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: DarkTheme.glassBorder,
   },
   cardDark: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: DarkTheme.glassHighlight,
   },
   cardActive: {
     borderWidth: 2,
-    borderColor: '#38BDF8',
+    borderColor: RingColors.catchup.primary,
     opacity: 0.8,
   },
   thumbnail: {
     height: 80,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: DarkTheme.glassHighlight,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   thumbnailDark: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: DarkTheme.glassBorder,
   },
   thumbnailImage: {
     width: '100%',
@@ -259,36 +265,36 @@ const styles = StyleSheet.create({
   },
   placeholderLine: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: DarkTheme.glassLight,
     borderRadius: 2,
     width: '100%',
   },
   inFocusBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#38BDF8',
+    top: Spacing.xs,
+    right: Spacing.xs,
+    backgroundColor: RingColors.catchup.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: BorderRadius.xs,
   },
   inFocusText: {
+    ...Typography.labelSmall,
     fontSize: 9,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
   cardContent: {
-    padding: 8,
+    padding: Spacing.sm,
   },
   cardTitle: {
-    fontSize: 12,
+    ...Typography.bodySmall,
     fontWeight: '500',
-    color: '#E2E8F0',
+    color: DarkTheme.textPrimary,
     lineHeight: 18,
     minHeight: 36,
   },
   cardTitleDark: {
-    color: '#F3F4F6',
+    color: DarkTheme.textPrimary,
   },
   cardMeta: {
     flexDirection: 'row',
@@ -297,27 +303,27 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   cardSource: {
-    fontSize: 11,
-    color: '#94A3B8',
+    ...Typography.labelSmall,
+    color: DarkTheme.textSecondary,
     flex: 1,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   cardSourceDark: {
-    color: '#9CA3AF',
+    color: DarkTheme.textSecondary,
   },
   cardTime: {
-    fontSize: 11,
+    ...Typography.labelSmall,
     fontWeight: '500',
-    color: '#38BDF8',
+    color: RingColors.catchup.primary,
   },
   hint: {
-    fontSize: 11,
-    color: '#9CA3AF',
+    ...Typography.labelSmall,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: Spacing.sm,
     fontStyle: 'italic',
   },
   hintDark: {
-    color: '#6B7280',
+    color: DarkTheme.textTertiary,
   },
 });

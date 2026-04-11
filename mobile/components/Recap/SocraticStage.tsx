@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Spacing, Typography, BorderRadius, RingColors, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import Icon from '../ui/Icon';
 import { SocraticResponse, KeyInsight } from '../../services/recap-service';
@@ -270,10 +270,10 @@ const styles = StyleSheet.create({
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
+    backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.25)',
-    shadowColor: '#FB923C',
+    shadowColor: RingColors.recap.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -311,22 +311,20 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
+    backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: DarkThemeColors.glassSectionBorder,
     ...getBackdropBlur(16),
     gap: Spacing.sm,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
-    borderRadius: BorderRadius.lg,
+    ...DarkGlassMaterials.input,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     ...Typography.bodyMedium,
     color: DarkThemeColors.textPrimary,
     maxHeight: 100,
-    borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.15)',
   },
   sendButton: {
@@ -346,9 +344,9 @@ const styles = StyleSheet.create({
   concludedArea: {
     alignItems: 'center',
     padding: Spacing.lg,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
+    backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: DarkThemeColors.glassSectionBorder,
   },
   concludedText: {
     ...Typography.bodyMedium,
@@ -368,7 +366,7 @@ const styles = StyleSheet.create({
   },
   // Article reference styles
   articleRefInline: {
-    color: '#FB923C',
+    color: RingColors.recap.primary,
     fontWeight: '600',
   },
   articleChipsContainer: {
@@ -395,13 +393,13 @@ const styles = StyleSheet.create({
   },
   articleChipText: {
     flex: 1,
-    fontSize: 12,
-    color: '#FB923C',
+    ...Typography.labelSmall,
+    color: RingColors.recap.primary,
     fontWeight: '500',
   },
   articleChipArrow: {
     fontSize: 14,
-    color: '#FB923C',
+    color: RingColors.recap.primary,
     fontWeight: '600',
   },
 });
