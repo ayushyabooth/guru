@@ -9,7 +9,7 @@
  * - Dark-only mode
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,16 @@ export default function SignupScreen() {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const { colors } = useTheme();
+
+  // Clear form fields on mount to prevent stale data
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setInviteCode('');
+    setStatus('idle');
+    setErrorMessage('');
+  }, []);
 
   const handleSignup = async () => {
     setStatus('idle');
@@ -171,6 +181,7 @@ export default function SignupScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="off"
               icon="email"
             />
 
@@ -184,6 +195,7 @@ export default function SignupScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="off"
               icon="lock"
             />
 
@@ -197,6 +209,7 @@ export default function SignupScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="off"
               icon="lock"
             />
 
@@ -210,6 +223,7 @@ export default function SignupScreen() {
               }}
               autoCapitalize="characters"
               autoCorrect={false}
+              autoComplete="off"
               icon="key"
             />
 

@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   contextButtonActive: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   contextButtonText: {
     fontSize: 14,
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   startButtonText: {
     fontSize: 14,

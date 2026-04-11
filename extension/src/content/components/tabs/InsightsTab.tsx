@@ -19,7 +19,7 @@ export default function InsightsTab() {
             paddingLeft: '12px',
           }}>
             <div class="guru-peek-card-type" style={{ color, marginBottom: '4px' }}>
-              {ann.type}
+              {ann.type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
             </div>
             <div class="guru-section-text">{ann.text}</div>
           </div>

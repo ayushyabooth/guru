@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   narrativeItemText: {
     flex: 1,
     fontSize: 13,
-    color: '#32b0c6',
+    color: '#38BDF8',
     fontFamily: 'monospace',
     textDecorationLine: 'underline',
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 13,
-    color: '#32b0c6',
+    color: '#38BDF8',
     fontWeight: '500',
   },
   list: {

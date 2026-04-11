@@ -186,7 +186,7 @@ export default function CapacityScreen() {
           </View>
 
           <View style={styles.infoRow}>
-            <View style={[styles.infoDot, { backgroundColor: '#0891B2' }]} />
+            <View style={[styles.infoDot, { backgroundColor: '#EC4899' }]} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Medium (3-5 hours/week)</Text>
               <Text style={styles.infoText}>

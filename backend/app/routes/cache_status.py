@@ -4,7 +4,8 @@ Cache status endpoint for checking if storyboards are ready
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from datetime import date
+from datetime import date, datetime
+import uuid
 import logging
 
 from app.db.database import get_db
@@ -12,6 +13,9 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.models.cache import StoryboardCache
 from app.services.startup_service import _build_filter_contexts_for_user
+
+# Sentinel UUID for base (shared) storyboard caches
+BASE_SENTINEL_UUID = uuid.UUID('00000000-0000-0000-0000-000000000000')
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +59,15 @@ async def get_cache_status(
         cached_count = 0
         
         for filter_context in filter_contexts:
+            # Check base (sentinel) caches first, then user-specific
             cache_entry = db.query(StoryboardCache).filter(
                 and_(
-                    StoryboardCache.user_id == current_user.id,
+                    StoryboardCache.user_id.in_([BASE_SENTINEL_UUID, current_user.id]),
                     StoryboardCache.filter_context == filter_context,
                     StoryboardCache.cache_date == today_str
                 )
             ).first()
-            
+
             if cache_entry:
                 cached_count += 1
         

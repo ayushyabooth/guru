@@ -47,18 +47,38 @@ function getFilterBorder(filterContext: string): string {
 
 export default function SnapshotStage({ snapshot, onContinue }: SnapshotStageProps) {
   const { articles_engaged, qa_highlights, reading_pattern, topic_clusters } = snapshot;
+  const hasActivity = articles_engaged.length > 0;
+  const isWidened = (snapshot as any).widened_window === true;
 
   return (
     <View style={styles.container}>
       {/* Reading pattern header */}
       <View style={styles.patternHeader}>
-        <Text style={styles.patternText}>
-          Your peak day was <Text style={styles.highlight}>{reading_pattern.peak_day}</Text>
-          {reading_pattern.deepest_dive?.article_title !== 'N/A' && (
-            <> · Deepest dive: <Text style={styles.highlight}>{reading_pattern.deepest_dive.time_spent_minutes} min</Text> on "{reading_pattern.deepest_dive.article_title}"</>
-          )}
-        </Text>
+        {hasActivity ? (
+          <Text style={styles.patternText}>
+            {isWidened && <Text style={{ color: DarkThemeColors.textTertiary }}>Recent activity{'\u00A0\u00B7\u00A0'}</Text>}
+            Your peak day was <Text style={styles.highlight}>{reading_pattern.peak_day}</Text>
+            {reading_pattern.deepest_dive?.article_title !== 'N/A' && (
+              <> {'\u00B7'} Deepest dive: <Text style={styles.highlight}>{reading_pattern.deepest_dive.time_spent_minutes} min</Text> on "{reading_pattern.deepest_dive.article_title}"</>
+            )}
+          </Text>
+        ) : (
+          <Text style={styles.patternText}>
+            No reading activity this week yet
+          </Text>
+        )}
       </View>
+
+      {/* Empty state */}
+      {!hasActivity && (
+        <View style={styles.emptyState}>
+          <Icon name="book-open-page-variant" size={48} color="rgba(251, 146, 60, 0.3)" />
+          <Text style={styles.emptyTitle}>Your week is just getting started</Text>
+          <Text style={styles.emptySubtitle}>
+            Read articles in Catch-up or Dive-in to build your weekly snapshot. You can still continue to reflect on your reading.
+          </Text>
+        </View>
+      )}
 
       {/* Article cards */}
       <ScrollView
@@ -279,5 +299,25 @@ const styles = StyleSheet.create({
     ...Typography.labelLarge,
     color: '#fff',
     fontWeight: '700',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: 80,
+  },
+  emptyTitle: {
+    ...Typography.headlineSmall,
+    color: DarkThemeColors.textPrimary,
+    marginTop: Spacing.lg,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    ...Typography.bodySmall,
+    color: DarkThemeColors.textSecondary,
+    marginTop: Spacing.sm,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

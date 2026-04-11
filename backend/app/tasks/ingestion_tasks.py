@@ -478,6 +478,8 @@ def ingest_article(url: str, notes: str = None, priority: str = "Normal", catego
             quality_score=quality_score,
             luminary_id=article_data.get('luminary_id') if article_data else None,
             discovery_query=article_data.get('discovery_query') if article_data else None,
+            industries=[_industry] if _industry else [],
+            specializations=_specializations if _specializations else [],
         )
 
         db.add(new_article)

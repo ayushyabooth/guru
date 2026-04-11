@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6366F1',
     borderRadius: 2,
   },
   progressText: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   optionButtonSelected: {
     backgroundColor: 'rgba(56,189,248,0.12)',
-    borderColor: '#007AFF',
+    borderColor: '#6366F1',
   },
   optionButtonText: {
     fontSize: 18,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
   },
   optionButtonTextSelected: {
-    color: '#007AFF',
+    color: '#6366F1',
   },
   summarySection: {
     backgroundColor: 'rgba(255,255,255,0.04)',
@@ -389,6 +389,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   submitButtonTextDisabled: {
-    color: '#adb5bd',
+    color: '#64748B',
   },
 });

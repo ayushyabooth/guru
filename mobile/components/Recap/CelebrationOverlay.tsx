@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   audioRetryText: {
     ...Typography.labelMedium,
-    color: '#C04040',
+    color: '#EF4444',
     fontWeight: '600',
   },
 });

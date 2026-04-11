@@ -27,6 +27,9 @@ class Article(Base):
     luminary_id = Column(String(100), nullable=True)  # For Tier 2 (luminary) articles
     discovery_query = Column(String(500), nullable=True)  # For Tier 3 (discovery) articles
     content_hash = Column(String(64), nullable=True)  # SHA-256 for content dedup
+    # Tagging fields (filter-driven clustering depends on these)
+    industries = Column(JSON, nullable=True)  # e.g., ["Consumer"]
+    specializations = Column(JSON, nullable=True)  # e.g., ["Food & Beverage"]
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

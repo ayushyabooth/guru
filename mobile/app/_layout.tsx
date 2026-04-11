@@ -1,4 +1,4 @@
-import { Platform, LogBox } from 'react-native';
+import { Platform, LogBox, View, StyleSheet } from 'react-native';
 import { DarkTheme as NavDarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -36,6 +36,11 @@ const queryClient = new QueryClient({
   },
 });
 
+// Web: constrain to mobile-width viewport for better UX on desktop browsers
+const webShell: any = Platform.OS === 'web'
+  ? { flex: 1, maxWidth: 480, width: '100%', alignSelf: 'center' as const }
+  : { flex: 1 };
+
 // Prevent splash screen from auto-hiding while fonts load
 SplashScreen.preventAutoHideAsync();
 
@@ -45,6 +50,10 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Orbitron_400Regular,
     Orbitron_700Bold,
+    // Load icon fonts explicitly from assets/fonts/ so they don't reference
+    // node_modules/ paths which Vercel strips from deployments.
+    'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
+    'material': require('../assets/fonts/MaterialIcons.ttf'),
   });
 
   useEffect(() => {
@@ -73,13 +82,15 @@ export default function RootLayout() {
         <TimeTrackingProvider>
           <DiveInProvider userId="default">
             <NavThemeProvider value={NavDarkTheme}>
-              <Stack>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-              </Stack>
+              <View style={webShell}>
+                <Stack>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                </Stack>
+              </View>
               <StatusBar style="light" />
             </NavThemeProvider>
           </DiveInProvider>

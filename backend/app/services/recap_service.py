@@ -9,6 +9,7 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import and_, func
 import uuid
 
@@ -577,7 +578,7 @@ class RecapJourneyService:
         if filters_explored == 0:
             filters_explored = 1  # At minimum, user has their core filter
 
-        # ── Tier: always 'full' (no tier gating in the app) ──
+        # ── Single tier: all users get the full recap experience ──
         tier = 'full'
 
         activity_stats = {
@@ -629,6 +630,30 @@ class RecapJourneyService:
                 TimeLog.started_at <= week_end_dt,
             )
         ).all()
+
+        # ── Fallback: if no activity this week, widen window to last 14 days ──
+        # This ensures the snapshot always has content to show, even for
+        # users who were active recently but not in the strict Mon-Sun window.
+        widened_window = False
+        if not time_logs:
+            fallback_start_dt = datetime.combine(
+                week_end - timedelta(days=14), datetime.min.time()
+            )
+            time_logs = db.query(TimeLog).filter(
+                and_(
+                    TimeLog.user_id == user_uuid,
+                    TimeLog.ring_type.in_(['catchup', 'divein']),
+                    TimeLog.started_at >= fallback_start_dt,
+                    TimeLog.started_at <= week_end_dt,
+                )
+            ).all()
+            if time_logs:
+                widened_window = True
+                week_start_dt = fallback_start_dt
+                logger.info(
+                    f"Snapshot for user {user_id}: no activity in strict week, "
+                    f"widened to last 14 days ({len(time_logs)} time logs found)"
+                )
 
         # Aggregate per context_id (article/storyboard)
         article_engagement = {}  # context_id -> { total_seconds, industry, specialization, activity_types }
@@ -868,6 +893,7 @@ class RecapJourneyService:
             "user_highlights": user_highlights,
             "topic_clusters": topic_clusters,
             "reading_pattern": reading_pattern,
+            "widened_window": widened_window,
         }
 
         # Compute anchor interactions (top 3-4 most meaningful engagements)
@@ -1023,13 +1049,39 @@ class RecapJourneyService:
         anchor_interactions = snapshot_data.get("anchor_interactions", [])
 
         if not articles:
-            return [{
-                "type": "reflection",
-                "text": "What's one thing you'd like to explore or learn about next week?",
-                "referenced_articles": [],
-                "response_format": "free_text",
-                "chips": [],
-            }]
+            # No articles found in snapshot — return a set of general
+            # reflection questions so the user still gets a meaningful
+            # Stage 2 experience rather than a single generic prompt.
+            return [
+                {
+                    "type": "reflection",
+                    "text": "Think about the most interesting article or idea you came across recently. What made it stick with you?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "pattern_spotting",
+                    "text": "Have you noticed any recurring themes or topics showing up across your reading lately?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "surprise",
+                    "text": "Was there anything you read recently that challenged your assumptions or surprised you?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "reflection",
+                    "text": "What's one topic you'd like to explore more deeply next week?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+            ]
 
         # Always generate 5 questions (no tier gating)
         question_count = 5
@@ -1239,7 +1291,21 @@ Return ONLY the JSON array, no other text."""
                 for a in other_anchors[:3]
             ])
 
-            prompt = f"""The user just answered a guided reflection question in their weekly recap.
+            # If no articles to reference, generate a simpler followup without article links
+            if not other_context.strip():
+                prompt = f"""The user just answered a guided reflection question in their weekly recap.
+
+Question: {current_question.get('text', '')}
+User's answer: {user_answer[:500]}
+
+Generate a brief follow-up (1-2 sentences) that:
+1. Acknowledges their thought naturally (don't just say "great answer")
+2. Asks a deeper probing question to help them think further
+3. Do NOT reference any articles, IDs, or links — the user hasn't read any yet
+
+Return ONLY the follow-up text, no JSON wrapper."""
+            else:
+                prompt = f"""The user just answered a guided reflection question in their weekly recap.
 
 Question: {current_question.get('text', '')}
 User's answer: {user_answer[:500]}
@@ -1251,7 +1317,7 @@ Generate a brief follow-up (1-2 sentences) that:
 1. Acknowledges their thought naturally (don't just say "great answer")
 2. Connects their answer to ONE of the other articles listed above
 3. Asks a deeper probing question that bridges the two topics
-4. Use [[Article: "title" | id:UUID]] format for article references
+4. Use [[Article: "title" | id:UUID]] format for article references — ONLY use IDs from the list above, never invent IDs
 
 Return ONLY the follow-up text, no JSON wrapper."""
 
@@ -1330,7 +1396,7 @@ Return ONLY the follow-up text, no JSON wrapper."""
             return []
 
         articles_text = "\n\n".join([
-            f"[{a['filter']}] \"{a['title']}\": {a['summary']}"
+            f"[id:{a['id']}] [{a['filter']}] \"{a['title']}\": {a['summary']}"
             for a in article_details
         ])
 
@@ -1341,18 +1407,19 @@ ARTICLES:
 
 For each insight:
 - Find cross-article patterns, surprising connections, or actionable takeaways
-- Reference specific articles that contribute to the insight
+- Reference specific articles that contribute to the insight using their exact UUID from the [id:...] prefix above
 - Make insights concise (1-2 sentences) and thought-provoking
 
 Return a JSON array:
 [
   {{
     "insight_text": "...",
-    "source_article_ids": ["id1", "id2"],
+    "source_article_ids": ["exact-uuid-from-list", "exact-uuid-from-list"],
     "filters_spanned": ["filter1", "filter2"]
   }}
 ]
 
+IMPORTANT: source_article_ids MUST contain exact UUIDs from the article list above, not sequential numbers.
 Return ONLY the JSON array."""
 
         try:
@@ -1373,6 +1440,14 @@ Return ONLY the JSON array."""
 
             insights = json.loads(response_text)
             if isinstance(insights, list):
+                # Validate article IDs — filter out any that aren't in our actual list
+                valid_ids = {a['id'] for a in article_details}
+                for insight in insights:
+                    if 'source_article_ids' in insight:
+                        insight['source_article_ids'] = [
+                            aid for aid in insight['source_article_ids']
+                            if aid in valid_ids
+                        ]
                 return insights[:5]
 
         except (json.JSONDecodeError, Exception) as e:
@@ -1401,10 +1476,29 @@ Return ONLY the JSON array."""
                 return {"error": "Recap journey not found"}
 
             journey.commitment_text = commitment_text.strip()
-            journey.status = 'commitment'
+            journey.status = 'completed'
+            journey.stage_progress = 4
+            journey.completed_at = datetime.utcnow()
+
+            # Mark recap_completed on DailyMetric for ring system
+            today = date.today()
+            daily = db.query(DailyMetric).filter(
+                DailyMetric.user_id == journey.user_id,
+                DailyMetric.metric_date == today,
+            ).first()
+            if daily:
+                daily.recap_completed = True
+            else:
+                daily = DailyMetric(
+                    user_id=journey.user_id,
+                    metric_date=today,
+                    recap_completed=True,
+                )
+                db.add(daily)
+
             db.commit()
 
-            logger.info(f"Stored commitment for journey {recap_journey_id}")
+            logger.info(f"Stored commitment for journey {recap_journey_id}, marked completed")
             return {"saved": True}
 
         except Exception as e:
@@ -1806,6 +1900,7 @@ After 4-5 exchanges, naturally wrap up with a synthesis of the insights generate
             # ── Persist state ──
             journey.socratic_exchanges = exchanges
             journey.socratic_exchange_count = exchange_count
+            flag_modified(journey, 'socratic_exchanges')
             if journey.status == 'stage_2':
                 journey.status = 'stage_3'
             db.commit()

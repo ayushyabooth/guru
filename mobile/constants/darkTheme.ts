@@ -36,6 +36,11 @@ export const DarkTheme = {
   diveinGlow: 'rgba(236, 72, 153, 0.15)',
   recapGlow: 'rgba(251, 146, 60, 0.15)',
 
+  // Interactive (CTAs, links, accents)
+  interactive: '#6366F1',       // Indigo 500
+  interactiveHover: '#818CF8',  // Indigo 400
+  interactivePressed: '#4F46E5', // Indigo 600
+
   // Semantic colors (slightly brighter for dark bg)
   success: '#10B981',
   warning: '#F59E0B',

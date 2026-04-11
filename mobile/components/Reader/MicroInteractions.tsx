@@ -312,7 +312,7 @@ export const MicroInteractions: React.FC<MicroInteractionsProps> = ({
                   accessibilityLabel={`${label} emoji`}
                   accessibilityState={{ selected: selectedEmojis.includes(emoji) }}
                 >
-                  <Icon name={emoji} size={32} color={selectedEmojis.includes(emoji) ? '#32b0c6' : '#666'} />
+                  <Icon name={emoji} size={32} color={selectedEmojis.includes(emoji) ? '#38BDF8' : '#666'} />
                   <Text style={styles.emojiLabelText}>{label}</Text>
                 </TouchableOpacity>
               ))}
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#32b0c6',
+    color: '#38BDF8',
     marginBottom: 12,
   },
   prompt: {
@@ -428,10 +428,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   yesButton: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   notSureButton: {
-    backgroundColor: '#ffc107',
+    backgroundColor: '#F59E0B',
   },
   responseButtonText: {
     fontSize: 14,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emojiButtonSelected: {
-    borderColor: '#32b0c6',
+    borderColor: '#38BDF8',
     backgroundColor: '#e7f6f8',
   },
   emojiText: {
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   submitButton: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,

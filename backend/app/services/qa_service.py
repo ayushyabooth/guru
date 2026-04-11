@@ -64,7 +64,7 @@ class QAService:
             if not content:
                 # Prefer context_summary (dense RAG summary, legally safe)
                 from app.models.article_rich_content import ArticleRichContent
-                rc = self.db.query(ArticleRichContent).filter(
+                rc = db.query(ArticleRichContent).filter(
                     ArticleRichContent.article_id == article.id
                 ).first()
                 if rc and rc.context_summary:
@@ -200,7 +200,7 @@ Format your response as a JSON array of objects with a 'question' field:
             else:
                 # Prefer context_summary → raw_text fallback
                 from app.models.article_rich_content import ArticleRichContent
-                rc = self.db.query(ArticleRichContent).filter(
+                rc = db.query(ArticleRichContent).filter(
                     ArticleRichContent.article_id == article.id
                 ).first()
                 if rc and rc.context_summary:

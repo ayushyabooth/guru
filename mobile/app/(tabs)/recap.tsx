@@ -333,8 +333,6 @@ export default function RecapScreen() {
       // Advance stage
       const result = await recapService.advanceStage(journey.journey_id);
       setJourney(prev => prev ? { ...prev, stage_progress: result.stage_progress, status: result.status } : null);
-
-      // Always go to Socratic (no tier gating)
       setViewState('socratic');
     } catch (err: any) {
       Alert.alert('Error', 'Failed to advance. Please try again.');

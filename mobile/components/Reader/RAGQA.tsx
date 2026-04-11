@@ -666,7 +666,7 @@ export const RAGQA: React.FC<RAGQAProps> = ({
 
         {isGenerating && (
           <View style={styles.loadingState}>
-            <ActivityIndicator size="small" color="#32b0c6" />
+            <ActivityIndicator size="small" color="#38BDF8" />
             <Text style={styles.loadingText}>Generating answer...</Text>
           </View>
         )}
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   suggestedTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#32b0c6',
+    color: '#38BDF8',
     marginBottom: 16,
   },
   questionCard: {
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveButtonActive: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   saveButtonText: {
     fontSize: 14,
@@ -905,7 +905,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -959,12 +959,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#32b0c6',
+    borderLeftColor: '#38BDF8',
   },
   leadingQuestionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#32b0c6',
+    color: '#38BDF8',
     textTransform: 'uppercase',
     marginBottom: 8,
   },
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,

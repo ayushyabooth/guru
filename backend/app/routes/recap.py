@@ -27,6 +27,7 @@ Legacy endpoints (kept for backward compatibility):
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from typing import Optional, List
 from pathlib import Path
 import uuid
@@ -220,10 +221,11 @@ async def submit_recap_answer(
     if request.question_index < 0 or request.question_index >= len(questions):
         raise HTTPException(status_code=400, detail="Invalid question index")
 
-    # Store response
-    responses = journey.guided_responses or {}
+    # Store response (copy dict to ensure SQLAlchemy detects mutation)
+    responses = dict(journey.guided_responses or {})
     responses[str(request.question_index)] = request.response
     journey.guided_responses = responses
+    flag_modified(journey, 'guided_responses')
 
     # Check if all questions answered
     all_answered = len(responses) >= len(questions)
@@ -273,13 +275,6 @@ async def recap_socratic_exchange(
 
     if not journey:
         raise HTTPException(status_code=404, detail="Recap journey not found")
-
-    # Check tier allows Stage 3
-    if journey.tier == 'lite':
-        raise HTTPException(
-            status_code=403,
-            detail="Socratic deep dive requires Standard or Full tier (4+ articles)",
-        )
 
     result = RecapJourneyService.socratic_exchange(journey_uuid, request.message, db)
 

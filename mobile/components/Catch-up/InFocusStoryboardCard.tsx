@@ -22,6 +22,7 @@ import SocraticQAModal from './SocraticQAModal';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
 import Icon from '../ui/Icon';
+import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 
 /** Convert raw slug like "food_beverage" → "Food & Beverage" */
@@ -253,9 +254,12 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.heroPlaceholder, { backgroundColor: categoryColors.accent + '18' }]}>
-            <Icon name={industryConfig.icon} size={48} color={categoryColors.accent} style={{ opacity: 0.6 }} />
-          </View>
+          <HeroGradientFallback
+            accentFrom={industryConfig.accent}
+            accentTo={industryConfig.accentSecondary || industryConfig.accent}
+            emoji={industryConfig.emoji}
+            height={180}
+          />
         )}
       </Animated.View>
 

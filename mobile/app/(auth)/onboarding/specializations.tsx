@@ -2,7 +2,7 @@
  * Specializations Screen - Liquid Glass Design
  *
  * Features:
- * - Select up to 4 specializations
+ * - Select up to 2 specializations
  * - 3D glass blob backgrounds
  * - Glass cards with selection states
  */
@@ -36,7 +36,7 @@ interface Specialization {
   description: string;
 }
 
-const MAX_SPECIALIZATIONS = 4;
+const MAX_SPECIALIZATIONS = 2;
 
 export default function SpecializationsScreen() {
   const { state, setSpecializations, nextStep, previousStep } = useOnboarding();
@@ -133,7 +133,7 @@ export default function SpecializationsScreen() {
 
         <Text style={styles.title}>Choose your specializations</Text>
         <Text style={styles.subtitle}>
-          Select 1-4 areas within {getIndustryName()} that you focus on most.
+          Select 1-2 areas within {getIndustryName()} that you focus on most.
         </Text>
         <View style={styles.selectionBadge}>
           <Text style={styles.selectionCount}>

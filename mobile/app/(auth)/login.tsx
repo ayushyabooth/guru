@@ -9,7 +9,7 @@
  * - Dark/light theme support
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,13 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { isDark, colors } = useTheme();
+
+  // Clear form fields on mount to prevent stale data
+  useEffect(() => {
+    setEmail('');
+    setPassword('');
+    setError('');
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -166,6 +173,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              autoComplete="off"
               icon="user"
             />
 
@@ -179,6 +187,7 @@ export default function LoginScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="off"
               icon="lock"
             />
 

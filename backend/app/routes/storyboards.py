@@ -465,7 +465,7 @@ async def get_saved_articles(
         # Get saved articles
         saved_articles_query = db.query(UserSavedArticle).filter(
             UserSavedArticle.user_id == current_user.id
-        ).order_by(UserSavedArticle.created_at.desc())
+        ).order_by(UserSavedArticle.saved_at.desc())
         
         total = saved_articles_query.count()
         saved_articles = saved_articles_query.offset(offset).limit(limit).all()
@@ -483,7 +483,7 @@ async def get_saved_articles(
                     "word_count": article.word_count,
                     "is_paywalled": article.is_paywalled,
                     "created_at": article.created_at.isoformat() if article.created_at else None,
-                    "saved_at": saved_article.created_at.isoformat() if saved_article.created_at else None
+                    "saved_at": saved_article.saved_at.isoformat() if saved_article.saved_at else None
                 })
         
         return {

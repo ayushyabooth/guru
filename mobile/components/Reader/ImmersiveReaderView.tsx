@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#32b0c6',
+    color: '#38BDF8',
     fontWeight: '600',
   },
   headerRight: {
@@ -541,14 +541,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#32b0c6',
+    borderColor: '#38BDF8',
   },
   saveButtonActive: {
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   saveButtonText: {
     fontSize: 14,
-    color: '#32b0c6',
+    color: '#38BDF8',
     fontWeight: '600',
   },
   saveButtonTextActive: {
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
   },
   scrollContainer: {
     flex: 1,
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
   contextBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#32b0c6',
+    color: '#38BDF8',
     textTransform: 'uppercase',
   },
   similarityScore: {
@@ -840,7 +840,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#32b0c6',
+    backgroundColor: '#38BDF8',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
