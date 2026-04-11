@@ -120,7 +120,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   };
 
   return (
-    <View style={[styles.card, liquidGlassStyle]}>
+    <View style={[styles.card, liquidGlassStyle, !isDark && { backgroundColor: 'rgba(255,255,255,0.85)', borderColor: 'rgba(0,0,0,0.08)' }]}>
       {/* Accent strip at top - uses filter context color */}
       <View style={[styles.accentStrip, { backgroundColor: filterColors.accent }]} />
       

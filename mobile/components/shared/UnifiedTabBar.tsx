@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import Icon from '../ui/Icon';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Unified tab interface that supports both simple and rich modes
 export interface TabItem {
@@ -45,22 +46,22 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
+  const { isDark } = useTheme();
 
   const getColors = (tab: TabItem, isActive: boolean) => {
     if (variant === 'rich' && tab.type) {
       const colors = TAB_COLORS[tab.type] || TAB_COLORS.default;
       return {
-        bg: isActive ? colors.active + '38' : colors.inactive, // ~22% opacity for glass
-        text: isActive ? '#E0F2FE' : colors.active,
-        border: isActive ? colors.active + '80' : 'rgba(255,255,255,0.08)', // ~50% opacity border
+        bg: isActive ? colors.active + '38' : colors.inactive,
+        text: isActive ? (isDark ? '#E0F2FE' : '#0F172A') : colors.active,
+        border: isActive ? colors.active + '80' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
       };
     }
-    // Minimal variant - translucent glass pill styling, themed by accentColor
     const accent = accentColor || '#38BDF8';
     return {
-      bg: isActive ? `${accent}38` : 'rgba(255,255,255,0.06)',
-      text: isActive ? '#E0F2FE' : '#94A3B8',
-      border: isActive ? `${accent}80` : 'rgba(255,255,255,0.10)',
+      bg: isActive ? `${accent}38` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+      text: isActive ? (isDark ? '#E0F2FE' : '#0F172A') : (isDark ? '#94A3B8' : '#475569'),
+      border: isActive ? `${accent}80` : (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)'),
     };
   };
 
