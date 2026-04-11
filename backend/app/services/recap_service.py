@@ -630,6 +630,30 @@ class RecapJourneyService:
             )
         ).all()
 
+        # ── Fallback: if no activity this week, widen window to last 14 days ──
+        # This ensures the snapshot always has content to show, even for
+        # users who were active recently but not in the strict Mon-Sun window.
+        widened_window = False
+        if not time_logs:
+            fallback_start_dt = datetime.combine(
+                week_end - timedelta(days=14), datetime.min.time()
+            )
+            time_logs = db.query(TimeLog).filter(
+                and_(
+                    TimeLog.user_id == user_uuid,
+                    TimeLog.ring_type.in_(['catchup', 'divein']),
+                    TimeLog.started_at >= fallback_start_dt,
+                    TimeLog.started_at <= week_end_dt,
+                )
+            ).all()
+            if time_logs:
+                widened_window = True
+                week_start_dt = fallback_start_dt
+                logger.info(
+                    f"Snapshot for user {user_id}: no activity in strict week, "
+                    f"widened to last 14 days ({len(time_logs)} time logs found)"
+                )
+
         # Aggregate per context_id (article/storyboard)
         article_engagement = {}  # context_id -> { total_seconds, industry, specialization, activity_types }
         day_totals = {}  # day_name -> total_seconds
@@ -868,6 +892,7 @@ class RecapJourneyService:
             "user_highlights": user_highlights,
             "topic_clusters": topic_clusters,
             "reading_pattern": reading_pattern,
+            "widened_window": widened_window,
         }
 
         # Compute anchor interactions (top 3-4 most meaningful engagements)
@@ -1023,13 +1048,39 @@ class RecapJourneyService:
         anchor_interactions = snapshot_data.get("anchor_interactions", [])
 
         if not articles:
-            return [{
-                "type": "reflection",
-                "text": "What's one thing you'd like to explore or learn about next week?",
-                "referenced_articles": [],
-                "response_format": "free_text",
-                "chips": [],
-            }]
+            # No articles found in snapshot — return a set of general
+            # reflection questions so the user still gets a meaningful
+            # Stage 2 experience rather than a single generic prompt.
+            return [
+                {
+                    "type": "reflection",
+                    "text": "Think about the most interesting article or idea you came across recently. What made it stick with you?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "pattern_spotting",
+                    "text": "Have you noticed any recurring themes or topics showing up across your reading lately?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "surprise",
+                    "text": "Was there anything you read recently that challenged your assumptions or surprised you?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+                {
+                    "type": "reflection",
+                    "text": "What's one topic you'd like to explore more deeply next week?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                },
+            ]
 
         # Always generate 5 questions (no tier gating)
         question_count = 5
