@@ -79,6 +79,11 @@ export const LightTheme = {
   textTertiary: '#94A3B8',
   textInverse: '#FFFFFF',
 
+  // Interactive (CTAs, links, accents)
+  interactive: '#6366F1',       // Indigo 500
+  interactiveHover: '#818CF8',  // Indigo 400
+  interactivePressed: '#4F46E5', // Indigo 600
+
   // Semantic colors
   success: '#10B981',
   warning: '#F59E0B',

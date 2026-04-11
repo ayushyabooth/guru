@@ -108,6 +108,14 @@ export default function WebViewReader({
   useEffect(() => {
     if (overlayVisible || article.totalSections === 0) return;
 
+    // Dismiss active peek card if user scrolls >15% away
+    if (activePeekCard) {
+      const activePos = activePeekCard.position_after_section / article.totalSections;
+      if (Math.abs(scrollProgress - activePos) > 0.15) {
+        setActivePeekCard(null);
+      }
+    }
+
     for (const ann of article.annotations) {
       if (seenPeekCards.has(ann.id)) continue;
 
@@ -119,7 +127,7 @@ export default function WebViewReader({
         break; // one at a time
       }
     }
-  }, [scrollProgress, article.annotations, article.totalSections, overlayVisible, seenPeekCards]);
+  }, [scrollProgress, article.annotations, article.totalSections, overlayVisible, seenPeekCards, activePeekCard]);
 
   // -- WebView message handler ----------------------------------------------
   const handleWebViewMessage = useCallback((message: WebViewMessage) => {

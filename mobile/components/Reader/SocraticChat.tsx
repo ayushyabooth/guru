@@ -383,7 +383,7 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
         {/* Loading indicator */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#32b0c6" />
+            <ActivityIndicator size="small" color="#38BDF8" />
             <Text style={styles.loadingText}>Thinking...</Text>
           </View>
         )}

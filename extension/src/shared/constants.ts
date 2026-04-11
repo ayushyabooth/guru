@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const API_BASE_URL = 'https://guru-production-1b4f.up.railway.app/api/v1';
 
 // Design tokens (from mobile/constants/theme.ts)
 export const COLORS = {

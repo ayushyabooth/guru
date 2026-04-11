@@ -31,15 +31,15 @@ function isTokenExpiringSoon(token: string): boolean {
 }
 
 // Refresh token by getting a new one from the backend
-async function refreshAuthToken(currentToken: string): Promise<string | null> {
+async function refreshAuthToken(): Promise<string | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${currentToken}`,
-      },
-    });
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) return null;
+
+    const response = await fetch(
+      `${API_BASE_URL}/auth/refresh?refresh_token=${encodeURIComponent(refreshToken)}`,
+      { method: 'POST' },
+    );
 
     if (response.ok) {
       const data = await response.json();
@@ -75,7 +75,7 @@ export async function getAuthToken(): Promise<string | null> {
 
   // Check if token is expiring soon and refresh if needed
   if (isTokenExpiringSoon(token)) {
-    const newToken = await refreshAuthToken(token);
+    const newToken = await refreshAuthToken();
     return newToken || token; // Return new token or fall back to old one
   }
 
@@ -83,27 +83,51 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 export async function setAuthToken(token: string): Promise<void> {
-  try {
-    // Try SecureStore first
-    await SecureStore.setItemAsync('access_token', token);
-  } catch {
-    // Fallback to localStorage for web
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('access_token', token);
-    } else {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem('access_token', token);
+  } else {
+    try {
+      await SecureStore.setItemAsync('access_token', token);
+    } catch {
       throw new Error('Failed to set auth token: no storage available');
     }
   }
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return localStorage.getItem('refresh_token');
+  } else {
+    try {
+      return await SecureStore.getItemAsync('refresh_token');
+    } catch {
+      return null;
+    }
+  }
+}
+
+export async function setRefreshToken(token: string): Promise<void> {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem('refresh_token', token);
+  } else {
+    try {
+      await SecureStore.setItemAsync('refresh_token', token);
+    } catch {
+      throw new Error('Failed to set refresh token: no storage available');
+    }
+  }
+}
+
 export async function removeAuthToken(): Promise<void> {
-  try {
-    // Try SecureStore first
-    await SecureStore.deleteItemAsync('access_token');
-  } catch {
-    // Fallback to localStorage for web
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('access_token');
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  } else {
+    try {
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+    } catch {
+      // SecureStore not available
     }
   }
 }

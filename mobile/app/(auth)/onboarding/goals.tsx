@@ -327,14 +327,14 @@ export default function GoalsScreen() {
         {/* Dive-in Goal Card */}
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
-            <View style={[styles.goalIndicator, { backgroundColor: '#0891B2' }]} />
+            <View style={[styles.goalIndicator, { backgroundColor: '#EC4899' }]} />
             <View style={styles.goalInfo}>
-              <Text style={styles.goalTitle}>Daily Dive-in</Text>
+              <Text style={styles.goalTitle}>Weekly Dive-in</Text>
               <Text style={styles.goalDescription}>Deep reading for real expertise</Text>
             </View>
             <View style={styles.goalValueBox}>
-              <Text style={[styles.goalValue, { color: '#0891B2' }]}>{diveinDaily}</Text>
-              <Text style={styles.goalUnit}>min/day</Text>
+              <Text style={[styles.goalValue, { color: '#EC4899' }]}>{diveinDaily}</Text>
+              <Text style={styles.goalUnit}>min/week</Text>
             </View>
           </View>
 
@@ -343,7 +343,7 @@ export default function GoalsScreen() {
             min={15}
             max={60}
             step={5}
-            color="#0891B2"
+            color="#EC4899"
             gradientStart="#22D3EE"
             onChange={handleDiveinChange}
           />
@@ -362,7 +362,7 @@ export default function GoalsScreen() {
                 <Text
                   style={[
                     styles.quickButtonText,
-                    diveinDaily === val && { color: '#0891B2', fontWeight: '700' },
+                    diveinDaily === val && { color: '#EC4899', fontWeight: '700' },
                   ]}
                 >
                   {val}m
@@ -375,7 +375,7 @@ export default function GoalsScreen() {
           {diveinDaily >= 30 && (
             <View style={styles.encouragementBadge}>
               <View style={styles.encouragementRow}>
-                <Icon name="arm-flex-outline" size={16} color="#0891B2" />
+                <Icon name="arm-flex-outline" size={16} color="#EC4899" />
                 <Text style={styles.encouragementText}> More dive-in = deeper expertise</Text>
               </View>
             </View>
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   },
   encouragementText: {
     ...Typography.labelMedium,
-    color: '#0891B2',
+    color: '#EC4899',
   },
   summaryCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.06)',

@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 4,
-    borderColor: '#32B0C6',
+    borderColor: '#38BDF8',
     borderTopColor: 'transparent',
   },
   message: {

@@ -237,6 +237,13 @@ export default function IndustryScreen() {
 
       {/* Header */}
       <View style={styles.headerContainer}>
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '20%' }]} />
+          </View>
+          <Text style={styles.progressText}>Step 1 of 5</Text>
+        </View>
+
         <Text style={styles.title}>Choose Your Industry</Text>
         <Text style={styles.subtitle}>
           Select the industry that best fits your role
@@ -328,8 +335,28 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
+  },
+  progressContainer: {
+    marginBottom: Spacing.lg,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderRadius: 3,
+    marginBottom: Spacing.sm,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#38BDF8',
+    borderRadius: 3,
+  },
+  progressText: {
+    ...Typography.labelMedium,
+    color: '#38BDF8',
+    textAlign: 'center',
   },
   title: {
     ...Typography.displaySmall,

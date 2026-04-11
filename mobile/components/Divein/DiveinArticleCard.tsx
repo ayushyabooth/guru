@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getFilterColors } from '../../constants/theme';
+import { getIndustryConfig } from '../../constants/industryConfig';
 import Icon from '../ui/Icon';
+import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -61,6 +63,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   const categoryColors = getFilterColors(article.industry);
   const filterColors = getFilterColors(filterContext);
   const industryIcon = categoryColors.icon;
+  const industryConfig = getIndustryConfig(article.industry);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -139,9 +142,12 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.heroPlaceholder, { backgroundColor: categoryColors.accent + '18' }]}>
-            <Icon name={industryIcon} size={32} color={categoryColors.accent} style={{ opacity: 0.5 }} />
-          </View>
+          <HeroGradientFallback
+            accentFrom={industryConfig.accent}
+            accentTo={industryConfig.accentSecondary || industryConfig.accent}
+            emoji={industryConfig.emoji}
+            height={140}
+          />
         )}
         
         {/* Liquid glass overlay */}

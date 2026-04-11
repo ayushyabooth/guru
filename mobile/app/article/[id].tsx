@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import WebViewReader, { OverlayArticleData } from '../../components/Reader/WebViewReader';
 import { RelatedArticle } from '../../components/Reader/RelatedArticles';
@@ -65,6 +65,47 @@ export default function ArticleDetailScreen() {
   const [readingHistory, setReadingHistoryState] = useState<string[]>(getReadingHistory());
   const [readingTime, setReadingTime] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
+
+  // Notes state (web fallback)
+  const [noteInput, setNoteInput] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [savedNotes, setSavedNotes] = useState<{text: string; time: string}[]>([]);
+
+  // Ask Guru state (web fallback)
+  const [guruInput, setGuruInput] = useState('');
+  const [guruLoading, setGuruLoading] = useState(false);
+  const [guruMessages, setGuruMessages] = useState<{role: 'user'|'guru'; text: string}[]>([]);
+  const [guruConversationId, setGuruConversationId] = useState<string | null>(null);
+
+  const sendGuruMessage = async () => {
+    if (!guruInput.trim() || guruLoading) return;
+    const question = guruInput.trim();
+    setGuruMessages(prev => [...prev, { role: 'user', text: question }]);
+    setGuruInput('');
+    setGuruLoading(true);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch(`${API_BASE_URL}/socratic/chat`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          article_id: articleId,
+          question,
+          conversation_history: guruMessages.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
+          conversation_id: guruConversationId,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGuruMessages(prev => [...prev, { role: 'guru', text: data.response }]);
+        if (data.conversation_id) setGuruConversationId(data.conversation_id);
+      } else {
+        setGuruMessages(prev => [...prev, { role: 'guru', text: 'Sorry, I had trouble answering that. Please try again.' }]);
+      }
+    } catch (e) {
+      setGuruMessages(prev => [...prev, { role: 'guru', text: 'Network error. Please check your connection.' }]);
+    } finally { setGuruLoading(false); }
+  };
 
   // Track which feed tab opened this article
   const [sourceTab] = useState<string>(() => {
@@ -201,7 +242,7 @@ export default function ArticleDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#32b0c6" />
+        <ActivityIndicator size="large" color="#38BDF8" />
         <Text style={styles.loadingText}>Loading article...</Text>
       </View>
     );
@@ -329,7 +370,7 @@ export default function ArticleDetailScreen() {
           <>
             {overlayArticle.annotations.map((ann) => (
               <View key={ann.id} style={styles.webAnnotationCard}>
-                <Text style={styles.webAnnotationType}>{ann.type}</Text>
+                <Text style={styles.webAnnotationType}>{ann.type.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</Text>
                 <Text style={styles.webSectionText}>{ann.text}</Text>
               </View>
             ))}
@@ -337,30 +378,106 @@ export default function ArticleDetailScreen() {
         )}
 
         {activeTab === 2 && (
-          <View style={styles.webEmptyState}>
-            <Text style={styles.webEmptyText}>No notes yet.</Text>
-            <Text style={styles.webEmptySubtext}>
-              Install the Guru Chrome extension to highlight text and take notes directly on articles.
-            </Text>
-          </View>
-        )}
-
-        {activeTab === 3 && (
-          <View style={styles.webEmptyState}>
-            <Text style={styles.webEmptyText}>Ask Guru is available with the Chrome extension.</Text>
-            <Text style={styles.webEmptySubtext}>
-              The extension lets you ask questions about this article directly on the page.
-            </Text>
-            {rc?.socratic_prompts && rc.socratic_prompts.length > 0 && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={styles.webSectionTitle}>Think about it</Text>
-                {rc.socratic_prompts.map((p, i) => (
-                  <View key={i} style={styles.webPromptCard}>
-                    <Text style={styles.webPromptText}>{p}</Text>
+          <View style={{ padding: 16 }}>
+            <TextInput
+              style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, minHeight: 100, fontSize: 15, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', textAlignVertical: 'top' }}
+              placeholder="Add a note about this article..."
+              placeholderTextColor="#94A3B8"
+              multiline
+              numberOfLines={4}
+              value={noteInput}
+              onChangeText={setNoteInput}
+            />
+            <TouchableOpacity
+              style={{ backgroundColor: noteInput.trim() ? '#6366F1' : '#94A3B8', borderRadius: 12, padding: 14, marginTop: 12, alignItems: 'center' }}
+              onPress={async () => {
+                if (!noteInput.trim() || savingNote) return;
+                setSavingNote(true);
+                try {
+                  const token = await getAuthToken();
+                  const res = await fetch(`${API_BASE_URL}/articles/${articleId}/annotations`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ highlighted_text: 'Note', note_text: noteInput, color: 'gold', start_offset: 0, end_offset: 0 }),
+                  });
+                  if (res.ok) {
+                    setSavedNotes(prev => [...prev, { text: noteInput, time: new Date().toLocaleTimeString() }]);
+                    setNoteInput('');
+                  }
+                } catch (e) { console.error('Failed to save note:', e); }
+                finally { setSavingNote(false); }
+              }}
+              disabled={!noteInput.trim() || savingNote}
+            >
+              <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>{savingNote ? 'Saving...' : 'Save Note'}</Text>
+            </TouchableOpacity>
+            {savedNotes.length > 0 && (
+              <View style={{ marginTop: 20 }}>
+                <Text style={styles.webSectionTitle}>Your Notes</Text>
+                {savedNotes.map((n, i) => (
+                  <View key={i} style={{ backgroundColor: 'rgba(251,146,60,0.08)', borderLeftWidth: 3, borderLeftColor: '#F59E0B', padding: 12, borderRadius: 8, marginTop: 8 }}>
+                    <Text style={{ color: '#F1F5F9', fontSize: 14 }}>{n.text}</Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>{n.time}</Text>
                   </View>
                 ))}
               </View>
             )}
+            {overlayArticle.annotations.length > 0 && (
+              <View style={{ marginTop: 20 }}>
+                <Text style={styles.webSectionTitle}>Highlights</Text>
+                {overlayArticle.annotations.map((ann) => (
+                  <View key={ann.id} style={styles.webAnnotationCard}>
+                    <Text style={styles.webSectionText}>{ann.text}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 3 && (
+          <View style={{ padding: 16 }}>
+            {guruMessages.map((msg, i) => (
+              <View key={i} style={{ marginBottom: 12, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <View style={{ backgroundColor: msg.role === 'user' ? '#6366F1' : 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14, maxWidth: '85%' }}>
+                  <Text style={{ color: msg.role === 'user' ? '#FFF' : '#F1F5F9', fontSize: 14, lineHeight: 20 }}>{msg.text}</Text>
+                </View>
+              </View>
+            ))}
+            {guruLoading && (
+              <View style={{ marginBottom: 12 }}>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14, maxWidth: '85%' }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Guru is thinking...</Text>
+                </View>
+              </View>
+            )}
+            {rc?.socratic_prompts && rc.socratic_prompts.length > 0 && guruMessages.length === 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.webSectionTitle}>Think about it</Text>
+                {rc.socratic_prompts.map((p, i) => (
+                  <TouchableOpacity key={i} style={styles.webPromptCard} onPress={() => { setGuruInput(p); }}>
+                    <Text style={styles.webPromptText}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, fontSize: 15, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}
+                placeholder="Ask Guru about this article..."
+                placeholderTextColor="#94A3B8"
+                value={guruInput}
+                onChangeText={setGuruInput}
+                onSubmitEditing={sendGuruMessage}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: guruInput.trim() ? '#6366F1' : '#94A3B8', borderRadius: 12, padding: 14, justifyContent: 'center' }}
+                onPress={sendGuruMessage}
+                disabled={!guruInput.trim() || guruLoading}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '600' }}>Ask</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -408,17 +525,17 @@ const styles = StyleSheet.create({
     color: '#ff6b6b',
     textAlign: 'center',
   },
-  // Web reading state styles
+  // Web reading state styles — dark theme to match rest of app
   webReadingContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#0A0E17',
   },
   webHeader: {
     padding: 16,
     paddingTop: 48,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   webBackText: {
     fontSize: 15,
@@ -427,9 +544,9 @@ const styles = StyleSheet.create({
   },
   webReadingState: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   webReadingIcon: {
     fontSize: 20,
@@ -438,7 +555,7 @@ const styles = StyleSheet.create({
   webReadingTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#F1F5F9',
     marginBottom: 6,
   },
   webReadingMeta: {
@@ -447,9 +564,9 @@ const styles = StyleSheet.create({
   },
   webTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 16,
   },
   webTab: {
@@ -465,7 +582,7 @@ const styles = StyleSheet.create({
   webTabText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#94A3B8',
+    color: '#64748B',
   },
   webTabTextActive: {
     color: '#6366F1',
@@ -482,17 +599,17 @@ const styles = StyleSheet.create({
   webSectionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#F1F5F9',
     marginBottom: 8,
   },
   webSectionText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#475569',
+    color: '#94A3B8',
   },
   webQuoteCard: {
     padding: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: '#6366F1',
@@ -501,7 +618,7 @@ const styles = StyleSheet.create({
   webQuoteText: {
     fontSize: 13,
     fontStyle: 'italic',
-    color: '#475569',
+    color: '#94A3B8',
     lineHeight: 20,
   },
   webAnnotationCard: {
@@ -535,21 +652,21 @@ const styles = StyleSheet.create({
   },
   webPromptCard: {
     padding: 12,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: 'rgba(251,146,60,0.1)',
     borderRadius: 8,
     marginBottom: 8,
   },
   webPromptText: {
     fontSize: 13,
-    color: '#92400E',
+    color: '#FB923C',
   },
   webActions: {
     flexDirection: 'row',
     gap: 12,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#111827',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   webActionBtn: {
     flex: 1,
@@ -557,7 +674,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   webActionBtnPrimary: {
     backgroundColor: '#6366F1',
@@ -566,7 +683,7 @@ const styles = StyleSheet.create({
   webActionBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#94A3B8',
   },
   webActionBtnTextPrimary: {
     color: '#fff',
@@ -574,15 +691,15 @@ const styles = StyleSheet.create({
   webArticleBanner: {
     margin: 16,
     padding: 14,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(99,102,241,0.1)',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: 'rgba(99,102,241,0.2)',
     gap: 10,
   },
   webBannerText: {
     fontSize: 13,
-    color: '#4338CA',
+    color: '#818CF8',
     lineHeight: 18,
   },
   webBannerBtn: {

@@ -23,28 +23,52 @@ interface PeekCardProps {
   onDismiss: () => void;
 }
 
-const AUTO_DISMISS_MS = 8000;
+const AUTO_DISMISS_MS = 6000;
 
 export default function PeekCard({ annotation, onTap, onDismiss }: PeekCardProps) {
   const slideAnim = useRef(new Animated.Value(260)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const dismissingRef = useRef(false);
+
+  const dismiss = () => {
+    if (dismissingRef.current) return;
+    dismissingRef.current = true;
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 80,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onDismiss());
+  };
 
   useEffect(() => {
-    // Slide in
-    Animated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      tension: 60,
-      friction: 10,
-    }).start();
+    dismissingRef.current = false;
+    slideAnim.setValue(80);
+    opacityAnim.setValue(0);
+
+    // Slide in with spring + fade
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 18,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Auto-dismiss
-    const timer = setTimeout(() => {
-      Animated.timing(slideAnim, {
-        toValue: 260,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => onDismiss());
-    }, AUTO_DISMISS_MS);
+    const timer = setTimeout(dismiss, AUTO_DISMISS_MS);
 
     return () => clearTimeout(timer);
   }, [annotation.id]);
@@ -57,7 +81,7 @@ export default function PeekCard({ annotation, onTap, onDismiss }: PeekCardProps
     <Animated.View
       style={[
         styles.card,
-        { borderLeftColor: colors.accent, transform: [{ translateX: slideAnim }] },
+        { borderLeftColor: colors.accent, opacity: opacityAnim, transform: [{ translateX: slideAnim }] },
       ]}
     >
       <TouchableOpacity

@@ -204,6 +204,363 @@
           "color_primary": "#22C55E"
         }
       ]
+    },
+    {
+      "id": "healthcare",
+      "name": "Healthcare",
+      "emoji": "🏥",
+      "icon": "hospital-box-outline",
+      "color_primary": "#EF4444",
+      "color_secondary": "#DC2626",
+      "description": "Hospitals, medtech, pharmaceuticals, biotech",
+      "specializations": [
+        {
+          "id": "clinical_practice",
+          "name": "Clinical Practice",
+          "description": "Hospital systems, physician groups, clinical operations, patient care delivery",
+          "emoji": "🩺",
+          "icon": "stethoscope",
+          "color_primary": "#EF4444"
+        },
+        {
+          "id": "medical_technology",
+          "name": "Medical Technology",
+          "description": "Medical devices, diagnostics, health IT systems, digital health platforms",
+          "emoji": "🔬",
+          "icon": "microscope",
+          "color_primary": "#F87171"
+        },
+        {
+          "id": "pharmaceuticals",
+          "name": "Pharmaceuticals",
+          "description": "Drug development, clinical trials, regulatory affairs, pharma manufacturing",
+          "emoji": "💊",
+          "icon": "pill",
+          "color_primary": "#DC2626"
+        },
+        {
+          "id": "healthcare_operations",
+          "name": "Healthcare Operations",
+          "description": "Healthcare administration, payer operations, revenue cycle, compliance",
+          "emoji": "📋",
+          "icon": "clipboard-pulse-outline",
+          "color_primary": "#B91C1C"
+        },
+        {
+          "id": "biotech_research",
+          "name": "Biotech & Research",
+          "description": "Biotechnology, genomics, life sciences research, CRISPR and gene therapy",
+          "emoji": "🧬",
+          "icon": "dna",
+          "color_primary": "#FCA5A5"
+        }
+      ]
+    },
+    {
+      "id": "manufacturing",
+      "name": "Manufacturing",
+      "emoji": "🏭",
+      "icon": "factory",
+      "color_primary": "#78716C",
+      "color_secondary": "#57534E",
+      "description": "Industrial production, supply chain, automation",
+      "specializations": [
+        {
+          "id": "operations_supply_chain",
+          "name": "Operations & Supply Chain",
+          "description": "Supply chain management, logistics, procurement, warehouse operations",
+          "emoji": "📦",
+          "icon": "truck-delivery-outline",
+          "color_primary": "#78716C"
+        },
+        {
+          "id": "advanced_manufacturing",
+          "name": "Advanced Manufacturing",
+          "description": "3D printing, smart factories, Industry 4.0, materials science",
+          "emoji": "⚙️",
+          "icon": "cog-outline",
+          "color_primary": "#57534E"
+        },
+        {
+          "id": "industrial_automation",
+          "name": "Industrial Automation",
+          "description": "Robotics, PLC systems, SCADA, industrial IoT, process automation",
+          "emoji": "🤖",
+          "icon": "robot-industrial",
+          "color_primary": "#A8A29E"
+        },
+        {
+          "id": "quality_process",
+          "name": "Quality & Process",
+          "description": "Six Sigma, lean manufacturing, quality assurance, continuous improvement",
+          "emoji": "✅",
+          "icon": "check-decagram-outline",
+          "color_primary": "#44403C"
+        },
+        {
+          "id": "product_development",
+          "name": "Product Development",
+          "description": "R&D, prototyping, product design, engineering management",
+          "emoji": "🛠️",
+          "icon": "hammer-wrench",
+          "color_primary": "#D6D3D1"
+        }
+      ]
+    },
+    {
+      "id": "energy",
+      "name": "Energy",
+      "emoji": "⚡",
+      "icon": "lightning-bolt",
+      "color_primary": "#F97316",
+      "color_secondary": "#EA580C",
+      "description": "Renewable energy, oil & gas, utilities, sustainability",
+      "specializations": [
+        {
+          "id": "renewable_energy",
+          "name": "Renewable Energy",
+          "description": "Solar, wind, hydro, battery storage, clean energy technology",
+          "emoji": "☀️",
+          "icon": "solar-power",
+          "color_primary": "#F97316"
+        },
+        {
+          "id": "grid_distribution",
+          "name": "Grid & Distribution",
+          "description": "Power grid modernization, utilities, transmission, smart grid technology",
+          "emoji": "🔌",
+          "icon": "transmission-tower",
+          "color_primary": "#EA580C"
+        },
+        {
+          "id": "oil_gas_operations",
+          "name": "Oil & Gas Operations",
+          "description": "Upstream exploration, midstream pipelines, downstream refining, LNG",
+          "emoji": "🛢️",
+          "icon": "barrel-outline",
+          "color_primary": "#C2410C"
+        },
+        {
+          "id": "sustainability_esg",
+          "name": "Sustainability & ESG",
+          "description": "Carbon markets, ESG reporting, climate strategy, circular economy",
+          "emoji": "🌍",
+          "icon": "earth",
+          "color_primary": "#FB923C"
+        },
+        {
+          "id": "energy_trading",
+          "name": "Energy Trading",
+          "description": "Power trading, commodity markets, energy risk management, pricing",
+          "emoji": "📊",
+          "icon": "chart-bar",
+          "color_primary": "#FDBA74"
+        }
+      ]
+    },
+    {
+      "id": "real_estate",
+      "name": "Real Estate",
+      "emoji": "🏢",
+      "icon": "office-building",
+      "color_primary": "#64748B",
+      "color_secondary": "#475569",
+      "description": "Commercial, residential, property management, infrastructure",
+      "specializations": [
+        {
+          "id": "commercial_development",
+          "name": "Commercial Development",
+          "description": "Office, retail, mixed-use development, commercial leasing, CRE investment",
+          "emoji": "🏗️",
+          "icon": "crane",
+          "color_primary": "#64748B"
+        },
+        {
+          "id": "residential_urban_planning",
+          "name": "Residential & Urban Planning",
+          "description": "Housing development, urban design, zoning, community planning",
+          "emoji": "🏘️",
+          "icon": "home-group",
+          "color_primary": "#475569"
+        },
+        {
+          "id": "real_estate_finance",
+          "name": "Real Estate Finance",
+          "description": "REITs, mortgage markets, real estate lending, property valuation",
+          "emoji": "💰",
+          "icon": "cash-multiple",
+          "color_primary": "#334155"
+        },
+        {
+          "id": "property_management",
+          "name": "Property Management",
+          "description": "Facilities management, tenant relations, property operations, PropTech",
+          "emoji": "🔑",
+          "icon": "key-variant",
+          "color_primary": "#94A3B8"
+        },
+        {
+          "id": "infrastructure",
+          "name": "Infrastructure",
+          "description": "Transportation, public works, infrastructure investment, P3 projects",
+          "emoji": "🌉",
+          "icon": "bridge",
+          "color_primary": "#CBD5E1"
+        }
+      ]
+    },
+    {
+      "id": "education",
+      "name": "Education",
+      "emoji": "🎓",
+      "icon": "school-outline",
+      "color_primary": "#10B981",
+      "color_secondary": "#059669",
+      "description": "Higher education, EdTech, curriculum, research",
+      "specializations": [
+        {
+          "id": "higher_education_leadership",
+          "name": "Higher Education Leadership",
+          "description": "University administration, accreditation, enrollment strategy, governance",
+          "emoji": "🏛️",
+          "icon": "bank-outline",
+          "color_primary": "#10B981"
+        },
+        {
+          "id": "edtech_digital_learning",
+          "name": "EdTech & Digital Learning",
+          "description": "Learning platforms, online education, educational software, LMS",
+          "emoji": "💻",
+          "icon": "laptop",
+          "color_primary": "#059669"
+        },
+        {
+          "id": "curriculum_development",
+          "name": "Curriculum Development",
+          "description": "Instructional design, assessment, pedagogy, standards alignment",
+          "emoji": "📚",
+          "icon": "book-open-page-variant-outline",
+          "color_primary": "#047857"
+        },
+        {
+          "id": "student_success_retention",
+          "name": "Student Success & Retention",
+          "description": "Student engagement, advising, retention analytics, career services",
+          "emoji": "🎯",
+          "icon": "bullseye-arrow",
+          "color_primary": "#34D399"
+        },
+        {
+          "id": "research_innovation",
+          "name": "Research & Innovation",
+          "description": "Research grants, technology transfer, academic publishing, lab management",
+          "emoji": "🔬",
+          "icon": "flask-outline",
+          "color_primary": "#6EE7B7"
+        }
+      ]
+    },
+    {
+      "id": "government",
+      "name": "Government",
+      "emoji": "🏛️",
+      "icon": "account-group-outline",
+      "color_primary": "#3B82F6",
+      "color_secondary": "#2563EB",
+      "description": "Public sector, policy, defense, digital government",
+      "specializations": [
+        {
+          "id": "policy_administration",
+          "name": "Policy & Administration",
+          "description": "Public policy analysis, regulatory affairs, legislative process, governance",
+          "emoji": "📜",
+          "icon": "file-document-outline",
+          "color_primary": "#3B82F6"
+        },
+        {
+          "id": "public_safety_defense",
+          "name": "Public Safety & Defense",
+          "description": "Law enforcement, national security, emergency management, military operations",
+          "emoji": "🛡️",
+          "icon": "shield-star-outline",
+          "color_primary": "#2563EB"
+        },
+        {
+          "id": "infrastructure_planning",
+          "name": "Infrastructure & Planning",
+          "description": "Public infrastructure, transportation planning, municipal services, zoning",
+          "emoji": "🗺️",
+          "icon": "map-outline",
+          "color_primary": "#1D4ED8"
+        },
+        {
+          "id": "social_programs",
+          "name": "Social Programs",
+          "description": "Social services, public health programs, welfare systems, community development",
+          "emoji": "🤝",
+          "icon": "handshake-outline",
+          "color_primary": "#60A5FA"
+        },
+        {
+          "id": "digital_government",
+          "name": "Digital Government",
+          "description": "GovTech, civic tech, digital services, open data, government IT modernization",
+          "emoji": "🖥️",
+          "icon": "desktop-classic",
+          "color_primary": "#93C5FD"
+        }
+      ]
+    },
+    {
+      "id": "non_profit",
+      "name": "Non-Profit",
+      "emoji": "💜",
+      "icon": "heart-outline",
+      "color_primary": "#A855F7",
+      "color_secondary": "#9333EA",
+      "description": "Philanthropy, social impact, community organizations",
+      "specializations": [
+        {
+          "id": "program_management",
+          "name": "Program Management",
+          "description": "Program design, implementation, monitoring and evaluation, grant management",
+          "emoji": "📋",
+          "icon": "clipboard-check-outline",
+          "color_primary": "#A855F7"
+        },
+        {
+          "id": "fundraising_development",
+          "name": "Fundraising & Development",
+          "description": "Major gifts, annual campaigns, donor relations, planned giving, grants",
+          "emoji": "🎁",
+          "icon": "gift-outline",
+          "color_primary": "#9333EA"
+        },
+        {
+          "id": "social_entrepreneurship",
+          "name": "Social Entrepreneurship",
+          "description": "Social enterprise, impact investing, mission-driven business models",
+          "emoji": "🚀",
+          "icon": "rocket-launch-outline",
+          "color_primary": "#7C3AED"
+        },
+        {
+          "id": "community_engagement",
+          "name": "Community Engagement",
+          "description": "Volunteer management, advocacy, grassroots organizing, public relations",
+          "emoji": "🌍",
+          "icon": "earth",
+          "color_primary": "#C084FC"
+        },
+        {
+          "id": "impact_measurement",
+          "name": "Impact Measurement",
+          "description": "Outcomes tracking, social ROI, logic models, data-driven impact assessment",
+          "emoji": "📊",
+          "icon": "chart-box-outline",
+          "color_primary": "#D8B4FE"
+        }
+      ]
     }
   ],
   "interests": [

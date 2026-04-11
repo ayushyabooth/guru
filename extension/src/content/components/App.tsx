@@ -34,7 +34,7 @@ export default function App() {
 
     let ticking = false;
     const checkScroll = () => {
-      if (ticking || panel || peek) return;
+      if (ticking || panel) return;
       ticking = true;
 
       requestAnimationFrame(() => {
@@ -61,10 +61,11 @@ export default function App() {
             unseenPeekCards.value = next;
 
             // Show peek card after a brief delay (feels natural)
+            // If one is already showing, replace it smoothly
             if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
             peekTimerRef.current = setTimeout(() => {
               activePeekCard.value = ann;
-            }, 400);
+            }, peek ? 100 : 400);
 
             break; // Only one at a time
           }

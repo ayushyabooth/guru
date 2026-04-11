@@ -109,9 +109,12 @@ console.log('[Guru] Content script loaded on:', window.location.href);
 
 // Auto-sync auth token from web app's localStorage when on the web app origin
 // This enables zero-friction auth: user logs into web app, extension picks up the token
-if (window.location.hostname === 'localhost' && window.location.port === '8081') {
+const isGuruWebApp = (window.location.hostname === 'localhost' && window.location.port === '8081') ||
+  window.location.hostname === 'dist-guru8.vercel.app' ||
+  window.location.hostname.endsWith('.vercel.app');
+if (isGuruWebApp) {
   try {
-    const webAppToken = localStorage.getItem('guru_access_token');
+    const webAppToken = localStorage.getItem('access_token') || localStorage.getItem('guru_access_token');
     if (webAppToken) {
       chrome.runtime.sendMessage({ type: 'SYNC_TOKEN', token: webAppToken });
       console.log('[Guru] Synced auth token from web app');
@@ -252,7 +255,18 @@ function getBaseStyles(): string {
       height: 3px;
       background: rgba(99, 102, 241, 0.6);
       border-radius: 2px;
-      transition: top 0.1s;
+      transition: top 0.1s linear;
+    }
+
+    @keyframes guru-panel-slide-up {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
     .guru-panel {
@@ -267,10 +281,11 @@ function getBaseStyles(): string {
       box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
       border-radius: 16px 16px 0 0;
       pointer-events: auto;
-      transition: height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      animation: guru-panel-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .guru-panel-handle {
@@ -368,12 +383,15 @@ function getBaseStyles(): string {
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
       pointer-events: auto;
       cursor: pointer;
-      transform: translateX(320px);
-      transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+      transform: translateX(80px);
+      opacity: 0;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                  opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .guru-peek-card.visible {
       transform: translateX(0);
+      opacity: 1;
     }
 
     .guru-peek-card-type {

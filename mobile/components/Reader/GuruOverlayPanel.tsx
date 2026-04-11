@@ -293,7 +293,7 @@ export default function GuruOverlayPanel(props: GuruOverlayPanelProps) {
   // Snap to nearest height
   const snapTo = useCallback((target: number) => {
     currentH.current = target;
-    Animated.spring(sheetH, { toValue: target, useNativeDriver: false, tension: 80, friction: 12 }).start();
+    Animated.spring(sheetH, { toValue: target, useNativeDriver: false, tension: 80, friction: 18 }).start();
   }, [sheetH]);
 
   // Visibility toggle

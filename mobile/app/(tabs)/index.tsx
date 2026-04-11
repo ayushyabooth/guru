@@ -18,7 +18,7 @@ import GuruRings from '../../components/ui/GuruRings';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken } from '../../utils/auth';
 import GoalEditor from '../../components/Home/GoalEditor';
-const DevMetricsPanel = __DEV__ ? require('../../components/DevMetricsPanel').default : null;
+const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
 import {
   Spacing,
@@ -448,7 +448,7 @@ function HomeContent() {
       <OrganicBackground variant="home" />
 
       {/* Debug panel - only in development mode */}
-      {__DEV__ && (
+      {process.env.NODE_ENV !== 'production' && (
         <DebugPanel
           metrics={displayMetrics}
           onUpdateMetrics={handleDebugUpdate}
@@ -457,7 +457,7 @@ function HomeContent() {
       )}
 
       {/* Dev Metrics Panel - performance monitoring */}
-      {__DEV__ && DevMetricsPanel && <DevMetricsPanel />}
+      {process.env.NODE_ENV !== 'production' && DevMetricsPanel && <DevMetricsPanel />}
 
       <ScrollView
         style={styles.scrollView}

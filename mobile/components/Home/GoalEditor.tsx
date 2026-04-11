@@ -234,13 +234,13 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
         {/* Dive-in Goal */}
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
-            <View style={[styles.goalIndicator, { backgroundColor: '#0891B2' }]} />
+            <View style={[styles.goalIndicator, { backgroundColor: '#EC4899' }]} />
             <View style={styles.goalTitleContainer}>
               <Text style={styles.goalTitle}>Daily Dive-in</Text>
               <Text style={styles.goalSubtitle}>Deep reading for expertise</Text>
             </View>
             <View style={styles.goalValueContainer}>
-              <Text style={[styles.goalValue, { color: '#0891B2' }]}>{diveinGoal}m</Text>
+              <Text style={[styles.goalValue, { color: '#EC4899' }]}>{diveinGoal}m</Text>
               <Text style={styles.goalUnit}>per day</Text>
             </View>
           </View>
@@ -250,7 +250,7 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
             min={15}
             max={60}
             step={5}
-            color="#0891B2"
+            color="#EC4899"
             onChange={setDiveinGoal}
           />
 
@@ -268,7 +268,7 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
                 <Text
                   style={[
                     styles.presetButtonText,
-                    diveinGoal === val && { color: '#0891B2' },
+                    diveinGoal === val && { color: '#EC4899' },
                   ]}
                 >
                   {val}m
@@ -279,7 +279,7 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
 
           {/* Encouragement message */}
           <View style={styles.encouragementContainer}>
-            <Icon name="lightbulb-outline" size={16} color="#0891B2" style={styles.encouragementIcon} />
+            <Icon name="lightbulb-outline" size={16} color="#EC4899" style={styles.encouragementIcon} />
             <Text style={styles.encouragementText}>{getDiveinEncouragement()}</Text>
           </View>
         </View>
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   encouragementText: {
     fontSize: 13,
-    color: '#0891B2',
+    color: '#EC4899',
     fontWeight: '500',
     flex: 1,
   },

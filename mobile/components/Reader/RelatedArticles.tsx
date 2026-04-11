@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 15,
-    color: '#32b0c6',
+    color: '#38BDF8',
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
