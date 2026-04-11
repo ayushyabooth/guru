@@ -178,6 +178,16 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Stale content cleanup error: {e}")
 
+    # Start ingestion orchestrator (non-blocking, fire-and-forget)
+    try:
+        import asyncio
+        from app.services.ingestion_orchestrator import IngestionOrchestrator
+        orchestrator = IngestionOrchestrator.get_instance()
+        asyncio.create_task(orchestrator.start())
+        logger.info("Ingestion orchestrator started (background)")
+    except Exception as e:
+        logger.error(f"Failed to start ingestion orchestrator: {e}")
+
     logger.info("API ready")
 
 
