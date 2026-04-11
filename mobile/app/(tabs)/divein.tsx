@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    padding: Spacing.xxl,
   },
   loadingText: {
     marginTop: Spacing.md,
@@ -207,6 +207,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterWrapper: {
-    paddingTop: 12,
+    paddingTop: Spacing.md,
   },
 });

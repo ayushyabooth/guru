@@ -3,6 +3,14 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensi
 import { DiveinArticleCard, DiveinArticleData } from './DiveinArticleCard';
 import { DiveinArticleSkeleton } from './DiveinArticleSkeleton';
 import Icon from '../ui/Icon';
+import { DarkTheme } from '../../constants/darkTheme';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+  DarkGlassMaterials,
+  RingColors,
+} from '../../constants/liquidGlass';
 
 export interface DiveinArticle {
   id: string;
@@ -143,7 +151,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
             {savedArticles.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Icon name="bookmark-outline" size={16} color="#38BDF8" />
+                  <Icon name="bookmark-outline" size={16} color={RingColors.divein.primary} />
                   <Text style={styles.sectionTitle}>SAVED FOR LATER</Text>
                   <View style={styles.sectionCount}>
                     <Text style={styles.sectionCountText}>{savedArticles.length}</Text>
@@ -157,7 +165,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
             {expertArticles.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Icon name="star" size={16} color="#F59E0B" />
+                  <Icon name="star" size={16} color={DarkTheme.warning} />
                   <Text style={styles.sectionTitle}>EXPERT PICKS</Text>
                   <View style={styles.sectionCount}>
                     <Text style={styles.sectionCountText}>{expertArticles.length}</Text>
@@ -171,7 +179,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
             {moreArticles.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Icon name="compass-outline" size={16} color="#6B7280" />
+                  <Icon name="compass-outline" size={16} color={DarkTheme.textTertiary} />
                   <Text style={styles.sectionTitle}>MORE TO EXPLORE</Text>
                   <View style={styles.sectionCount}>
                     <Text style={styles.sectionCountText}>{moreArticles.length}</Text>
@@ -185,7 +193,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
 
         {isLoading && (
           <View style={styles.loadingMore}>
-            <ActivityIndicator size="small" color="#38BDF8" />
+            <ActivityIndicator size="small" color={RingColors.divein.primary} />
             <Text style={styles.loadingMoreText}>Loading more articles...</Text>
           </View>
         )}
@@ -206,11 +214,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: Spacing.lg,
   },
   gridRow: {
     flexDirection: 'row',
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm,
     gap: 0,
   },
   gridItem: {
@@ -220,57 +228,55 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
     paddingTop: 20,
-    paddingBottom: 4,
+    paddingBottom: Spacing.xs,
   },
   sectionIcon: {
     fontSize: 16,
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 12,
+    ...Typography.labelMedium,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: '#64748B',
+    color: DarkTheme.textTertiary,
   },
   sectionCount: {
-    marginLeft: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 8,
+    marginLeft: Spacing.sm,
+    backgroundColor: DarkTheme.glassHighlight,
+    paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 10,
   },
   sectionCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
   },
   contextToggle: {
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: DarkTheme.glassSectionBorder,
     maxHeight: 60,
   },
   contextToggleContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
   },
   contextButton: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.xl,
     backgroundColor: 'transparent',
-    marginRight: 8,
+    marginRight: Spacing.sm,
   },
   contextButtonActive: {
-    backgroundColor: '#38BDF8',
+    backgroundColor: RingColors.divein.primary,
   },
   contextButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelLarge,
+    color: DarkTheme.textSecondary,
   },
   contextButtonTextActive: {
     color: '#FFFFFF',
@@ -316,35 +322,33 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   source: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
   },
   metaDivider: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.15)',
+    ...Typography.labelMedium,
+    color: DarkTheme.glassBorder,
     marginHorizontal: 6,
   },
   date: {
-    fontSize: 12,
-    color: '#64748B',
+    ...Typography.labelMedium,
+    color: DarkTheme.textTertiary,
   },
   readingTime: {
-    fontSize: 12,
-    color: '#64748B',
+    ...Typography.labelMedium,
+    color: DarkTheme.textTertiary,
   },
   headline: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#E2E8F0',
+    ...Typography.headlineSmall,
+    color: DarkTheme.textPrimary,
     lineHeight: 26,
     marginBottom: 10,
   },
   teaser: {
-    fontSize: 14,
+    ...Typography.bodyMedium,
     lineHeight: 21,
-    color: '#94A3B8',
-    marginBottom: 16,
+    color: DarkTheme.textSecondary,
+    marginBottom: Spacing.md,
   },
   articleFooter: {
     flexDirection: 'row',
@@ -353,26 +357,23 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   contextChip: {
-    paddingHorizontal: 12,
+    ...DarkGlassMaterials.pill,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   contextChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelMedium,
+    color: DarkTheme.textSecondary,
     textTransform: 'capitalize',
   },
   startButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#38BDF8',
+    borderRadius: BorderRadius.sm,
+    backgroundColor: RingColors.divein.primary,
   },
   startButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...Typography.labelLarge,
     color: '#FFFFFF',
   },
   emptyState: {
@@ -380,38 +381,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 80,
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing.xl,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#94A3B8',
-    marginBottom: 8,
+    ...Typography.headlineSmall,
+    color: DarkTheme.textSecondary,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#64748B',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
   },
   loadingMore: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 24,
-    gap: 8,
+    paddingVertical: Spacing.lg,
+    gap: Spacing.sm,
   },
   loadingMoreText: {
-    fontSize: 14,
-    color: '#94A3B8',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textSecondary,
   },
   endOfFeed: {
-    paddingVertical: 32,
+    paddingVertical: Spacing.xl,
     alignItems: 'center',
   },
   endOfFeedText: {
-    fontSize: 14,
-    color: '#64748B',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     fontStyle: 'italic',
   },
 });

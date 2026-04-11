@@ -24,7 +24,7 @@ export default function RecapRingProgress({ progress, size = 44, insightCount = 
         {/* Background track */}
         <Circle
           cx={cx} cy={cy} r={radius}
-          fill="rgba(255,255,255,0.3)"
+          fill="rgba(15, 20, 35, 0.42)"
           stroke="rgba(251, 146, 60, 0.15)"
           strokeWidth={strokeWidth}
         />

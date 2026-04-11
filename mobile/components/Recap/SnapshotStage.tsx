@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Spacing, Typography, BorderRadius, RingColors, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import Icon from '../ui/Icon';
 import { SnapshotData } from '../../services/recap-service';
@@ -170,7 +170,9 @@ const styles = StyleSheet.create({
   patternHeader: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: DarkGlassMaterials.cardLight.backgroundColor,
+    borderBottomWidth: 1,
+    borderBottomColor: DarkGlassMaterials.cardLight.borderColor,
     ...getBackdropBlur(16),
   },
   patternText: {
@@ -206,17 +208,12 @@ const styles = StyleSheet.create({
     color: RingColors.recap.primary,
   },
   articleCard: {
+    ...DarkGlassMaterials.card,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.md,
-    borderWidth: 1,
     borderLeftWidth: 4,
     ...getBackdropBlur(12),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
   },
   articleHeader: {
     flexDirection: 'row',
@@ -264,12 +261,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   qaCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    ...DarkGlassMaterials.cardLight,
     padding: Spacing.md,
-    borderRadius: BorderRadius.md,
     marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
   },
   qaQuestion: {
     ...Typography.bodySmall,

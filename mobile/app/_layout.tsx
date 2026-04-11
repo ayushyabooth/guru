@@ -1,13 +1,8 @@
-import { Platform, LogBox, View, StyleSheet } from 'react-native';
-import { DarkTheme as NavDarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
 // Suppress noisy "Unexpected text node" warnings from React Native Web
-// These are caused by whitespace between JSX elements inside View components
-// and don't affect functionality.
 if (Platform.OS === 'web') {
   const origWarn = console.error;
   console.error = (...args: any[]) => {
@@ -19,11 +14,11 @@ import { useFonts, Orbitron_400Regular, Orbitron_700Bold } from '@expo-google-fo
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DiveInProvider } from '../contexts/DiveInContext';
 import { TimeTrackingProvider } from '../contexts/TimeTrackingContext';
-import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import { loadVisualConfigFromAPI } from '../constants/industryConfig';
+import ThemeAwareNav from '../components/ThemeAwareNav';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,35 +31,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Web: constrain to mobile-width viewport for better UX on desktop browsers
-const webShell: any = Platform.OS === 'web'
-  ? { flex: 1, maxWidth: 480, width: '100%', alignSelf: 'center' as const }
-  : { flex: 1 };
-
-function ThemeAwareNav() {
-  const { isDark } = useTheme();
-  return (
-    <NavThemeProvider value={isDark ? NavDarkTheme : DefaultTheme}>
-      <View style={webShell}>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-      </View>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </NavThemeProvider>
-  );
-}
-
 // Prevent splash screen from auto-hiding while fonts load
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   const [fontsLoaded] = useFonts({
     Orbitron_400Regular,
     Orbitron_700Bold,

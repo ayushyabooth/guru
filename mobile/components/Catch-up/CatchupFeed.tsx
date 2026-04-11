@@ -5,6 +5,15 @@ import { useCatchupFeed } from '../../hooks/useCatchupFeed';
 import { CatchupService } from '../../services/article-service';
 import { InFocusStoryboardCard } from './InFocusStoryboardCard';
 import { StoryboardSkeleton } from './StoryboardSkeleton';
+import { DarkTheme } from '../../constants/darkTheme';
+import {
+  Spacing,
+  Typography,
+  BorderRadius,
+  DarkGlassMaterials,
+  RingColors,
+  getDarkBackdropBlur,
+} from '../../constants/liquidGlass';
 
 interface CatchupFeedProps {
   context: string;           // 'core', 'specialization:X', 'interest:Y'
@@ -89,8 +98,8 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
         <RefreshControl
           refreshing={isLoading && storyboards.length > 0}
           onRefresh={refresh}
-          colors={['#38BDF8']}
-          tintColor="#38BDF8"
+          colors={[RingColors.catchup.primary]}
+          tintColor={RingColors.catchup.primary}
         />
       }
     >
@@ -110,14 +119,14 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
       )}
       
       {hasMore && !isLoading && (
-        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { backdropFilter: 'blur(12px) saturate(180%)', WebkitBackdropFilter: 'blur(12px) saturate(180%)', boxShadow: '0 0 16px rgba(56,189,248,0.20), inset 0 1px 0 rgba(255,255,255,0.10)' } as any]} onPress={loadMore}>
+        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { ...getDarkBackdropBlur(12), boxShadow: `0 0 16px ${DarkTheme.catchupGlow}, inset 0 1px 0 ${DarkTheme.glassHighlight}` } as any]} onPress={loadMore}>
           <Text style={styles.loadMoreButtonText}>Load More Stories</Text>
         </TouchableOpacity>
       )}
       
       {isLoading && storyboards.length > 0 && (
         <View style={styles.loadingMore}>
-          <ActivityIndicator size="small" color="#38BDF8" />
+          <ActivityIndicator size="small" color={RingColors.catchup.primary} />
           <Text style={styles.loadingMoreText}>Loading more...</Text>
         </View>
       )}
@@ -126,7 +135,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
         <View style={styles.endMessage}>
           <View style={styles.endMessageRow}>
             <Text style={styles.endMessageText}>You're all caught up! </Text>
-            <Icon name="party-popper" size={18} color="#38BDF8" />
+            <Icon name="party-popper" size={18} color={RingColors.catchup.primary} />
           </View>
         </View>
       )}
@@ -144,115 +153,107 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: Spacing.xl,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94A3B8',
+    marginTop: Spacing.md,
+    ...Typography.bodyLarge,
+    color: DarkTheme.textSecondary,
     textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: Spacing.xl,
   },
   errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ff6b6b',
-    marginBottom: 8,
+    ...Typography.headlineSmall,
+    color: DarkTheme.error,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   errorSubtext: {
-    fontSize: 14,
-    color: '#64748B',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: '#38BDF8',
-    borderRadius: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: RingColors.catchup.primary,
+    borderRadius: BorderRadius.sm,
   },
   retryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+    color: DarkTheme.textPrimary,
+    ...Typography.labelLarge,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: Spacing.xl,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#E2E8F0',
-    marginBottom: 8,
+    ...Typography.headlineSmall,
+    color: DarkTheme.textPrimary,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#64748B',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
   refreshButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    ...DarkGlassMaterials.button,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   refreshButtonText: {
-    color: '#94A3B8',
-    fontWeight: '600',
-    fontSize: 16,
+    color: DarkTheme.textSecondary,
+    ...Typography.labelLarge,
   },
   errorBanner: {
-    margin: 12,
-    padding: 12,
+    margin: Spacing.md,
+    padding: Spacing.md,
     backgroundColor: 'rgba(239,68,68,0.12)',
-    borderRadius: 8,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
   },
   errorBannerText: {
-    color: '#ff6b6b',
-    fontSize: 14,
+    color: DarkTheme.error,
+    ...Typography.bodyMedium,
     fontWeight: '500',
   },
   loadMoreButton: {
-    margin: 12,
-    padding: 16,
-    backgroundColor: 'rgba(56, 189, 248, 0.30)',
-    borderRadius: 8,
+    margin: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: `${RingColors.catchup.primary}4D`,
+    borderRadius: BorderRadius.sm,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.35)',
+    borderColor: `${RingColors.catchup.light}59`,
   },
   loadMoreButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: DarkTheme.textPrimary,
+    ...Typography.labelLarge,
   },
   loadingMore: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-    gap: 8,
+    padding: Spacing.md,
+    gap: Spacing.sm,
   },
   loadingMoreText: {
-    fontSize: 14,
-    color: '#94A3B8',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textSecondary,
   },
   endMessage: {
-    padding: 24,
+    padding: Spacing.lg,
     alignItems: 'center',
   },
   endMessageRow: {
@@ -260,15 +261,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   endMessageText: {
-    fontSize: 16,
-    color: '#38BDF8',
+    ...Typography.bodyLarge,
+    color: RingColors.catchup.primary,
     fontWeight: '500',
   },
   authHint: {
-    fontSize: 14,
-    color: '#94A3B8',
+    ...Typography.bodyMedium,
+    color: DarkTheme.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.md,
     fontStyle: 'italic',
   },
 });

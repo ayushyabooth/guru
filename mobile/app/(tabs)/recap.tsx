@@ -41,6 +41,7 @@ import {
   Typography,
   BorderRadius,
   RingColors,
+  DarkGlassMaterials,
   getBackdropBlur,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
@@ -941,12 +942,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   pill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    ...DarkGlassMaterials.pill,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.pill,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
   },
   pillText: {
     ...Typography.labelSmall,
@@ -992,8 +990,7 @@ const styles = StyleSheet.create({
   },
   // Completed
   completedCard: {
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
-    borderRadius: BorderRadius.lg,
+    ...DarkGlassMaterials.card,
     padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
@@ -1057,11 +1054,8 @@ const styles = StyleSheet.create({
   stagesPreview: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
-    borderRadius: BorderRadius.lg,
+    ...DarkGlassMaterials.card,
     padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     ...getBackdropBlur(16),
   },
   stagesTitle: {

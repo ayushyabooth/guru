@@ -14,6 +14,7 @@ import {
   Typography,
   BorderRadius,
   RingColors,
+  DarkGlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
@@ -244,9 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     paddingTop: Spacing.md,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    ...DarkGlassMaterials.navBar,
     ...getBackdropBlur(24),
   },
   backButton: {
@@ -299,11 +298,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
-    borderRadius: BorderRadius.lg,
+    ...DarkGlassMaterials.card,
     padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     marginBottom: Spacing.lg,
     ...getBackdropBlur(16),
   },
@@ -323,14 +319,13 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: DarkThemeColors.glassBorder,
   },
   commitmentCard: {
+    ...DarkGlassMaterials.cardLight,
     backgroundColor: 'rgba(251, 146, 60, 0.06)',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.15)',
+    padding: Spacing.md,
     marginBottom: Spacing.lg,
   },
   section: {
@@ -399,10 +394,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   narratorText: {
-    color: '#38BDF8',
+    color: DarkThemeColors.catchup,
   },
   analystText: {
-    color: '#FB923C',
+    color: DarkThemeColors.recap,
   },
   scriptText: {
     ...Typography.bodyMedium,

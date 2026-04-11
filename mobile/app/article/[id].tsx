@@ -7,6 +7,8 @@ import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { CatchupService } from '../../services/article-service';
 import { useTimeTracking } from '../../hooks/useTimeTracking';
+import DarkThemeColors from '../../constants/darkTheme';
+import { DarkGlassMaterials, Spacing, Typography, BorderRadius } from '../../constants/liquidGlass';
 
 // Reading history stack stored in sessionStorage
 const getReadingHistory = (): string[] => {
@@ -242,7 +244,7 @@ export default function ArticleDetailScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#38BDF8" />
+        <ActivityIndicator size="large" color={DarkThemeColors.catchup} />
         <Text style={styles.loadingText}>Loading article...</Text>
       </View>
     );
@@ -378,18 +380,18 @@ export default function ArticleDetailScreen() {
         )}
 
         {activeTab === 2 && (
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: Spacing.md }}>
             <TextInput
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, minHeight: 100, fontSize: 16, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', textAlignVertical: 'top' }}
+              style={{ ...DarkGlassMaterials.input, padding: Spacing.md, minHeight: 100, fontSize: 16, color: DarkThemeColors.textPrimary, textAlignVertical: 'top' }}
               placeholder="Add a note about this article..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={DarkThemeColors.textSecondary}
               multiline
               numberOfLines={4}
               value={noteInput}
               onChangeText={setNoteInput}
             />
             <TouchableOpacity
-              style={{ backgroundColor: noteInput.trim() ? '#6366F1' : '#94A3B8', borderRadius: 12, padding: 14, marginTop: 12, alignItems: 'center' }}
+              style={{ backgroundColor: noteInput.trim() ? DarkThemeColors.interactive : DarkThemeColors.textSecondary, borderRadius: BorderRadius.md, padding: 14, marginTop: Spacing.md, alignItems: 'center' }}
               onPress={async () => {
                 if (!noteInput.trim() || savingNote) return;
                 setSavingNote(true);
@@ -412,18 +414,18 @@ export default function ArticleDetailScreen() {
               <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 16 }}>{savingNote ? 'Saving...' : 'Save Note'}</Text>
             </TouchableOpacity>
             {savedNotes.length > 0 && (
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: Spacing.lg }}>
                 <Text style={styles.webSectionTitle}>Your Notes</Text>
                 {savedNotes.map((n, i) => (
-                  <View key={i} style={{ backgroundColor: 'rgba(251,146,60,0.08)', borderLeftWidth: 3, borderLeftColor: '#F59E0B', padding: 12, borderRadius: 8, marginTop: 8 }}>
-                    <Text style={{ color: '#F1F5F9', fontSize: 14 }}>{n.text}</Text>
-                    <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 4 }}>{n.time}</Text>
+                  <View key={i} style={{ backgroundColor: DarkThemeColors.recapGlow, borderLeftWidth: 3, borderLeftColor: DarkThemeColors.warning, padding: Spacing.md, borderRadius: BorderRadius.sm, marginTop: Spacing.sm }}>
+                    <Text style={{ color: DarkThemeColors.textPrimary, fontSize: 14 }}>{n.text}</Text>
+                    <Text style={{ color: DarkThemeColors.textSecondary, fontSize: 12, marginTop: Spacing.xs }}>{n.time}</Text>
                   </View>
                 ))}
               </View>
             )}
             {overlayArticle.annotations.length > 0 && (
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: Spacing.lg }}>
                 <Text style={styles.webSectionTitle}>Highlights</Text>
                 {overlayArticle.annotations.map((ann) => (
                   <View key={ann.id} style={styles.webAnnotationCard}>
@@ -436,23 +438,23 @@ export default function ArticleDetailScreen() {
         )}
 
         {activeTab === 3 && (
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: Spacing.md }}>
             {guruMessages.map((msg, i) => (
-              <View key={i} style={{ marginBottom: 12, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <View style={{ backgroundColor: msg.role === 'user' ? '#6366F1' : 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14, maxWidth: '85%' }}>
-                  <Text style={{ color: msg.role === 'user' ? '#FFF' : '#F1F5F9', fontSize: 14, lineHeight: 20 }}>{msg.text}</Text>
+              <View key={i} style={{ marginBottom: Spacing.md, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <View style={{ backgroundColor: msg.role === 'user' ? DarkThemeColors.interactive : DarkThemeColors.glassLight, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
+                  <Text style={{ color: msg.role === 'user' ? '#FFF' : DarkThemeColors.textPrimary, fontSize: 14, lineHeight: 20 }}>{msg.text}</Text>
                 </View>
               </View>
             ))}
             {guruLoading && (
-              <View style={{ marginBottom: 12 }}>
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 14, maxWidth: '85%' }}>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>Guru is thinking...</Text>
+              <View style={{ marginBottom: Spacing.md }}>
+                <View style={{ backgroundColor: DarkThemeColors.glassLight, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
+                  <Text style={{ color: DarkThemeColors.textSecondary, fontSize: 14 }}>Guru is thinking...</Text>
                 </View>
               </View>
             )}
             {rc?.socratic_prompts && rc.socratic_prompts.length > 0 && guruMessages.length === 0 && (
-              <View style={{ marginBottom: 16 }}>
+              <View style={{ marginBottom: Spacing.md }}>
                 <Text style={styles.webSectionTitle}>Think about it</Text>
                 {rc.socratic_prompts.map((p, i) => (
                   <TouchableOpacity key={i} style={styles.webPromptCard} onPress={() => { setGuruInput(p); }}>
@@ -461,17 +463,17 @@ export default function ArticleDetailScreen() {
                 ))}
               </View>
             )}
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
               <TextInput
-                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, fontSize: 16, color: '#F1F5F9', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}
+                style={{ flex: 1, ...DarkGlassMaterials.input, padding: 14, fontSize: 16, color: DarkThemeColors.textPrimary }}
                 placeholder="Ask Guru about this article..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={DarkThemeColors.textSecondary}
                 value={guruInput}
                 onChangeText={setGuruInput}
                 onSubmitEditing={sendGuruMessage}
               />
               <TouchableOpacity
-                style={{ backgroundColor: guruInput.trim() ? '#6366F1' : '#94A3B8', borderRadius: 12, padding: 14, justifyContent: 'center' }}
+                style={{ backgroundColor: guruInput.trim() ? DarkThemeColors.interactive : DarkThemeColors.textSecondary, borderRadius: BorderRadius.md, padding: 14, justifyContent: 'center' }}
                 onPress={sendGuruMessage}
                 disabled={!guruInput.trim() || guruLoading}
               >
@@ -506,68 +508,63 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0A0E17',
+    backgroundColor: DarkThemeColors.background,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94A3B8',
+    marginTop: Spacing.md,
+    ...Typography.bodyLarge,
+    color: DarkThemeColors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-    backgroundColor: '#0A0E17',
+    padding: Spacing.xl,
+    backgroundColor: DarkThemeColors.background,
   },
   errorText: {
-    fontSize: 16,
-    color: '#ff6b6b',
+    ...Typography.bodyLarge,
+    color: DarkThemeColors.error,
     textAlign: 'center',
   },
   // Web reading state styles — dark theme to match rest of app
   webReadingContainer: {
     flex: 1,
-    backgroundColor: '#0A0E17',
+    backgroundColor: DarkThemeColors.background,
   },
   webHeader: {
-    padding: 16,
+    padding: Spacing.md,
     paddingTop: 48,
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    ...DarkGlassMaterials.navBar,
   },
   webBackText: {
-    fontSize: 16,
-    color: '#6366F1',
+    ...Typography.bodyLarge,
+    color: DarkThemeColors.interactive,
     fontWeight: '500',
   },
   webReadingState: {
-    padding: 20,
-    backgroundColor: '#111827',
+    padding: Spacing.lg,
+    backgroundColor: DarkThemeColors.backgroundSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: DarkThemeColors.glassBorder,
   },
   webReadingIcon: {
     fontSize: 20,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   webReadingTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#F1F5F9',
+    ...Typography.headlineSmall,
+    color: DarkThemeColors.textPrimary,
     marginBottom: 6,
   },
   webReadingMeta: {
-    fontSize: 12,
-    color: '#64748B',
+    ...Typography.bodySmall,
+    color: DarkThemeColors.textTertiary,
   },
   webTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 16,
+    ...DarkGlassMaterials.tabBar,
+    paddingHorizontal: Spacing.md,
   },
   webTab: {
     flex: 1,
@@ -577,15 +574,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   webTabActive: {
-    borderBottomColor: '#6366F1',
+    borderBottomColor: DarkThemeColors.interactive,
   },
   webTabText: {
-    fontSize: 12,
+    ...Typography.labelSmall,
     fontWeight: '500',
-    color: '#64748B',
+    color: DarkThemeColors.textTertiary,
   },
   webTabTextActive: {
-    color: '#6366F1',
+    color: DarkThemeColors.interactive,
   },
   webContent: {
     flex: 1,
@@ -597,120 +594,116 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   webSectionTitle: {
+    ...Typography.headlineSmall,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#F1F5F9',
-    marginBottom: 8,
+    color: DarkThemeColors.textPrimary,
+    marginBottom: Spacing.sm,
   },
   webSectionText: {
-    fontSize: 14,
+    ...Typography.bodyMedium,
     lineHeight: 22,
-    color: '#94A3B8',
+    color: DarkThemeColors.textSecondary,
   },
   webQuoteCard: {
-    padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 8,
+    ...DarkGlassMaterials.cardLight,
+    padding: Spacing.md,
     borderLeftWidth: 3,
-    borderLeftColor: '#6366F1',
-    marginBottom: 8,
+    borderLeftColor: DarkThemeColors.interactive,
+    marginBottom: Spacing.sm,
   },
   webQuoteText: {
-    fontSize: 12,
+    ...Typography.bodySmall,
     fontStyle: 'italic',
-    color: '#94A3B8',
+    color: DarkThemeColors.textSecondary,
     lineHeight: 20,
   },
   webAnnotationCard: {
+    ...DarkGlassMaterials.cardLight,
     padding: 14,
     borderLeftWidth: 3,
-    borderLeftColor: '#10B981',
-    marginBottom: 12,
+    borderLeftColor: DarkThemeColors.success,
+    marginBottom: Spacing.md,
   },
   webAnnotationType: {
-    fontSize: 11,
+    ...Typography.labelSmall,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    color: '#10B981',
-    marginBottom: 4,
+    color: DarkThemeColors.success,
+    marginBottom: Spacing.xs,
   },
   webEmptyState: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: Spacing.xl,
   },
   webEmptyText: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 8,
+    ...Typography.bodyLarge,
+    color: DarkThemeColors.textTertiary,
+    marginBottom: Spacing.sm,
   },
   webEmptySubtext: {
-    fontSize: 12,
-    color: '#94A3B8',
+    ...Typography.bodySmall,
+    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   webPromptCard: {
-    padding: 12,
-    backgroundColor: 'rgba(251,146,60,0.1)',
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: Spacing.md,
+    backgroundColor: DarkThemeColors.recapGlow,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.sm,
   },
   webPromptText: {
-    fontSize: 12,
-    color: '#FB923C',
+    ...Typography.bodySmall,
+    color: DarkThemeColors.recap,
   },
   webActions: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    backgroundColor: '#111827',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    ...DarkGlassMaterials.tabBar,
   },
   webActionBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    ...DarkGlassMaterials.button,
   },
   webActionBtnPrimary: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
+    backgroundColor: DarkThemeColors.interactive,
+    borderColor: DarkThemeColors.interactive,
   },
   webActionBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#94A3B8',
+    ...Typography.labelLarge,
+    color: DarkThemeColors.textSecondary,
   },
   webActionBtnTextPrimary: {
     color: '#fff',
   },
   webArticleBanner: {
-    margin: 16,
+    margin: Spacing.md,
     padding: 14,
     backgroundColor: 'rgba(99,102,241,0.1)',
-    borderRadius: 10,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: 'rgba(99,102,241,0.2)',
     gap: 10,
   },
   webBannerText: {
-    fontSize: 12,
-    color: '#818CF8',
+    ...Typography.bodySmall,
+    color: DarkThemeColors.interactiveHover,
     lineHeight: 18,
   },
   webBannerBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 6,
     paddingHorizontal: 14,
-    backgroundColor: '#6366F1',
-    borderRadius: 8,
+    backgroundColor: DarkThemeColors.interactive,
+    borderRadius: BorderRadius.sm,
   },
   webBannerBtnText: {
-    fontSize: 12,
+    ...Typography.labelSmall,
     fontWeight: '600',
     color: '#fff',
   },

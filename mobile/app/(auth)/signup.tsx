@@ -27,6 +27,7 @@ import {
   Spacing,
   Typography,
   BorderRadius,
+  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -132,7 +133,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, getDarkBackdropBlur(40)]}>
       {/* Background */}
       <OrganicBackground variant="login" />
 
@@ -148,7 +149,7 @@ export default function SignupScreen() {
           {/* Logo + Brand Name - Horizontal Row */}
           <View style={styles.logoSection}>
             <View style={styles.brandRow}>
-              <GuruRings size="logo" dimensions={80} />
+              <GuruRings size="logo" dimensions={88} />
               <Text style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
             </View>
           </View>
@@ -273,11 +274,11 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: Spacing.md,
   },
   brandName: {
     fontFamily: 'Orbitron_400Regular',
-    fontSize: 38,
+    fontSize: 42,
     letterSpacing: 12,
   },
   card: {

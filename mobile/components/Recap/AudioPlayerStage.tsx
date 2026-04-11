@@ -15,8 +15,10 @@ import {
   Typography,
   BorderRadius,
   RingColors,
+  DarkGlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
+import DarkThemeColors from '../../constants/darkTheme';
 import type { ScriptSegment } from '../../services/recap-service';
 
 const { width } = Dimensions.get('window');
@@ -393,7 +395,7 @@ function estimateCurrentSegment(
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: DarkThemeColors.overlay,
     paddingTop: 60,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
@@ -479,7 +481,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: DarkThemeColors.glassBorder,
     overflow: 'hidden',
   },
   progressFill: {
@@ -508,9 +510,9 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: DarkGlassMaterials.button.backgroundColor,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: DarkGlassMaterials.button.borderColor,
   },
   skipText: {
     ...Typography.labelMedium,

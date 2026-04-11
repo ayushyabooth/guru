@@ -64,12 +64,12 @@ export default function GlassButton({
 
   const isDisabled = disabled || loading;
 
-  // Primary button — translucent glass with blur
+  // Primary button — interactive indigo with glass blur
   if (variant === 'primary') {
     const webGlassStyle = Platform.OS === 'web' ? {
       backdropFilter: 'blur(16px) saturate(180%)',
       WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-      boxShadow: '0 0 24px rgba(56,189,248,0.20), inset 0 1px 0 rgba(255,255,255,0.12)',
+      boxShadow: '0 0 24px rgba(99,102,241,0.25), inset 0 1px 0 rgba(255,255,255,0.12)',
     } : {};
 
     return (
@@ -81,7 +81,7 @@ export default function GlassButton({
           styles.primaryContainer,
           {
             height,
-            borderRadius,
+            borderRadius: BorderRadius.lg,
             width: fullWidth ? '100%' : undefined,
           },
           webGlassStyle as any,
@@ -166,10 +166,10 @@ const styles = StyleSheet.create({
   primaryContainer: {
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(56, 189, 248, 0.30)',
+    backgroundColor: 'rgba(99, 102, 241, 0.35)',
     borderWidth: 1.5,
-    borderColor: 'rgba(125, 211, 252, 0.40)',
-    shadowColor: '#38BDF8',
+    borderColor: 'rgba(129, 140, 248, 0.45)',
+    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
