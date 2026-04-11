@@ -33,12 +33,12 @@ import {
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
 
-const { width } = Dimensions.get('window');
-// Calculate card size based on screen width for responsive grid
-// Mobile: 3 columns with smaller cards
+const { width: screenWidth } = Dimensions.get('window');
+// Constrain to max 480px (matches the webShell max-width) for proper grid sizing
+const width = Math.min(screenWidth, 480);
 const GAP = 12;
 const PADDING = 24;
-const COLUMNS = width < 500 ? 3 : 3;
+const COLUMNS = 3;
 const CARD_SIZE = (width - PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
 interface Industry {
