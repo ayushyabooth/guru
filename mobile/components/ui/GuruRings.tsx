@@ -674,10 +674,12 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
 // ═══════════════════════════════════════════════════════════════════
 
 function LogoRings({ dimensions }: { dimensions: number }) {
+  // Clean, simple logo — no glow halos, no specular crescents, no nexus effects.
+  // Works crisp at any size from 24px to 200px.
   const vb = 200;
-  const cx = 100, cy = 96;
-  const outerR = 52, innerR = 28;
-  const offset = 30;
+  const cx = 100, cy = 100;
+  const outerR = 44, innerR = 24;
+  const offset = 26;
 
   const tCx = cx, tCy = cy - offset;
   const pCx = cx - offset * 0.866, pCy = cy + offset * 0.5;
@@ -687,128 +689,34 @@ function LogoRings({ dimensions }: { dimensions: number }) {
     <View style={[styles.centerBox, { width: dimensions, height: dimensions }]}>
       <Svg width={dimensions} height={dimensions} viewBox={`0 0 ${vb} ${vb}`}>
         <Defs>
-          {/* Sky Blue */}
-          <RadialGradient id="lg_sky" cx="38%" cy="32%" r="68%" fx="32%" fy="26%">
-            <Stop offset="0%" stopColor="#E0F2FE" stopOpacity={0.6} />
-            <Stop offset="15%" stopColor="#BAE6FD" stopOpacity={0.98} />
-            <Stop offset="35%" stopColor="#7DD3FC" stopOpacity={1.0} />
-            <Stop offset="60%" stopColor="#38BDF8" stopOpacity={0.98} />
-            <Stop offset="85%" stopColor="#0284C7" stopOpacity={0.92} />
-            <Stop offset="100%" stopColor="#075985" stopOpacity={0.85} />
-          </RadialGradient>
-          <LinearGradient id="lg_skySpec" x1="20%" y1="5%" x2="80%" y2="95%">
-            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.7} />
-            <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.2} />
-            <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.0} />
-            <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
+          <LinearGradient id="lg_sky" x1="30%" y1="0%" x2="70%" y2="100%">
+            <Stop offset="0%" stopColor="#7DD3FC" />
+            <Stop offset="100%" stopColor="#0284C7" />
           </LinearGradient>
-
-          {/* Magenta */}
-          <RadialGradient id="lg_mag" cx="60%" cy="32%" r="68%" fx="66%" fy="26%">
-            <Stop offset="0%" stopColor="#FDF2F8" stopOpacity={0.6} />
-            <Stop offset="15%" stopColor="#FBCFE8" stopOpacity={0.98} />
-            <Stop offset="35%" stopColor="#F472B6" stopOpacity={1.0} />
-            <Stop offset="60%" stopColor="#EC4899" stopOpacity={0.98} />
-            <Stop offset="85%" stopColor="#BE185D" stopOpacity={0.92} />
-            <Stop offset="100%" stopColor="#831843" stopOpacity={0.85} />
-          </RadialGradient>
-          <LinearGradient id="lg_magSpec" x1="78%" y1="8%" x2="22%" y2="92%">
-            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.65} />
-            <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.18} />
-            <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.0} />
-            <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
+          <LinearGradient id="lg_mag" x1="70%" y1="0%" x2="30%" y2="100%">
+            <Stop offset="0%" stopColor="#F472B6" />
+            <Stop offset="100%" stopColor="#BE185D" />
           </LinearGradient>
-
-          {/* Coral */}
-          <RadialGradient id="lg_cor" cx="40%" cy="38%" r="68%" fx="34%" fy="32%">
-            <Stop offset="0%" stopColor="#FFF7ED" stopOpacity={0.6} />
-            <Stop offset="15%" stopColor="#FED7AA" stopOpacity={0.98} />
-            <Stop offset="35%" stopColor="#FDBA74" stopOpacity={1.0} />
-            <Stop offset="60%" stopColor="#FB923C" stopOpacity={0.98} />
-            <Stop offset="85%" stopColor="#EA580C" stopOpacity={0.92} />
-            <Stop offset="100%" stopColor="#9A3412" stopOpacity={0.85} />
-          </RadialGradient>
-          <LinearGradient id="lg_corSpec" x1="15%" y1="12%" x2="85%" y2="88%">
-            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.65} />
-            <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.18} />
-            <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.0} />
-            <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
+          <LinearGradient id="lg_cor" x1="30%" y1="20%" x2="70%" y2="100%">
+            <Stop offset="0%" stopColor="#FDBA74" />
+            <Stop offset="100%" stopColor="#EA580C" />
           </LinearGradient>
         </Defs>
 
-        {/* Drop shadow */}
-        <Ellipse cx={cx + 2} cy={cy + 6} rx={outerR + offset * 0.4} ry={outerR + offset * 0.3}
-          fill="rgba(0,0,0,0.15)" />
+        {/* Catch-up (top, blue) */}
+        <Path d={annulusPath(tCx, tCy, outerR, innerR)} fill="url(#lg_sky)" opacity={0.92} />
+        <Circle cx={tCx} cy={tCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
 
-        {/* Outer ambient glow */}
-        <Circle cx={tCx} cy={tCy} r={outerR + 24} fill="#38BDF8" opacity={0.10} />
-        <Circle cx={pCx} cy={pCy} r={outerR + 24} fill="#EC4899" opacity={0.10} />
-        <Circle cx={gCx} cy={gCy} r={outerR + 24} fill="#FB923C" opacity={0.10} />
+        {/* Dive-in (bottom-left, pink) */}
+        <Path d={annulusPath(pCx, pCy, outerR, innerR)} fill="url(#lg_mag)" opacity={0.92} />
+        <Circle cx={pCx} cy={pCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
 
-        {/* Inner glow halos */}
-        <Circle cx={tCx} cy={tCy} r={outerR + 8} fill="#7DD3FC" opacity={0.30} />
-        <Circle cx={pCx} cy={pCy} r={outerR + 8} fill="#F472B6" opacity={0.30} />
-        <Circle cx={gCx} cy={gCy} r={outerR + 8} fill="#FDBA74" opacity={0.30} />
+        {/* Recap (bottom-right, orange) */}
+        <Path d={annulusPath(gCx, gCy, outerR, innerR)} fill="url(#lg_cor)" opacity={0.92} />
+        <Circle cx={gCx} cy={gCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1} />
 
-        {/* Z1: Sky Blue */}
-        <G>
-          <Path d={annulusPath(tCx, tCy, outerR, innerR)} fill="url(#lg_sky)" opacity={0.97} />
-          <Path d={annulusPath(tCx, tCy, outerR, innerR)} fill="url(#lg_skySpec)" opacity={0.4} />
-          <Circle cx={tCx} cy={tCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={1.5} />
-          <Circle cx={tCx} cy={tCy} r={innerR} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-        </G>
-
-        {/* Z2: Magenta */}
-        <G>
-          <Path d={annulusPath(pCx, pCy, outerR, innerR)} fill="url(#lg_mag)" opacity={0.97} />
-          <Path d={annulusPath(pCx, pCy, outerR, innerR)} fill="url(#lg_magSpec)" opacity={0.4} />
-          <Circle cx={pCx} cy={pCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5} />
-          <Circle cx={pCx} cy={pCy} r={innerR} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-        </G>
-
-        {/* Z3: Coral */}
-        <G>
-          <Path d={annulusPath(gCx, gCy, outerR, innerR)} fill="url(#lg_cor)" opacity={0.97} />
-          <Path d={annulusPath(gCx, gCy, outerR, innerR)} fill="url(#lg_corSpec)" opacity={0.4} />
-          <Circle cx={gCx} cy={gCy} r={outerR} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth={1.5} />
-          <Circle cx={gCx} cy={gCy} r={innerR} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
-        </G>
-
-        {/* Borromean overpaint */}
-        <Path d={annulusArcPath(tCx, tCy, outerR, innerR, 105, 175)}
-          fill="url(#lg_sky)" opacity={0.95} />
-        <Path d={annulusArcPath(tCx, tCy, outerR, innerR, 105, 175)}
-          fill="url(#lg_skySpec)" opacity={0.35} />
-
-        {/* Specular crescents */}
-        <Path d={arcStrokePath(tCx, tCy, outerR - 4, 240, 330)}
-          fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={6} strokeLinecap="round" />
-        <Path d={arcStrokePath(tCx, tCy, outerR - 6, 260, 310)}
-          fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} strokeLinecap="round" />
-        <Path d={arcStrokePath(pCx, pCy, outerR - 4, 310, 40)}
-          fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={6} strokeLinecap="round" />
-        <Path d={arcStrokePath(pCx, pCy, outerR - 6, 330, 20)}
-          fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth={2.5} strokeLinecap="round" />
-        <Path d={arcStrokePath(gCx, gCy, outerR - 4, 230, 310)}
-          fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={6} strokeLinecap="round" />
-        <Path d={arcStrokePath(gCx, gCy, outerR - 6, 250, 290)}
-          fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth={2.5} strokeLinecap="round" />
-
-        {/* Inner hole highlights */}
-        <Path d={arcStrokePath(tCx, tCy, innerR + 3, 240, 340)}
-          fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={2.5} strokeLinecap="round" />
-        <Path d={arcStrokePath(pCx, pCy, innerR + 3, 310, 50)}
-          fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={2.5} strokeLinecap="round" />
-        <Path d={arcStrokePath(gCx, gCy, innerR + 3, 230, 320)}
-          fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={2.5} strokeLinecap="round" />
-
-        {/* Nexus glow */}
-        <Circle cx={(tCx + pCx + gCx) / 3} cy={(tCy + pCy + gCy) / 3} r={16}
-          fill="#FFFFFF" opacity={0.15} />
-        <Circle cx={(tCx + pCx + gCx) / 3} cy={(tCy + pCy + gCy) / 3} r={8}
-          fill="#FFFFFF" opacity={0.25} />
-        <Circle cx={(tCx + pCx + gCx) / 3 - 1} cy={(tCy + pCy + gCy) / 3 - 1.5} r={3}
-          fill="#FFFFFF" opacity={0.4} />
+        {/* Borromean overpaint — blue goes over orange at bottom-right overlap */}
+        <Path d={annulusArcPath(tCx, tCy, outerR, innerR, 105, 175)} fill="url(#lg_sky)" opacity={0.9} />
       </Svg>
     </View>
   );
