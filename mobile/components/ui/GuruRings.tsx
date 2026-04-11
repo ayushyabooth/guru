@@ -227,7 +227,9 @@ function computeProgress(metrics: RingMetrics) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// HERO PRESET — Full interlocking rings with liquid fill + glow
+// HERO PRESET — Triskelion stroked rings matching Figma EDL specs
+// Specs: R=70, SW=9, offset=35, fill clockwise from 12 o'clock
+// Borromean weave: Blue OVER Pink, Pink OVER Orange, Orange OVER Blue
 // ═══════════════════════════════════════════════════════════════════
 
 function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimensions }: {
@@ -242,369 +244,137 @@ function HeroRings({ metrics, onRingPress, showChangeGoals, onChangeGoals, dimen
   const hasProgress = prog.catchup > 0 || prog.divein > 0 || prog.recap > 0;
   const anim = useLiquidAnimation(hasProgress);
 
-  const vb = 400;
-  const cx = vb / 2, cy = vb / 2;
-  const outerR = 105, innerR = 55, midR = (outerR + innerR) / 2;
-  const offset = 58;
+  // Figma spec: viewBox 200, ring radius 70, stroke 9, center offset 35
+  const vb = 200;
+  const cx = 100, cy = 98;
+  const R = 70;     // ring radius
+  const SW = 9;     // stroke width
+  const offset = 35; // center-to-center offset
 
-  const tCx = cx, tCy = cy - offset - 2;
-  const pCx = cx - offset * 0.866, pCy = cy + offset * 0.5 - 2;
-  const gCx = cx + offset * 0.866, gCy = cy + offset * 0.5 - 2;
-
-  const tgAngles = useMemo(
-    () => circleIntersectionAngles(tCx, tCy, midR, gCx, gCy, midR), []
-  );
-  // Divein-catchup intersection (angles on divein's circle) for overpaint
-  const tpAngles = useMemo(
-    () => circleIntersectionAngles(pCx, pCy, midR, tCx, tCy, midR), []
-  );
+  // Triangle layout: Catch-up top, Dive-in bottom-left, Recap bottom-right
+  const tCx = cx, tCy = cy - offset;
+  const pCx = cx - offset * 0.866, pCy = cy + offset * 0.5;
+  const gCx = cx + offset * 0.866, gCy = cy + offset * 0.5;
 
   const nexusCx = (tCx + pCx + gCx) / 3;
   const nexusCy = (tCy + pCy + gCy) / 3;
   const avgProgress = (prog.catchup + prog.divein + prog.recap) / 3;
-  const nexus = computeNexusColor(prog.catchup, prog.divein, prog.recap);
 
-  const renderRing = (
-    rCx: number, rCy: number, key: RingName,
-    progress: number, fillAngle: number, ghosted = false,
-  ) => {
-    const full = annulusPath(rCx, rCy, outerR, innerR);
-    const bodyOpacity = ghosted ? 0.15 : 1;
+  const RING_COLORS_MAP: Record<RingName, string> = {
+    catchup: '#38BDF8',
+    divein: '#EC4899',
+    recap: '#FB923C',
+  };
+  const DIM = '#2A2E37'; // unfilled ring color per Figma spec
+
+  // Circumference for stroke-dasharray progress
+  const circumference = 2 * Math.PI * R;
+
+  // Render a single ring with progress fill
+  const renderRing = (rCx: number, rCy: number, key: RingName, progress: number) => {
+    const color = RING_COLORS_MAP[key];
+    const fillLength = circumference * Math.min(progress, 1);
+    const gapLength = circumference - fillLength;
 
     return (
       <G>
-        {/* Glass body — always on full ring so unfilled portion has base color */}
-        <G>
-          <Path d={full} fill={`url(#${key}Glass)`} opacity={bodyOpacity} />
-          <Path d={full} fill={`url(#${key}Depth)`} opacity={0.06 * bodyOpacity} />
-        </G>
-
-        {/* Liquid fill */}
-        {!ghosted && progress > 0 && progress < 1 && (
-          <G>
-            <Path d={annulusArcPath(rCx, rCy, outerR, innerR, 0, fillAngle)}
-              fill={`url(#${key}Liquid)`} />
-            {fillAngle > 5 && fillAngle < 355 && (
-              <G>
-                <Path d={annulusArcPath(rCx, rCy, outerR, innerR, fillAngle, Math.min(fillAngle + 4, 359.9))}
-                  fill={`url(#${key}Liquid)`} opacity={0.5} />
-                <Path d={annulusArcPath(rCx, rCy, outerR, innerR, Math.min(fillAngle + 3, 359.9), Math.min(fillAngle + 8, 359.9))}
-                  fill={`url(#${key}Liquid)`} opacity={0.2} />
-              </G>
-            )}
-            <Path d={annulusArcPath(rCx, rCy, outerR - 2, innerR + 2, 0, Math.min(fillAngle, 359.9))}
-              fill={`url(#${key}LiquidSpec)`} opacity={anim.pulseOpacity} />
-            {/* Animated meniscus — bright wobbling line at fill boundary */}
-            {fillAngle > 5 && fillAngle < 355 && (
-              <Path
-                d={annulusArcPath(rCx, rCy, outerR - 1, innerR + 1,
-                  fillAngle - 2 + anim.wobbleA * 4,
-                  fillAngle + 2 + anim.wobbleA * 4)}
-                fill="rgba(255,255,255,0.35)"
-              />
-            )}
-            {/* Shimmer sweep across filled liquid */}
-            {fillAngle > 30 && anim.shimmer.map((intensity, i) => {
-              if (intensity < 0.03) return null;
-              const bandCenter = ((i + 0.5) / 4) * fillAngle;
-              const bandWidth = fillAngle * 0.08;
-              return (
-                <Path key={i}
-                  d={annulusArcPath(rCx, rCy, outerR - 4, innerR + 4,
-                    Math.max(0, bandCenter - bandWidth),
-                    Math.min(fillAngle, bandCenter + bandWidth))}
-                  fill="rgba(255,255,255,0.7)"
-                  opacity={intensity}
-                />
-              );
-            })}
-          </G>
+        {/* Unfilled track */}
+        <Circle cx={rCx} cy={rCy} r={R} fill="none" stroke={DIM} strokeWidth={SW} />
+        {/* Filled arc — clockwise from 12 o'clock */}
+        {progress > 0 && (
+          <Circle cx={rCx} cy={rCy} r={R} fill="none"
+            stroke={color} strokeWidth={SW} strokeLinecap="round"
+            strokeDasharray={`${fillLength} ${gapLength}`}
+            strokeDashoffset={0}
+            transform={`rotate(-90 ${rCx} ${rCy})`}
+          />
         )}
-
-        {!ghosted && progress >= 1 && (
-          <G>
-            <Path d={full} fill={`url(#${key}Liquid)`} />
-            <Path d={full} fill={`url(#${key}LiquidSpec)`} opacity={anim.pulseOpacity} />
-          </G>
-        )}
-
-        {/* Rim edges — outer ring bright on filled arc, dim on unfilled */}
-        {!ghosted && progress > 0 && progress < 1 ? (
-          <G>
-            <Path d={arcStrokePath(rCx, rCy, outerR, 0, fillAngle)}
-              fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth={1.2} strokeLinecap="round" />
-            <Path d={arcStrokePath(rCx, rCy, outerR, fillAngle, 359.9)}
-              fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={1.0} strokeLinecap="round" />
-          </G>
-        ) : (
-          <Circle cx={rCx} cy={rCy} r={outerR}
-            fill="none" stroke={ghosted ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)'} strokeWidth={1.2} />
-        )}
-        <Circle cx={rCx} cy={rCy} r={innerR}
-          fill="none" stroke={ghosted ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeWidth={0.8} />
-        {!ghosted && (
-          <Circle cx={rCx} cy={rCy} r={innerR + 1}
-            fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth={0.6} />
+        {/* Shimmer on filled portion */}
+        {progress > 0.1 && hasProgress && (
+          <Circle cx={rCx} cy={rCy} r={R} fill="none"
+            stroke="rgba(255,255,255,0.25)" strokeWidth={SW - 2}
+            strokeDasharray={`${fillLength * 0.15} ${circumference - fillLength * 0.15}`}
+            strokeDashoffset={-fillLength * anim.shimmer[0] * 8}
+            transform={`rotate(-90 ${rCx} ${rCy})`}
+            opacity={anim.pulseOpacity * 0.6}
+          />
         )}
       </G>
     );
   };
 
-  const renderOverpaint = (
-    rCx: number, rCy: number, key: RingName,
-    progress: number, fillAngle: number,
-    arcStart: number, arcEnd: number,
+  // Borromean weave: repaint a short arc of the FRONT ring OVER the BACK ring
+  // at their intersection point
+  const renderWeave = (
+    frontCx: number, frontCy: number, frontKey: RingName, frontProg: number,
+    startDeg: number, endDeg: number,
   ) => {
-    const sectorPath = annulusArcPath(rCx, rCy, outerR, innerR, arcStart, arcEnd);
-    const liquidCovers = fillAngle > arcStart;
-    const liquidFull = fillAngle >= arcEnd;
+    const color = RING_COLORS_MAP[frontKey];
+    const fillAngle = frontProg * 360;
+    // Only paint the weave arc if the front ring's fill covers this region
     return (
       <G>
-        {/* Only render glass+liquid on the filled portion of the overpaint sector */}
-        {progress > 0 && liquidCovers ? (
-          liquidFull ? (
-            <G>
-              <Path d={sectorPath} fill={`url(#${key}Glass)`} />
-              <Path d={sectorPath} fill={`url(#${key}Liquid)`} />
-            </G>
-          ) : (
-            <Path d={annulusArcPath(rCx, rCy, outerR, innerR, arcStart, fillAngle)}
-              fill={`url(#${key}Liquid)`} />
-          )
-        ) : (
-          /* Unfilled overpaint: transparent — just let background show */
-          null
+        {/* Always paint the track over the back ring */}
+        <Path d={arcStrokePath(frontCx, frontCy, R, startDeg, endDeg)}
+          fill="none" stroke={DIM} strokeWidth={SW} strokeLinecap="round" />
+        {/* Paint filled color if progress covers this arc */}
+        {fillAngle > startDeg && (
+          <Path d={arcStrokePath(frontCx, frontCy, R, startDeg, Math.min(endDeg, fillAngle))}
+            fill="none" stroke={color} strokeWidth={SW} strokeLinecap="round" />
         )}
       </G>
     );
   };
-
-  const renderBlend = (
-    rACx: number, rACy: number, pA: number, fA: number,
-    rBCx: number, rBCy: number, pB: number,
-    blendColor: string, clipId: string,
-  ) => {
-    const minP = Math.min(pA, pB);
-    if (minP <= 0) return null;
-    const arc = fA >= 360
-      ? annulusPath(rACx, rACy, outerR, innerR)
-      : annulusArcPath(rACx, rACy, outerR, innerR, 0, fA);
-    return (
-      <G clipPath={`url(#${clipId})`} opacity={minP * 0.55}>
-        <Path d={arc} fill={blendColor} />
-      </G>
-    );
-  };
-
-  const tFill = prog.catchup * 360;
-  const pFill = prog.divein * 360;
-  const gFill = prog.recap * 360;
 
   return (
     <View style={[styles.container, { paddingVertical: 16, paddingHorizontal: 20 }]}>
       <View style={[styles.ringsWrapper, { width: dimensions, height: dimensions }]}>
         <Svg width={dimensions} height={dimensions} viewBox={`0 0 ${vb} ${vb}`}>
-          <Defs>
-            {/* ═══ GLASS BODY GRADIENTS ═══ */}
-            <RadialGradient id="catchupGlass" cx="38%" cy="30%" r="65%">
-              <Stop offset="0%" stopColor="#BAE6FD" stopOpacity={0.14} />
-              <Stop offset="50%" stopColor="#7DD3FC" stopOpacity={0.08} />
-              <Stop offset="100%" stopColor="#38BDF8" stopOpacity={0.06} />
-            </RadialGradient>
-            <RadialGradient id="diveinGlass" cx="62%" cy="30%" r="65%">
-              <Stop offset="0%" stopColor="#FBCFE8" stopOpacity={0.14} />
-              <Stop offset="50%" stopColor="#F472B6" stopOpacity={0.08} />
-              <Stop offset="100%" stopColor="#EC4899" stopOpacity={0.06} />
-            </RadialGradient>
-            <RadialGradient id="recapGlass" cx="38%" cy="35%" r="65%">
-              <Stop offset="0%" stopColor="#FED7AA" stopOpacity={0.14} />
-              <Stop offset="50%" stopColor="#FDBA74" stopOpacity={0.08} />
-              <Stop offset="100%" stopColor="#FB923C" stopOpacity={0.06} />
-            </RadialGradient>
+          {/* Ambient glow behind rings (subtle, scales with progress) */}
+          {prog.catchup > 0.2 && (
+            <Circle cx={tCx} cy={tCy} r={R + 15} fill="#38BDF8" opacity={prog.catchup * 0.08} />
+          )}
+          {prog.divein > 0.2 && (
+            <Circle cx={pCx} cy={pCy} r={R + 15} fill="#EC4899" opacity={prog.divein * 0.08} />
+          )}
+          {prog.recap > 0.2 && (
+            <Circle cx={gCx} cy={gCy} r={R + 15} fill="#FB923C" opacity={prog.recap * 0.08} />
+          )}
 
-            {/* ═══ DEPTH SHADING ═══ */}
-            <LinearGradient id="catchupDepth" x1="30%" y1="0%" x2="70%" y2="100%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.30} />
-              <Stop offset="40%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
-            </LinearGradient>
-            <LinearGradient id="diveinDepth" x1="70%" y1="5%" x2="30%" y2="95%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.28} />
-              <Stop offset="40%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
-            </LinearGradient>
-            <LinearGradient id="recapDepth" x1="25%" y1="8%" x2="75%" y2="92%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.28} />
-              <Stop offset="40%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.12} />
-            </LinearGradient>
+          {/* Z-order: Dive-in (back) → Recap (mid) → Catch-up (front) */}
+          {renderRing(pCx, pCy, 'divein', prog.divein)}
+          {renderRing(gCx, gCy, 'recap', prog.recap)}
+          {renderRing(tCx, tCy, 'catchup', prog.catchup)}
 
-            {/* ═══ LIQUID FILL ═══ */}
-            <RadialGradient id="catchupLiquid" cx="38%" cy="30%" r="65%">
-              <Stop offset="0%" stopColor="#7DD3FC" stopOpacity={0.95} />
-              <Stop offset="40%" stopColor="#0EA5E9" stopOpacity={0.88} />
-              <Stop offset="75%" stopColor="#38BDF8" stopOpacity={0.80} />
-              <Stop offset="100%" stopColor="#0369A1" stopOpacity={0.75} />
-            </RadialGradient>
-            <RadialGradient id="diveinLiquid" cx="62%" cy="30%" r="65%">
-              <Stop offset="0%" stopColor="#FBCFE8" stopOpacity={0.95} />
-              <Stop offset="40%" stopColor="#F472B6" stopOpacity={0.88} />
-              <Stop offset="75%" stopColor="#EC4899" stopOpacity={0.80} />
-              <Stop offset="100%" stopColor="#9D174D" stopOpacity={0.75} />
-            </RadialGradient>
-            <RadialGradient id="recapLiquid" cx="38%" cy="35%" r="65%">
-              <Stop offset="0%" stopColor="#FED7AA" stopOpacity={0.95} />
-              <Stop offset="40%" stopColor="#FDBA74" stopOpacity={0.88} />
-              <Stop offset="75%" stopColor="#FB923C" stopOpacity={0.80} />
-              <Stop offset="100%" stopColor="#C2410C" stopOpacity={0.75} />
-            </RadialGradient>
+          {/* Borromean weaves — each ring passes OVER one and UNDER another */}
+          {/* Blue over Orange (right intersection) */}
+          {renderWeave(tCx, tCy, 'catchup', prog.catchup, 60, 120)}
+          {/* Pink over Blue (left intersection) */}
+          {renderWeave(pCx, pCy, 'divein', prog.divein, 300, 360)}
+          {/* Orange over Pink (bottom intersection) */}
+          {renderWeave(gCx, gCy, 'recap', prog.recap, 180, 240)}
 
-            {/* ═══ LIQUID SPECULAR ═══ */}
-            <LinearGradient id="catchupLiquidSpec" x1="20%" y1="0%" x2="80%" y2="100%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.40} />
-              <Stop offset="35%" stopColor="#FFFFFF" stopOpacity={0.08} />
-              <Stop offset="65%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.10} />
-            </LinearGradient>
-            <LinearGradient id="diveinLiquidSpec" x1="75%" y1="5%" x2="25%" y2="95%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.35} />
-              <Stop offset="35%" stopColor="#FFFFFF" stopOpacity={0.06} />
-              <Stop offset="65%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.10} />
-            </LinearGradient>
-            <LinearGradient id="recapLiquidSpec" x1="15%" y1="10%" x2="85%" y2="90%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.35} />
-              <Stop offset="35%" stopColor="#FFFFFF" stopOpacity={0.06} />
-              <Stop offset="65%" stopColor="#FFFFFF" stopOpacity={0} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0.10} />
-            </LinearGradient>
-
-            {/* ═══ SPECULAR CRESCENT GRADIENTS ═══ */}
-            <RadialGradient id="specCrescentCatchup" cx="42%" cy="28%" r="55%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.85} />
-              <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.4} />
-              <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.08} />
-              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="specCrescentDivein" cx="58%" cy="28%" r="55%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.8} />
-              <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.35} />
-              <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.06} />
-              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="specCrescentRecap" cx="42%" cy="32%" r="55%">
-              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.8} />
-              <Stop offset="30%" stopColor="#FFFFFF" stopOpacity={0.35} />
-              <Stop offset="60%" stopColor="#FFFFFF" stopOpacity={0.06} />
-              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
-            </RadialGradient>
-
-            {/* ═══ NEXUS GLOW ═══ */}
-            <RadialGradient id="nexusGlow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor={nexus.color} stopOpacity={nexus.opacity * 0.9} />
-              <Stop offset="25%" stopColor={nexus.color} stopOpacity={nexus.opacity * 0.5} />
-              <Stop offset="65%" stopColor={nexus.color} stopOpacity={nexus.opacity * 0.12} />
-              <Stop offset="100%" stopColor={nexus.color} stopOpacity={0} />
-            </RadialGradient>
-
-            {/* ═══ AMBIENT GLOW (behind rings) ═══ */}
-            <RadialGradient id="ambientCatchup" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="#38BDF8" stopOpacity={0.20} />
-              <Stop offset="70%" stopColor="#38BDF8" stopOpacity={0.05} />
-              <Stop offset="100%" stopColor="#38BDF8" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="ambientDivein" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="#EC4899" stopOpacity={0.20} />
-              <Stop offset="70%" stopColor="#EC4899" stopOpacity={0.05} />
-              <Stop offset="100%" stopColor="#EC4899" stopOpacity={0} />
-            </RadialGradient>
-            <RadialGradient id="ambientRecap" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="#FB923C" stopOpacity={0.20} />
-              <Stop offset="70%" stopColor="#FB923C" stopOpacity={0.05} />
-              <Stop offset="100%" stopColor="#FB923C" stopOpacity={0} />
-            </RadialGradient>
-
-            {/* ═══ SURFACE SHADOW ═══ */}
-            <RadialGradient id="surfaceShadow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0%" stopColor="#000000" stopOpacity={0.12} />
-              <Stop offset="50%" stopColor="#000000" stopOpacity={0.06} />
-              <Stop offset="100%" stopColor="#000000" stopOpacity={0} />
-            </RadialGradient>
-
-            {/* ═══ CLIP PATHS ═══ */}
-            <ClipPath id="clipCatchup">
-              <Path d={annulusPath(tCx, tCy, outerR + 2, innerR - 2)} />
-            </ClipPath>
-            <ClipPath id="clipDivein">
-              <Path d={annulusPath(pCx, pCy, outerR + 2, innerR - 2)} />
-            </ClipPath>
-            <ClipPath id="clipRecap">
-              <Path d={annulusPath(gCx, gCy, outerR + 2, innerR - 2)} />
-            </ClipPath>
-          </Defs>
-
-          {/* Surface shadow */}
-          <Ellipse cx={cx} cy={cy + 70} rx={170} ry={50} fill="url(#surfaceShadow)" />
-
-          {/* Ambient glow halos — scaled with progress, reduced to prevent blending */}
-          <Circle cx={tCx} cy={tCy} r={outerR + 15} fill="url(#ambientCatchup)" opacity={prog.catchup * 0.7} />
-          <Circle cx={pCx} cy={pCy} r={outerR + 15} fill="url(#ambientDivein)" opacity={prog.divein * 0.7} />
-          <Circle cx={gCx} cy={gCy} r={outerR + 15} fill="url(#ambientRecap)" opacity={prog.recap * 0.7} />
-
-          {/* ═══ BORROMEAN Z-ORDER (divein → recap → catchup, with divein overpaint on catchup) ═══ */}
-          {renderRing(pCx, pCy, 'divein', prog.divein, pFill)}
-          {renderRing(gCx, gCy, 'recap', prog.recap, gFill)}
-
-          {renderBlend(pCx, pCy, prog.divein, pFill, gCx, gCy, prog.recap, COLORS.blends.diveinRecap, 'clipRecap')}
-
-          {renderRing(tCx, tCy, 'catchup', prog.catchup, tFill)}
-
-          {renderBlend(tCx, tCy, prog.catchup, tFill, gCx, gCy, prog.recap, COLORS.blends.catchupRecap, 'clipRecap')}
-
-          {tpAngles && renderOverpaint(pCx, pCy, 'divein', prog.divein, pFill, tpAngles[1] - 25, tpAngles[0] + 25)}
-
-          {renderBlend(tCx, tCy, prog.catchup, tFill, pCx, pCy, prog.divein, COLORS.blends.catchupDivein, 'clipDivein')}
-
-          {/* ═══ SPECULAR CRESCENTS — only on filled arcs ═══ */}
-          <G clipPath="url(#clipCatchup)">
-            {prog.catchup > 0 && (
-              <Path d={annulusArcPath(tCx, tCy, outerR - 3, innerR + 8,
-                Math.max(230, 0), Math.min(340, tFill))}
-                fill="url(#specCrescentCatchup)" opacity={tFill >= 230 ? 0.25 : 0} />
-            )}
-          </G>
-          <G clipPath="url(#clipDivein)">
-            {prog.divein > 0 && (
-              <Path d={annulusArcPath(pCx, pCy, outerR - 3, innerR + 8, 300, 50)}
-                fill="url(#specCrescentDivein)" opacity={pFill >= 300 ? 0.20 : 0} />
-            )}
-          </G>
-          <G clipPath="url(#clipRecap)">
-            {prog.recap > 0 && (
-              <Path d={annulusArcPath(gCx, gCy, outerR - 3, innerR + 8,
-                Math.max(220, 0), Math.min(320, gFill))}
-                fill="url(#specCrescentRecap)" opacity={gFill >= 220 ? 0.20 : 0} />
-            )}
-          </G>
-
-          {/* Inner hole rim highlights — subtle */}
-          <Path d={annulusArcPath(tCx, tCy, innerR + 6, innerR, 235, 330)}
-            fill="rgba(255,255,255,0.05)" />
-          <Path d={annulusArcPath(pCx, pCy, innerR + 6, innerR, 305, 45)}
-            fill="rgba(255,255,255,0.04)" />
-          <Path d={annulusArcPath(gCx, gCy, innerR + 6, innerR, 225, 315)}
-            fill="rgba(255,255,255,0.04)" />
-
-
-          {/* ═══ NEXUS GLOW ═══ */}
-          {avgProgress > 0 && (
+          {/* Nexus glow — white point when all three have progress */}
+          {avgProgress > 0.2 && (
             <G>
-              <Circle cx={nexusCx} cy={nexusCy} r={10 + avgProgress * 18} fill="url(#nexusGlow)" />
-              <Circle cx={nexusCx} cy={nexusCy} r={4 + avgProgress * 5}
-                fill={nexus.color} opacity={nexus.opacity * 0.7} />
-              <Circle cx={nexusCx - 1.5} cy={nexusCy - 2} r={2 + avgProgress * 2}
-                fill="white" opacity={nexus.opacity * 0.5} />
+              <Circle cx={nexusCx} cy={nexusCy} r={5 + avgProgress * 10}
+                fill="white" opacity={avgProgress * 0.15} />
+              {avgProgress > 0.8 && (
+                <Circle cx={nexusCx} cy={nexusCy} r={5}
+                  fill="white" opacity={0.95} />
+              )}
             </G>
+          )}
+
+          {/* Over-goal green glow */}
+          {prog.catchup >= 1 && metrics.catchup.dailyProgress > metrics.catchup.dailyGoal && (
+            <Circle cx={tCx} cy={tCy} r={R + 8} fill="#10B981" opacity={0.12} />
+          )}
+          {prog.divein >= 1 && (
+            <Circle cx={pCx} cy={pCy} r={R + 8} fill="#10B981" opacity={0.12} />
+          )}
+          {prog.recap >= 1 && (
+            <Circle cx={gCx} cy={gCy} r={R + 8} fill="#10B981" opacity={0.12} />
           )}
         </Svg>
 
