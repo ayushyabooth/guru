@@ -22,7 +22,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DiveInProvider } from '../contexts/DiveInContext';
 import { TimeTrackingProvider } from '../contexts/TimeTrackingContext';
-import { ThemeProvider } from '../contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 import { loadVisualConfigFromAPI } from '../constants/industryConfig';
 
 const queryClient = new QueryClient({
@@ -40,6 +40,24 @@ const queryClient = new QueryClient({
 const webShell: any = Platform.OS === 'web'
   ? { flex: 1, maxWidth: 480, width: '100%', alignSelf: 'center' as const }
   : { flex: 1 };
+
+function ThemeAwareNav() {
+  const { isDark } = useTheme();
+  return (
+    <NavThemeProvider value={isDark ? NavDarkTheme : DefaultTheme}>
+      <View style={webShell}>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+      </View>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </NavThemeProvider>
+  );
+}
 
 // Prevent splash screen from auto-hiding while fonts load
 SplashScreen.preventAutoHideAsync();
@@ -81,18 +99,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <TimeTrackingProvider>
           <DiveInProvider userId="default">
-            <NavThemeProvider value={NavDarkTheme}>
-              <View style={webShell}>
-                <Stack>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-                </Stack>
-              </View>
-              <StatusBar style="light" />
-            </NavThemeProvider>
+            <ThemeAwareNav />
           </DiveInProvider>
         </TimeTrackingProvider>
       </ThemeProvider>

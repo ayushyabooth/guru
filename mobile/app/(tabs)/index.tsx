@@ -360,6 +360,7 @@ function HomeContent() {
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
   const COLORS = useHomeColors();
+  const { toggleTheme, isDark } = useTheme();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
   const blurStyle16 = COLORS.isDark ? getDarkBackdropBlur(16) : getBackdropBlur(16);
 
@@ -480,9 +481,14 @@ function HomeContent() {
                 <GuruRings size="logo" dimensions={36} />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity style={styles.logoutButton} onPress={toggleTheme}>
+                  <Text style={styles.logoutText}>{isDark ? '☀️' : '🌙'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                  <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
             <Text style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
