@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from '../ui/Icon';
 import GlassSection from '../ui/GlassSection';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface RichSummary {
   whats_in_article?: string;
@@ -21,15 +22,17 @@ interface RichSummarySectionProps {
 export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
   richSummary,
   fallbackSummary,
-  isDark = false,
+  isDark: _isDarkProp = false,
   categoryAccent = '#38BDF8',
   onQuotePress
 }) => {
+  const { colors } = useTheme();
+
   if (!richSummary) {
     if (!fallbackSummary) return null;
     return (
       <View style={styles.container}>
-        <Text style={styles.fallbackText}>{fallbackSummary}</Text>
+        <Text style={[styles.fallbackText, { color: colors.textPrimary }]}>{fallbackSummary}</Text>
       </View>
     );
   }
@@ -42,12 +45,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.whats_in_article && (
         <GlassSection
           title="What's in the article"
-          icon={<Icon name="clipboard-text-outline" size={16} color="#94A3B8" />}
+          icon={<Icon name="clipboard-text-outline" size={16} color={colors.textSecondary} />}
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
         >
-          <Text style={styles.sectionBody} numberOfLines={4}>{content.whats_in_article}</Text>
+          <Text style={[styles.sectionBody, { color: colors.textSecondary }]} numberOfLines={4}>{content.whats_in_article}</Text>
         </GlassSection>
       )}
 
@@ -55,7 +58,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.spotlight_quotes && content.spotlight_quotes.length > 0 && (
         <GlassSection
           title="Spotlight"
-          icon={<Icon name="format-quote-open" size={16} color="#94A3B8" />}
+          icon={<Icon name="format-quote-open" size={16} color={colors.textSecondary} />}
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
@@ -70,11 +73,11 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
             {content.spotlight_quotes.slice(0, 3).map((quote, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.quoteCard, { borderLeftColor: categoryAccent }]}
+                style={[styles.quoteCard, { borderLeftColor: categoryAccent, backgroundColor: colors.glassHighlight, borderColor: colors.glassBorder }]}
                 onPress={() => onQuotePress?.(quote)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.quoteText} numberOfLines={4}>
+                <Text style={[styles.quoteText, { color: colors.textSecondary }]} numberOfLines={4}>
                   "{quote}"
                 </Text>
                 {onQuotePress && (
@@ -90,12 +93,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.why_it_matters && (
         <GlassSection
           title="Why it matters"
-          icon={<Icon name="target" size={16} color="#94A3B8" />}
+          icon={<Icon name="target" size={16} color={colors.textSecondary} />}
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
         >
-          <Text style={styles.sectionBody}>{content.why_it_matters}</Text>
+          <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>{content.why_it_matters}</Text>
         </GlassSection>
       )}
 
@@ -103,12 +106,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.between_the_lines && (
         <GlassSection
           title="Between the lines"
-          icon={<Icon name="magnify" size={16} color="#94A3B8" />}
+          icon={<Icon name="magnify" size={16} color={colors.textSecondary} />}
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
         >
-          <Text style={styles.sectionBody}>{content.between_the_lines}</Text>
+          <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>{content.between_the_lines}</Text>
         </GlassSection>
       )}
     </View>
@@ -123,7 +126,6 @@ const styles = StyleSheet.create({
   fallbackText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#E2E8F0',
     paddingHorizontal: 16,
     fontWeight: '400',
   },
@@ -133,7 +135,6 @@ const styles = StyleSheet.create({
   sectionBody: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#CBD5E1',
     fontWeight: '400',
   },
   quotesScroll: {
@@ -141,18 +142,14 @@ const styles = StyleSheet.create({
   },
   quoteCard: {
     width: 240,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 8,
     padding: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#38BDF8',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   quoteText: {
     fontSize: 14,
     fontStyle: 'italic',
-    color: '#CBD5E1',
     lineHeight: 22,
   },
   quoteHint: {

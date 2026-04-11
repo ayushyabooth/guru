@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensi
 import { DiveinArticleCard, DiveinArticleData } from './DiveinArticleCard';
 import { DiveinArticleSkeleton } from './DiveinArticleSkeleton';
 import Icon from '../ui/Icon';
-import { DarkTheme } from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   Spacing,
   Typography,
@@ -51,6 +51,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
   isLoading,
   filterContext = 'core',
 }) => {
+  const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const numColumns = width >= 768 ? 2 : width >= 600 ? 2 : 1;
 
@@ -142,8 +143,8 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
           <DiveinArticleSkeleton />
         ) : articles.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No articles in this context</Text>
-            <Text style={styles.emptyStateSubtext}>Try switching to another context or save some articles</Text>
+            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>No articles in this context</Text>
+            <Text style={[styles.emptyStateSubtext, { color: colors.textTertiary }]}>Try switching to another context or save some articles</Text>
           </View>
         ) : (
           <>
@@ -152,9 +153,9 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
               <>
                 <View style={styles.sectionHeader}>
                   <Icon name="bookmark-outline" size={16} color={RingColors.divein.primary} />
-                  <Text style={styles.sectionTitle}>SAVED FOR LATER</Text>
-                  <View style={styles.sectionCount}>
-                    <Text style={styles.sectionCountText}>{savedArticles.length}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>SAVED FOR LATER</Text>
+                  <View style={[styles.sectionCount, { backgroundColor: colors.glassHighlight }]}>
+                    <Text style={[styles.sectionCountText, { color: colors.textSecondary }]}>{savedArticles.length}</Text>
                   </View>
                 </View>
                 {renderGrid(savedArticles)}
@@ -165,10 +166,10 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
             {expertArticles.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Icon name="star" size={16} color={DarkTheme.warning} />
-                  <Text style={styles.sectionTitle}>EXPERT PICKS</Text>
-                  <View style={styles.sectionCount}>
-                    <Text style={styles.sectionCountText}>{expertArticles.length}</Text>
+                  <Icon name="star" size={16} color={colors.warning} />
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>EXPERT PICKS</Text>
+                  <View style={[styles.sectionCount, { backgroundColor: colors.glassHighlight }]}>
+                    <Text style={[styles.sectionCountText, { color: colors.textSecondary }]}>{expertArticles.length}</Text>
                   </View>
                 </View>
                 {renderGrid(expertArticles)}
@@ -179,10 +180,10 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
             {moreArticles.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Icon name="compass-outline" size={16} color={DarkTheme.textTertiary} />
-                  <Text style={styles.sectionTitle}>MORE TO EXPLORE</Text>
-                  <View style={styles.sectionCount}>
-                    <Text style={styles.sectionCountText}>{moreArticles.length}</Text>
+                  <Icon name="compass-outline" size={16} color={colors.textTertiary} />
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>MORE TO EXPLORE</Text>
+                  <View style={[styles.sectionCount, { backgroundColor: colors.glassHighlight }]}>
+                    <Text style={[styles.sectionCountText, { color: colors.textSecondary }]}>{moreArticles.length}</Text>
                   </View>
                 </View>
                 {renderGrid(moreArticles)}
@@ -194,13 +195,13 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
         {isLoading && (
           <View style={styles.loadingMore}>
             <ActivityIndicator size="small" color={RingColors.divein.primary} />
-            <Text style={styles.loadingMoreText}>Loading more articles...</Text>
+            <Text style={[styles.loadingMoreText, { color: colors.textSecondary }]}>Loading more articles...</Text>
           </View>
         )}
 
         {!hasMore && articles.length > 0 && (
           <View style={styles.endOfFeed}>
-            <Text style={styles.endOfFeedText}>You've reached the end</Text>
+            <Text style={[styles.endOfFeedText, { color: colors.textTertiary }]}>You've reached the end</Text>
           </View>
         )}
       </ScrollView>
@@ -240,23 +241,20 @@ const styles = StyleSheet.create({
     ...Typography.labelMedium,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: DarkTheme.textTertiary,
   },
   sectionCount: {
     marginLeft: Spacing.sm,
-    backgroundColor: DarkTheme.glassHighlight,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: 10,
   },
   sectionCountText: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
   },
   contextToggle: {
     backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderBottomColor: DarkTheme.glassSectionBorder,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
     maxHeight: 60,
   },
   contextToggleContent: {
@@ -276,7 +274,6 @@ const styles = StyleSheet.create({
   },
   contextButtonText: {
     ...Typography.labelLarge,
-    color: DarkTheme.textSecondary,
   },
   contextButtonTextActive: {
     color: '#FFFFFF',
@@ -323,31 +320,25 @@ const styles = StyleSheet.create({
   },
   source: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
   },
   metaDivider: {
     ...Typography.labelMedium,
-    color: DarkTheme.glassBorder,
     marginHorizontal: 6,
   },
   date: {
     ...Typography.labelMedium,
-    color: DarkTheme.textTertiary,
   },
   readingTime: {
     ...Typography.labelMedium,
-    color: DarkTheme.textTertiary,
   },
   headline: {
     ...Typography.headlineSmall,
-    color: DarkTheme.textPrimary,
     lineHeight: 26,
     marginBottom: 10,
   },
   teaser: {
     ...Typography.bodyMedium,
     lineHeight: 21,
-    color: DarkTheme.textSecondary,
     marginBottom: Spacing.md,
   },
   articleFooter: {
@@ -363,7 +354,6 @@ const styles = StyleSheet.create({
   },
   contextChipText: {
     ...Typography.labelMedium,
-    color: DarkTheme.textSecondary,
     textTransform: 'capitalize',
   },
   startButton: {
@@ -385,13 +375,11 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     ...Typography.headlineSmall,
-    color: DarkTheme.textSecondary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textTertiary,
     textAlign: 'center',
   },
   loadingMore: {
@@ -403,7 +391,6 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textSecondary,
   },
   endOfFeed: {
     paddingVertical: Spacing.xl,
@@ -411,7 +398,6 @@ const styles = StyleSheet.create({
   },
   endOfFeedText: {
     ...Typography.bodyMedium,
-    color: DarkTheme.textTertiary,
     fontStyle: 'italic',
   },
 });

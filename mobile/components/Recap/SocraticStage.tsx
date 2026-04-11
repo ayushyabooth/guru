@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 import { SocraticResponse, KeyInsight } from '../../services/recap-service';
 
@@ -42,6 +42,7 @@ const parseArticleRefs = (text: string): { parts: (string | { title: string; id:
 
 export default function SocraticStage({ onSendMessage, onComplete, initialExchanges }: SocraticStageProps) {
   const router = useRouter();
+  const { colors } = useTheme();
   const [messages, setMessages] = useState<ChatBubble[]>(
     (initialExchanges || []).map(e => ({ role: e.role as 'assistant' | 'user', content: e.content }))
   );
@@ -152,7 +153,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
             ]}>
               <Text style={[
                 styles.bubbleText,
-                msg.role === 'assistant' ? styles.assistantText : styles.userText,
+                { color: colors.textPrimary },
               ]}>
                 {parts.map((part, pIdx) => {
                   if (typeof part === 'string') {
@@ -199,7 +200,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
 
         {isLoading && (
           <View style={[styles.bubble, styles.assistantBubble]}>
-            <Text style={styles.loadingText}>Thinking...</Text>
+            <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Thinking...</Text>
           </View>
         )}
       </ScrollView>
@@ -207,7 +208,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
       {/* Input area or completion */}
       {isConcluded ? (
         <View style={styles.concludedArea}>
-          <Text style={styles.concludedText}>
+          <Text style={[styles.concludedText, { color: colors.textSecondary }]}>
             {insightCount > 0 ? `${insightCount} insight${insightCount > 1 ? 's' : ''} captured during this dialogue` : 'Dialogue complete'}
           </Text>
           <TouchableOpacity style={styles.continueButton} onPress={onComplete}>
@@ -217,11 +218,11 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
       ) : (
         <View style={styles.inputArea}>
           <TextInput
-            style={styles.chatInput}
+            style={[styles.chatInput, { color: colors.textPrimary }]}
             value={inputText}
             onChangeText={setInputText}
             placeholder="Share your thoughts..."
-            placeholderTextColor={DarkThemeColors.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             multiline
             editable={!isLoading}
             maxLength={1000}
@@ -288,11 +289,9 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
     lineHeight: 22,
   },
-  assistantText: { color: DarkThemeColors.textPrimary },
-  userText: { color: DarkThemeColors.textPrimary },
+  // bubble text color now applied inline via `colors.textPrimary`
   loadingText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textTertiary,
     fontStyle: 'italic',
   },
   insightIndicator: {
@@ -313,7 +312,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: DarkThemeColors.glassSectionBorder,
+    borderTopColor: 'rgba(255,255,255,0.06)',
     ...getBackdropBlur(16),
     gap: Spacing.sm,
   },
@@ -323,7 +322,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textPrimary,
     maxHeight: 100,
     borderColor: 'rgba(251, 146, 60, 0.15)',
   },
@@ -346,11 +344,10 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: DarkThemeColors.glassSectionBorder,
+    borderTopColor: 'rgba(255,255,255,0.06)',
   },
   concludedText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     marginBottom: Spacing.md,
   },
   continueButton: {
