@@ -441,14 +441,14 @@ export default function ArticleDetailScreen() {
           <View style={{ padding: Spacing.md }}>
             {guruMessages.map((msg, i) => (
               <View key={i} style={{ marginBottom: Spacing.md, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <View style={{ backgroundColor: msg.role === 'user' ? DarkThemeColors.interactive : DarkThemeColors.glassLight, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
+                <View style={{ backgroundColor: msg.role === 'user' ? DarkThemeColors.interactive : DarkThemeColors.backgroundSecondary, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
                   <Text style={{ color: msg.role === 'user' ? '#FFF' : DarkThemeColors.textPrimary, fontSize: 14, lineHeight: 20 }}>{msg.text}</Text>
                 </View>
               </View>
             ))}
             {guruLoading && (
               <View style={{ marginBottom: Spacing.md }}>
-                <View style={{ backgroundColor: DarkThemeColors.glassLight, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
+                <View style={{ backgroundColor: DarkThemeColors.backgroundSecondary, borderRadius: BorderRadius.lg, padding: 14, maxWidth: '85%' }}>
                   <Text style={{ color: DarkThemeColors.textSecondary, fontSize: 14 }}>Guru is thinking...</Text>
                 </View>
               </View>
@@ -627,7 +627,6 @@ const styles = StyleSheet.create({
   webAnnotationType: {
     ...Typography.labelSmall,
     fontWeight: '600',
-    textTransform: 'uppercase',
     letterSpacing: 0.5,
     color: DarkThemeColors.success,
     marginBottom: Spacing.xs,

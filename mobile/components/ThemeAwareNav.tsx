@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { DarkTheme as NavDarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
@@ -11,6 +11,16 @@ const webShell: any = Platform.OS === 'web'
 
 export default function ThemeAwareNav() {
   const { isDark } = useTheme();
+
+  // Set the HTML body background to match theme — prevents white gutters on desktop
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      document.body.style.backgroundColor = isDark ? '#0A0E17' : '#F8FAFC';
+      document.body.style.margin = '0';
+      document.documentElement.style.backgroundColor = isDark ? '#0A0E17' : '#F8FAFC';
+    }
+  }, [isDark]);
+
   return (
     <NavThemeProvider value={isDark ? NavDarkTheme : DefaultTheme}>
       <View style={webShell}>

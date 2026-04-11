@@ -244,7 +244,7 @@ export default function SignupScreen() {
               style={[styles.signInText, { color: colors.textSecondary }]}
               onPress={() => router.push('/(auth)/login')}
             >
-              Already have an account? Sign in
+              Already have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign in</Text>
             </Text>
           </GlassCard>
         </ScrollView>
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   brandName: {
-    fontFamily: 'Orbitron_400Regular',
+    fontFamily: 'Orbitron_700Bold',
     fontSize: 42,
     letterSpacing: 12,
   },

@@ -300,8 +300,8 @@ export const DarkGlassMaterials = {
   // Standard dark glass card
   card: {
     backgroundColor: 'rgba(15, 20, 35, 0.42)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: BorderRadius.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -313,8 +313,8 @@ export const DarkGlassMaterials = {
   // Heavy dark glass (modals, Guru messages)
   cardHeavy: {
     backgroundColor: 'rgba(15, 20, 35, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     borderRadius: BorderRadius.xl,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
@@ -353,7 +353,7 @@ export const DarkGlassMaterials = {
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: BorderRadius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
