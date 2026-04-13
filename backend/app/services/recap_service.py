@@ -313,7 +313,7 @@ Please generate a 2-3 paragraph synthesis that:
 Write in a conversational, engaging tone that helps the reader see the bigger picture of their learning journey. Focus on synthesis rather than just summarization."""
 
             response = claude_client.client.messages.create(
-                model=settings.CLAUDE_OPUS_MODEL,  # Use Opus for highest quality synthesis
+                model=settings.CLAUDE_SONNET_MODEL,  # Downgraded from Opus to save cost (~10x cheaper)
                 max_tokens=1000,
                 temperature=0.7,  # Slightly higher for more creative synthesis
                 messages=[{"role": "user", "content": prompt}]

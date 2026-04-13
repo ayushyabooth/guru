@@ -70,9 +70,9 @@ class Settings(BaseSettings):
     ARTICLE_TIME_WINDOW_DAYS: int = 14  # 2 weeks - articles older than this are excluded from feeds
 
     # 3-Tier Ingestion Settings (Tier 1=Expert Links, Tier 2=Luminary RSS, Tier 3=Web Discovery)
-    TIER1_SCHEDULE_HOURS: int = 2  # Expert links check interval (runs first)
-    TIER2_SCHEDULE_HOURS: int = 6  # Luminary RSS check interval
-    TIER3_SCHEDULE_HOURS: int = 12  # Web discovery interval (runs last)
+    TIER1_SCHEDULE_HOURS: int = 168  # Weekly (was 2h — $50/day cost)
+    TIER2_SCHEDULE_HOURS: int = 168  # Weekly (was 6h)
+    TIER3_SCHEDULE_HOURS: int = 168  # Weekly (was 12h)
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
     TIER2_AGE_FILTER_DAYS: int = 30  # Only ingest articles from last N days
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization
