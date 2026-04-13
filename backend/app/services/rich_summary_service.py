@@ -68,7 +68,7 @@ class RichSummaryService:
             # Call Claude (use client.messages since self.claude is ClaudeClient wrapper)
             from app.config import settings
             response = self.claude.client.messages.create(
-                model=settings.CLAUDE_SONNET_MODEL,
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=3000,  # Increased for context_summary field
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -92,7 +92,7 @@ class RichSummaryService:
                 context_summary=parsed.get("context_summary", ""),
                 industry_context=industry,
                 specialization_context=specialization,
-                model_used=settings.CLAUDE_SONNET_MODEL
+                model_used=settings.CLAUDE_HAIKU_MODEL
             )
             
             self.db.add(rich_content)

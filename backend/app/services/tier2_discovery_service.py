@@ -89,7 +89,7 @@ class Tier2DiscoveryService:
 
         try:
             response = self._client.messages.create(
-                model=settings.CLAUDE_SONNET_MODEL,
+                model=settings.CLAUDE_HAIKU_MODEL,  # Downgraded from Sonnet to save cost
                 max_tokens=4096,
                 tools=[{"type": "web_search_20250305", "name": "web_search"}],
                 messages=[{"role": "user", "content": prompt}],
