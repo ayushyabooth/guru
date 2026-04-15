@@ -198,14 +198,19 @@ Format your response as a JSON array of objects with a 'question' field:
                 else:
                     context = "Limited content available due to paywall restrictions."
             else:
-                # Prefer context_summary → raw_text fallback
+                # Prefer context_summary; lazy-generate on first access, then cache.
                 from app.models.article_rich_content import ArticleRichContent
+                from app.services.rich_summary_service import RichSummaryService
                 rc = db.query(ArticleRichContent).filter(
                     ArticleRichContent.article_id == article.id
                 ).first()
-                if rc and rc.context_summary:
-                    context = rc.context_summary
-                else:
+                context = rc.context_summary if rc and rc.context_summary else None
+                if not context:
+                    try:
+                        context = RichSummaryService(db).ensure_context_summary(article)
+                    except Exception as e:
+                        logger.warning(f"ensure_context_summary failed: {e}")
+                if not context:
                     context = article.raw_text or "No content available."
             
             # Get metadata
@@ -214,39 +219,42 @@ Format your response as a JSON array of objects with a 'question' field:
             if article.expert_notes:
                 industry = article.expert_notes[0].expert_industry or "General"
             
-            # Use Claude Sonnet for accurate, detailed answers
+            # Use Claude Haiku — sufficient for clarifying questions on pre-summarized
+            # context, and ~5x cheaper than Sonnet. Article context is cache-controlled
+            # so repeated questions on the same article hit the 90%-discounted prefix.
             claude_client = get_claude_client()
-            
-            prompt = f"""You are an expert analyst helping a professional understand an article. Please provide a comprehensive, accurate answer based on the article content.
+            model_used = settings.CLAUDE_HAIKU_MODEL
 
-ARTICLE DETAILS:
+            system_instructions = """You are an expert analyst helping a professional understand an article. Answer clearly and accurately based on the article content supplied in the system prompt.
+
+Your response should:
+1. Directly answer the user's question
+2. Cite specific details from the article when relevant
+3. Briefly note implications for a professional reader
+4. Acknowledge gaps if the article doesn't cover the question
+
+Be concise and well-structured. Plain prose, no headers unless the answer genuinely needs them."""
+
+            article_block = f"""ARTICLE DETAILS:
 Title: {article.title or "Untitled"}
 Source: {article.source or "Unknown"}
 URL: {article.url}
 Industry: {industry}
 
 ARTICLE CONTENT:
-{context}
-
-USER QUESTION: {question}
-
-Please provide a detailed, accurate answer based on the article content. Your response should:
-1. Directly answer the user's question
-2. Include specific details from the article when relevant
-3. Provide context and implications
-4. Be professional and actionable
-
-If the article doesn't contain enough information to fully answer the question, acknowledge this and provide what information is available.
-
-Format your response as a clear, well-structured answer."""
+{context}"""
 
             response = claude_client.client.messages.create(
-                model=claude_client.model,  # Use the latest Sonnet model for accuracy
+                model=model_used,
                 max_tokens=800,
-                temperature=0.3,  # Lower temperature for more focused answers
-                messages=[{"role": "user", "content": prompt}]
+                temperature=0.3,
+                system=[
+                    {"type": "text", "text": system_instructions},
+                    {"type": "text", "text": article_block, "cache_control": {"type": "ephemeral"}},
+                ],
+                messages=[{"role": "user", "content": question}]
             )
-            
+
             answer_text = response.content[0].text.strip()
             
             # Store the Q&A exchange in database
@@ -255,7 +263,7 @@ Format your response as a clear, well-structured answer."""
                 article_id=article_uuid,
                 question=question,
                 answer=answer_text,
-                model_used=claude_client.model,
+                model_used=model_used,
                 exchange_type='direct',
             )
             
@@ -271,7 +279,7 @@ Format your response as a clear, well-structured answer."""
                 "created_at": qa_exchange.created_at.isoformat(),
                 "article_id": str(article_id),
                 "question": question,
-                "model_used": qa_exchange.model_used
+                "model_used": model_used,
             }
             
         except Exception as e:
