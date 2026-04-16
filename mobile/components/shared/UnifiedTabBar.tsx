@@ -56,24 +56,24 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 500;
-  const { isDark } = useTheme();
+  const { isDark, colors: themeColors } = useTheme();
 
   const getColors = (tab: TabItem, isActive: boolean) => {
     if (variant === 'rich' && tab.type) {
       const colors = TAB_COLORS[tab.type] || TAB_COLORS.default;
       return {
         accent: colors.active,
-        bg: isActive ? hexToRgba(colors.active, 0.14) : hexToRgba(colors.active, 0.08),
-        text: isActive ? '#FFFFFF' : '#94A3B8',
-        border: isActive ? hexToRgba(colors.active, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+        bg: isActive ? hexToRgba(colors.active, isDark ? 0.14 : 0.12) : (isDark ? hexToRgba(colors.active, 0.08) : 'rgba(255,255,255,0.80)'),
+        text: isActive ? (isDark ? '#FFFFFF' : colors.active) : (isDark ? '#94A3B8' : themeColors.textSecondary),
+        border: isActive ? hexToRgba(colors.active, isDark ? 0.5 : 0.35) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)'),
       };
     }
     const accent = accentColor || '#38BDF8';
     return {
       accent,
-      bg: isActive ? hexToRgba(accent, 0.14) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
-      text: isActive ? '#FFFFFF' : '#94A3B8',
-      border: isActive ? hexToRgba(accent, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+      bg: isActive ? hexToRgba(accent, isDark ? 0.14 : 0.12) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.80)'),
+      text: isActive ? (isDark ? '#FFFFFF' : accent) : (isDark ? '#94A3B8' : themeColors.textSecondary),
+      border: isActive ? hexToRgba(accent, isDark ? 0.5 : 0.35) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)'),
     };
   };
 
@@ -111,15 +111,17 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
             pillStyle.push({
               shadowColor: colors.accent,
               shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.35,
-              shadowRadius: 12,
+              shadowOpacity: isDark ? 0.35 : 0.18,
+              shadowRadius: isDark ? 12 : 8,
             });
 
             if (Platform.OS === 'web') {
               pillStyle.push({
                 backdropFilter: 'blur(24px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                boxShadow: `0 0 20px ${hexToRgba(colors.accent, 0.25)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`,
+                boxShadow: isDark
+                  ? `0 0 20px ${hexToRgba(colors.accent, 0.25)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`
+                  : `0 0 12px ${hexToRgba(colors.accent, 0.15)}, 0 2px 8px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9)`,
               } as any);
             }
           } else {
@@ -128,6 +130,7 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
               pillStyle.push({
                 backdropFilter: 'blur(12px) saturate(150%)',
                 WebkitBackdropFilter: 'blur(12px) saturate(150%)',
+                boxShadow: isDark ? undefined : '0 1px 4px rgba(15,23,42,0.06)',
               } as any);
             }
           }

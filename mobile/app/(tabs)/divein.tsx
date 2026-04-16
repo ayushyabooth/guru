@@ -132,9 +132,12 @@ export default function DiveinScreen() {
     });
   })();
 
+  // In light mode, let AppBackground show through instead of a solid fill
+  const containerBg = isDark ? colors.background : 'transparent';
+
   if (profileLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="divein" />
         <DiveinFeed
           articles={[]}
@@ -150,7 +153,7 @@ export default function DiveinScreen() {
 
   if (!userProfile) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="divein" />
         <View style={[styles.container, styles.centerContent]}>
           <Text style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>Failed to load profile</Text>
@@ -160,19 +163,27 @@ export default function DiveinScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
       <OrganicBackground variant="divein" />
 
       {/* Header */}
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Dive-in</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Dive-in</Text>
         <View style={styles.headerMeta}>
-          <Text style={styles.headerDate}>{formatDateHeader()}</Text>
-          {articles.length > 0 && (
+          {isDark ? (
             <>
-              <View style={styles.headerDot} />
-              <Text style={styles.headerCount}>{articles.length} article{articles.length !== 1 ? 's' : ''}</Text>
+              <Text style={[styles.headerDate, { color: colors.textSecondary }]}>{formatDateHeader()}</Text>
+              {articles.length > 0 && (
+                <>
+                  <View style={styles.headerDot} />
+                  <Text style={styles.headerCount}>{articles.length} article{articles.length !== 1 ? 's' : ''}</Text>
+                </>
+              )}
             </>
+          ) : (
+            <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
+              {articles.length > 0 ? `${articles.length} article${articles.length !== 1 ? 's' : ''} curated` : 'Articles curated for you'}
+            </Text>
           )}
         </View>
       </View>
@@ -209,7 +220,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...Typography.displayMedium,
-    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   headerMeta: {
@@ -219,7 +229,6 @@ const styles = StyleSheet.create({
   },
   headerDate: {
     ...Typography.bodySmall,
-    color: 'rgba(255,255,255,0.5)',
   },
   headerDot: {
     width: 3,

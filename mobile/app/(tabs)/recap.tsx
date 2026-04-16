@@ -48,7 +48,6 @@ import {
   getBackdropBlur,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -528,15 +527,27 @@ export default function RecapScreen() {
 
   // ── Render Journey Stages ───────────────────────────────────────
 
+  // In light mode, let AppBackground show through instead of a solid fill
+  const containerBg = isDark ? colors.background : 'transparent';
+
+  // Theme-aware glass card style for light/dark surfaces
+  const glassCard = isDark
+    ? { backgroundColor: 'rgba(15,20,35,0.42)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 32, shadowOffset: { width: 0, height: 8 }, elevation: 8 }
+    : { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: 'rgba(15,23,42,0.08)', shadowColor: '#0F172A', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 4 };
+
+  const glassPill = isDark
+    ? { backgroundColor: 'rgba(15,20,35,0.42)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }
+    : { backgroundColor: 'rgba(255,255,255,0.75)', borderWidth: 1, borderColor: 'rgba(15,23,42,0.07)', shadowColor: '#0F172A', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 };
+
   // Loading state
   if (viewState === 'loading') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={RingColors.recap.primary} />
           <Text style={styles.loadingText}>Preparing your weekly recap...</Text>
-          <Text style={styles.loadingSubtext}>Gathering your articles and insights</Text>
+          <Text style={[styles.loadingSubtext, { color: colors.textSecondary }]}>Gathering your articles and insights</Text>
         </View>
       </SafeAreaView>
     );
@@ -570,7 +581,7 @@ export default function RecapScreen() {
   // Stage 1: Snapshot / Glass Memory Wall
   if (viewState === 'snapshot' && snapshot) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         {/* Floating ring progress */}
         <View style={styles.floatingRing}>
@@ -587,7 +598,7 @@ export default function RecapScreen() {
   // Stage 2: Guided Questions
   if (viewState === 'questions' && questions.length > 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -609,7 +620,7 @@ export default function RecapScreen() {
   // Stage 3: Socratic Dialogue
   if (viewState === 'socratic') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -629,7 +640,7 @@ export default function RecapScreen() {
   // Commitment Screen
   if (viewState === 'commitment') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -648,7 +659,7 @@ export default function RecapScreen() {
   // Celebration Overlay
   if (viewState === 'celebration') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <CelebrationOverlay
           insightCount={insights.length}
@@ -684,7 +695,7 @@ export default function RecapScreen() {
   // ── Default: Entry Screen ───────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
       <OrganicBackground variant="recap" />
 
       <ScrollView
@@ -694,8 +705,8 @@ export default function RecapScreen() {
       >
         {/* Header */}
         <View style={[styles.header, {
-          backgroundColor: isDark ? 'rgba(15, 20, 35, 0.75)' : 'rgba(255, 255, 255, 0.65)',
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.7)',
+          backgroundColor: isDark ? 'rgba(15, 20, 35, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)',
         }]}>
           <View style={styles.headerRow}>
             <Text style={[styles.title, { color: colors.recap }]}>Recap</Text>
@@ -708,7 +719,7 @@ export default function RecapScreen() {
 
         {/* Ghost Ring Entry Area */}
         <View style={styles.entrySection}>
-          <Text style={styles.weekLabel}>{weekLabel}</Text>
+          <Text style={[styles.weekLabel, { color: colors.textSecondary }]}>{weekLabel}</Text>
 
           {/* Recap hero ring — orange Plasma Blob per BRD §C (ring color token assertion) */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
@@ -725,25 +736,27 @@ export default function RecapScreen() {
 
           {/* Activity summary pills */}
           <View style={styles.activityPills}>
-            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+            <View style={[styles.pill, glassPill]}>
               <Text style={[styles.pillText, { color: colors.textSecondary }]}>{weeklyReadMinutes}m reading</Text>
             </View>
-            <View style={styles.pillDot} />
-            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+            <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
+            <View style={[styles.pill, glassPill]}>
               <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} filters</Text>
             </View>
-            <View style={styles.pillDot} />
-            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+            <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
+            <View style={[styles.pill, glassPill]}>
               <Text style={[styles.pillText, { color: colors.textSecondary }]}>{displayMetrics.divein?.weeklyProgress || 0}m deep dives</Text>
             </View>
           </View>
 
           {/* CTA */}
           {hasCompletedRecap ? (
-            <View style={styles.completedCard}>
+            <View style={[styles.completedCard, glassCard, {
+              borderColor: isDark ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.3)',
+            }]}>
               <Icon name="star-four-points" size={32} color={RingColors.recap.primary} style={{ marginBottom: Spacing.sm }} />
               <Text style={styles.completedTitle}>Recap Complete</Text>
-              <Text style={styles.completedSubtitle}>
+              <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
                 You've completed your weekly learning recap.
               </Text>
               <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
@@ -791,7 +804,7 @@ export default function RecapScreen() {
         </View>
 
         {/* Journey Stages — interactive */}
-        <View style={[styles.stagesPreview, { backgroundColor: isDark ? 'rgba(15,20,35,0.42)' : 'rgba(255,255,255,0.65)', borderColor: isDark ? 'rgba(251, 146, 60, 0.2)' : 'rgba(251, 146, 60, 0.15)' }]}>
+        <View style={[styles.stagesPreview, glassCard, { borderColor: isDark ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.15)' }]}>
           <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
@@ -902,7 +915,6 @@ const styles = StyleSheet.create({
   },
   loadingSubtext: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
   },
   // Scroll
   scrollView: {
@@ -937,7 +949,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
   },
   archiveButton: {
     paddingHorizontal: Spacing.md,
@@ -961,7 +972,6 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textSecondary,
     marginBottom: Spacing.lg,
   },
   // Activity pills
@@ -978,13 +988,11 @@ const styles = StyleSheet.create({
   },
   pillText: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
   },
   pillDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: DarkThemeColors.textTertiary,
     marginHorizontal: Spacing.sm,
   },
   // CTA
@@ -994,7 +1002,6 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
     maxWidth: 280,
@@ -1042,7 +1049,6 @@ const styles = StyleSheet.create({
   },
   completedSubtitle: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
@@ -1093,7 +1099,6 @@ const styles = StyleSheet.create({
   },
   stagesTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     marginBottom: Spacing.lg,
   },
   stageItem: {
@@ -1132,12 +1137,10 @@ const styles = StyleSheet.create({
   },
   stageName: {
     ...Typography.labelLarge,
-    color: DarkThemeColors.textPrimary,
     marginBottom: 2,
   },
   stageDescription: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
   },
   // Error
   errorCard: {
@@ -1151,7 +1154,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.error,
+    color: '#DC2626',
     textAlign: 'center',
   },
   // Archive link

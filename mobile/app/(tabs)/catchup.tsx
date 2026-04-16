@@ -10,6 +10,7 @@ import {
   Typography,
   BorderRadius,
   DarkGlassMaterials,
+  GlassMaterials,
   RingColors,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
@@ -121,9 +122,12 @@ export default function CatchupScreen() {
     day: 'numeric',
   });
 
+  // In light mode, let AppBackground show through instead of a solid fill
+  const containerBg = isDark ? colors.background : 'transparent';
+
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="catchup" />
         <CatchupFeed
           context="core"
@@ -136,7 +140,7 @@ export default function CatchupScreen() {
 
   if (!userProfile) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="catchup" />
         <View style={[styles.container, styles.centerContent]}>
           <Text style={[styles.errorText, { color: colors.error }]}>Failed to load profile</Text>
@@ -146,19 +150,19 @@ export default function CatchupScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
       <OrganicBackground variant="catchup" filterContext="consumer" />
 
       {/* Glass header */}
       <Animated.View
         style={[
           styles.headerContainer,
-          Platform.OS === 'web' && styles.headerGlassWeb,
+          Platform.OS === 'web' && (isDark ? styles.headerGlassWebDark : styles.headerGlassWebLight),
           { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
         ]}
       >
-        <Text style={styles.headerTitle}>Catch-up</Text>
-        <Text style={styles.headerSubtitle}>{todayLabel}</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Catch-up</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>{todayLabel}</Text>
       </Animated.View>
 
       <View style={styles.filterWrapper}>
@@ -192,7 +196,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
   },
-  headerGlassWeb: {
+  headerGlassWebDark: {
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     borderRadius: BorderRadius.md,
@@ -201,14 +205,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   } as any,
+  headerGlassWebLight: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    ...GlassMaterials.card,
+    backdropFilter: 'blur(20px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  } as any,
   headerTitle: {
     ...Typography.displaySmall,
-    color: '#FFFFFF',
     fontWeight: '700',
   },
   headerSubtitle: {
     ...Typography.bodyMedium,
-    color: 'rgba(255,255,255,0.55)',
     marginTop: 2,
   },
   loadingText: {
