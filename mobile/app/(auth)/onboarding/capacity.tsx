@@ -79,7 +79,7 @@ export default function CapacityScreen() {
       <View style={styles.headerContainer}>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '80%' }]} />
+              <View style={[styles.progressFill, { width: '80%', backgroundColor: '#FB923C' }]} />
             </View>
             <Text style={styles.progressText}>Step 4 of 5</Text>
           </View>
@@ -229,6 +229,7 @@ export default function CapacityScreen() {
             disabled={!canProceed()}
             variant="primary"
             size="md"
+            accentColor="#FB923C"
             fullWidth={false}
             style={styles.continueButton}
           />
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#FB923C',
     textAlign: 'center',
   },
   title: {
@@ -305,10 +306,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderColor: '#38BDF8',
-    shadowColor: '#38BDF8',
-    shadowOpacity: 0.15,
+    backgroundColor: 'rgba(251, 146, 60, 0.18)',
+    borderColor: '#FB923C',
+    shadowColor: '#FB923C',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
   optionContent: {
     flexDirection: 'row',
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
     color: DarkThemeColors.textPrimary,
   },
   optionTitleSelected: {
-    color: '#38BDF8',
+    color: '#FB923C',
   },
   optionDescription: {
     ...Typography.bodyMedium,
@@ -350,23 +354,23 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   previewBadgeSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    backgroundColor: 'rgba(251, 146, 60, 0.15)',
   },
   previewBadgeText: {
     ...Typography.labelSmall,
     color: DarkThemeColors.textSecondary,
   },
   previewBadgeTextSelected: {
-    color: '#38BDF8',
+    color: '#FB923C',
   },
   checkmark: {
     width: 32,
     height: 32,
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#FB923C',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#38BDF8',
+    shadowColor: '#FB923C',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

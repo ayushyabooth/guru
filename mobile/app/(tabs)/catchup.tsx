@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Alert, Platform, Animated } from 'react-native';
 import { CatchupFeed } from '../../components/Catch-up/CatchupFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { useScreenTimeTracking, useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
@@ -8,15 +8,39 @@ import { OrganicBackground } from '../../components/ui';
 import {
   Spacing,
   Typography,
+  BorderRadius,
+  DarkGlassMaterials,
   RingColors,
+  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
+
+const ACCENT_COLOR = '#38BDF8';
 
 export default function CatchupScreen() {
   const [selectedContext, setSelectedContext] = useState('core');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { isDark, colors } = useTheme();
+
+  // Staggered header entrance
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(-12)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerTranslateY, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   // Use the new time tracking context
   const { recordInteraction, updateContext } = useTimeTrackingContext();
@@ -90,6 +114,13 @@ export default function CatchupScreen() {
     recordInteraction(); // Record any card interaction
   };
 
+  // Format today's date for subtitle
+  const todayLabel = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -118,12 +149,24 @@ export default function CatchupScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <OrganicBackground variant="catchup" filterContext="consumer" />
 
+      {/* Glass header */}
+      <Animated.View
+        style={[
+          styles.headerContainer,
+          Platform.OS === 'web' && styles.headerGlassWeb,
+          { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
+        ]}
+      >
+        <Text style={styles.headerTitle}>Catch-up</Text>
+        <Text style={styles.headerSubtitle}>{todayLabel}</Text>
+      </Animated.View>
+
       <View style={styles.filterWrapper}>
         <FilterTabBar
           selectedContext={selectedContext}
           onContextChange={setSelectedContext}
           tabs={tabs}
-          accentColor={RingColors.catchup.primary}
+          accentColor={ACCENT_COLOR}
         />
       </View>
 
@@ -144,6 +187,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
+  headerGlassWeb: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    ...DarkGlassMaterials.card,
+    ...getDarkBackdropBlur(20),
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  } as any,
+  headerTitle: {
+    ...Typography.displaySmall,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    ...Typography.bodyMedium,
+    color: 'rgba(255,255,255,0.55)',
+    marginTop: 2,
+  },
   loadingText: {
     marginTop: Spacing.md,
     ...Typography.bodyMedium,
@@ -152,6 +219,6 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
   },
   filterWrapper: {
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
   },
 });

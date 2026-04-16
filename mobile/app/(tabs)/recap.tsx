@@ -13,7 +13,10 @@ import {
 import { useRouter } from 'expo-router';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
+import GlassButton from '../../components/ui/GlassButton';
 import GuruRings from '../../components/ui/GuruRings';
+import { Triskelion } from '../../components/Rings/Triskelion';
+import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import { useMetrics } from '../../store/metric-context';
 import {
   recapService,
@@ -707,21 +710,31 @@ export default function RecapScreen() {
         <View style={styles.entrySection}>
           <Text style={styles.weekLabel}>{weekLabel}</Text>
 
-          <GuruRings size="ghost" metrics={displayMetrics} dimensions={220} />
+          {/* Recap hero ring — orange Plasma Blob per BRD §C (ring color token assertion) */}
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <PlasmaBlobRing
+              progress={ringProgress}
+              color={RingColors.recap.primary}
+              size={240}
+              stroke={16}
+              animated
+              glow
+            />
+          </View>
           {/* Tier badge removed — no tiers in the app */}
 
           {/* Activity summary pills */}
           <View style={styles.activityPills}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{weeklyReadMinutes}m reading</Text>
+            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{weeklyReadMinutes}m reading</Text>
             </View>
             <View style={styles.pillDot} />
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{filtersExplored} filters</Text>
+            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} filters</Text>
             </View>
             <View style={styles.pillDot} />
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{displayMetrics.divein?.weeklyProgress || 0}m deep dives</Text>
+            <View style={[styles.pill, { backgroundColor: isDark ? 'rgba(15, 20, 35, 0.42)' : 'rgba(255, 255, 255, 0.65)', borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0,0,0,0.08)' }]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{displayMetrics.divein?.weeklyProgress || 0}m deep dives</Text>
             </View>
           </View>
 
@@ -747,29 +760,38 @@ export default function RecapScreen() {
               <Text style={[styles.ctaText, { fontSize: 14, fontWeight: '500', color: colors.textSecondary }]}>
                 Read some articles in Catch-up or Dive-in first to unlock your weekly recap.
               </Text>
-              <View style={[styles.beginButton, { opacity: 0.4 }]}>
-                <Text style={styles.beginButtonText}>Begin Journey</Text>
-              </View>
+              <GlassButton
+                title="Begin Journey"
+                onPress={() => {}}
+                accentColor="#FB923C"
+                disabled
+                fullWidth={false}
+                size="lg"
+                style={{ paddingHorizontal: 32 }}
+              />
             </View>
           ) : (
             <View style={styles.ctaSection}>
-              <Text style={styles.ctaText}>
+              <Text style={[styles.ctaText, { color: colors.textSecondary }]}>
                 {isInProgress
                   ? 'Continue where you left off'
                   : 'Fill your last ring \u2014 consolidate what you learned this week'
                 }
               </Text>
-              <TouchableOpacity style={styles.beginButton} onPress={handleBeginJourney}>
-                <Text style={styles.beginButtonText}>
-                  {isInProgress ? 'Continue Journey' : 'Begin Journey'}
-                </Text>
-              </TouchableOpacity>
+              <GlassButton
+                title={isInProgress ? 'Continue Journey' : 'Begin Journey'}
+                onPress={handleBeginJourney}
+                accentColor="#FB923C"
+                fullWidth={false}
+                size="lg"
+                style={{ paddingHorizontal: 32 }}
+              />
             </View>
           )}
         </View>
 
         {/* Journey Stages — interactive */}
-        <View style={[styles.stagesPreview, { backgroundColor: isDark ? 'rgba(15,20,35,0.42)' : 'rgba(255,255,255,0.85)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}>
+        <View style={[styles.stagesPreview, { backgroundColor: isDark ? 'rgba(15,20,35,0.42)' : 'rgba(255,255,255,0.65)', borderColor: isDark ? 'rgba(251, 146, 60, 0.2)' : 'rgba(251, 146, 60, 0.15)' }]}>
           <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
@@ -820,8 +842,12 @@ export default function RecapScreen() {
                     )}
                   </View>
                   <View style={styles.stageContent}>
-                    <Text style={styles.stageName}>{stage.name}</Text>
-                    <Text style={styles.stageDescription}>
+                    {/* Theme-aware stage title: the static stageName style
+                        used a faint peach (`RingColors.recap.light`) which
+                        rendered almost invisible on a white card in light
+                        mode. Override to the theme's primary text token. */}
+                    <Text style={[styles.stageName, { color: colors.textPrimary }]}>{stage.name}</Text>
+                    <Text style={[styles.stageDescription, { color: colors.textSecondary }]}>
                       {tierLocked && stage.lockHint ? stage.lockHint : stage.desc}
                     </Text>
                   </View>
@@ -883,7 +909,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   // Header
   header: {
@@ -974,9 +1000,12 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   beginButton: {
-    backgroundColor: 'rgba(251, 146, 60, 0.30)',
+    // Opaque recap-orange for AA white-text contrast in both themes
+    // (GUR-100 systemic-contrast-sweep follow-up). Previously 30%-alpha
+    // on white card yielded ~1.9:1.
+    backgroundColor: '#FB923C',
     borderWidth: 1.5,
-    borderColor: 'rgba(253, 186, 116, 0.40)',
+    borderColor: '#EA580C',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 999,

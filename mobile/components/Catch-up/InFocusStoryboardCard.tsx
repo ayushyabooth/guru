@@ -104,10 +104,10 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
   };
 
   const inFocusArticle = getInFocusArticle();
-  
+
   // Get category colors from centralized config
   const categoryColors = getFilterColors(storyboard.industry);
-  
+
   // Get current in-focus article's image
   const getCurrentHeroImage = () => {
     if (inFocusArticleId === storyboard.headline_article?.id) {
@@ -165,7 +165,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
         useNativeDriver: true,
       }),
     ]).start();
-    
+
     // Swap article after fade starts
     setTimeout(() => {
       setInFocusArticleId(articleId);
@@ -220,7 +220,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
 
   const readingTime = getReadingTime(inFocusArticle.word_count);
   const specialization = storyboard.specializations?.[0] || '';
-  
+
   // Get industry icon from centralized config
   const industryConfig = getIndustryConfig(storyboard.industry);
 
@@ -240,6 +240,58 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
     borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
   };
 
+  // Hero image gradient overlay (fades from image to transparent at bottom)
+  const heroGradientOverlay = Platform.OS === 'web' ? {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    background: 'linear-gradient(to bottom, transparent 0%, rgba(10,14,23,0.8) 100%)',
+    borderBottomLeftRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
+  } : {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    backgroundColor: 'rgba(10,14,23,0.5)',
+    borderBottomLeftRadius: BorderRadius.md,
+    borderBottomRightRadius: BorderRadius.md,
+  };
+
+  // Content area glass panel styling
+  const contentGlassStyle = Platform.OS === 'web' ? {
+    backdropFilter: 'blur(28px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+    background: isDark
+      ? 'rgba(15,20,35,0.20)'
+      : 'rgba(255,255,255,0.15)',
+    borderTopWidth: 1,
+    borderTopColor: isDark
+      ? 'rgba(255,255,255,0.12)'
+      : 'rgba(255,255,255,0.4)',
+  } : {
+    backgroundColor: isDark
+      ? 'rgba(15,20,35,0.15)'
+      : 'rgba(255,255,255,0.1)',
+    borderTopWidth: 1,
+    borderTopColor: isDark
+      ? 'rgba(255,255,255,0.08)'
+      : 'rgba(255,255,255,0.3)',
+  };
+
+  // Category pill glass style with accent tint + glow
+  const categoryPillGlassStyle = Platform.OS === 'web' ? {
+    backgroundColor: `${categoryColors.accent}18`,
+    borderColor: `${categoryColors.accent}35`,
+    boxShadow: `0 0 12px ${categoryColors.accent}20`,
+  } : {
+    backgroundColor: `${categoryColors.accent}20`,
+    borderColor: `${categoryColors.accent}40`,
+  };
+
   return (
     <View
       style={[
@@ -252,15 +304,19 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
     >
       {/* Accent strip at top for category color pop */}
       <View style={[styles.accentStrip, { backgroundColor: categoryColors.accent }]} />
-      
-      {/* HERO IMAGE SECTION - Updates when carousel article is tapped */}
+
+      {/* HERO IMAGE SECTION — with gradient overlay */}
       <Animated.View style={[styles.heroSection, { opacity: fadeAnim }]}>
         {currentHeroImage ? (
-          <Image 
-            source={{ uri: currentHeroImage }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          <View style={{ position: 'relative' }}>
+            <Image
+              source={{ uri: currentHeroImage }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+            {/* Gradient overlay fading from image to transparent at bottom */}
+            <View style={heroGradientOverlay} />
+          </View>
         ) : (
           <HeroGradientFallback
             accentFrom={industryConfig.accent}
@@ -271,8 +327,8 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
         )}
       </Animated.View>
 
-      {/* Category Badge */}
-      <View style={[styles.categoryBadge, { backgroundColor: categoryColors.accent + '20', borderColor: categoryColors.accent + '40' }]}>
+      {/* Category Pill — glass with accent tint and glow */}
+      <View style={[styles.categoryBadge, categoryPillGlassStyle]}>
         <Icon name={industryConfig.icon} size={14} color={categoryColors.accent} />
         <Text style={[styles.categoryText, { color: categoryColors.accent }]}>
           {formatIndustryLabel(storyboard.industry)}
@@ -287,8 +343,8 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
         )}
       </View>
 
-      {/* IN FOCUS ARTICLE SECTION */}
-      <Animated.View style={[styles.inFocusSection, { opacity: fadeAnim }]}>
+      {/* IN FOCUS ARTICLE SECTION — glass overlay panel */}
+      <Animated.View style={[styles.inFocusSection, contentGlassStyle, { opacity: fadeAnim }]}>
         {/* Headline */}
         <TouchableOpacity
           onPress={() => Linking.openURL(inFocusArticle.url)}
@@ -348,7 +404,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           articleId={inFocusArticle.id}
         />
 
-        {/* In-Focus Action Buttons */}
+        {/* In-Focus Action Buttons — pass accent color for glass CTA */}
         <InFocusActionButtons
           articleId={inFocusArticle.id}
           isSaved={savedArticles.has(inFocusArticle.id) || inFocusArticle.is_saved || false}
@@ -357,6 +413,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           onNotRelevant={handleNotRelevant}
           storyboardId={storyboard.id}
           isDark={isDark}
+          accentColor={categoryColors.accent}
         />
       </Animated.View>
 
@@ -431,7 +488,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
     gap: 6,
   },
   categoryEmoji: {
@@ -446,6 +504,9 @@ const styles = StyleSheet.create({
   },
   inFocusSection: {
     paddingTop: 8,
+    marginTop: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginHorizontal: Spacing.xs,
   },
   headlineContainer: {
     paddingHorizontal: Spacing.md,

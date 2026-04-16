@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import Icon from '../ui/Icon';
 import GlassSection from '../ui/GlassSection';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -17,6 +17,41 @@ interface RichSummarySectionProps {
   isDark?: boolean;
   categoryAccent?: string;
   onQuotePress?: (quote: string) => void;
+}
+
+/** Section accent dot colors — each section gets its own color */
+const SECTION_COLORS: Record<string, string> = {
+  whats_in_article: '#38BDF8',  // blue
+  spotlight: '#38BDF8',          // blue
+  why_it_matters: '#EC4899',     // pink
+  between_the_lines: '#FB923C',  // orange
+};
+
+/** Small glowing accent dot rendered before the section icon */
+function AccentDot({ color }: { color: string }) {
+  const dotGlow = Platform.OS === 'web' ? {
+    boxShadow: `0 0 6px ${color}80`,
+  } : {
+    shadowColor: color,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+  };
+
+  return (
+    <View
+      style={[
+        {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: color,
+          marginRight: 6,
+        },
+        dotGlow,
+      ]}
+    />
+  );
 }
 
 export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
@@ -45,7 +80,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.whats_in_article && (
         <GlassSection
           title="What's in the article"
-          icon={<Icon name="clipboard-text-outline" size={16} color={colors.textSecondary} />}
+          icon={
+            <View style={styles.sectionIconRow}>
+              <AccentDot color={SECTION_COLORS.whats_in_article} />
+              <Icon name="clipboard-text-outline" size={16} color={colors.textSecondary} />
+            </View>
+          }
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
@@ -58,7 +98,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.spotlight_quotes && content.spotlight_quotes.length > 0 && (
         <GlassSection
           title="Spotlight"
-          icon={<Icon name="format-quote-open" size={16} color={colors.textSecondary} />}
+          icon={
+            <View style={styles.sectionIconRow}>
+              <AccentDot color={SECTION_COLORS.spotlight} />
+              <Icon name="format-quote-open" size={16} color={colors.textSecondary} />
+            </View>
+          }
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
@@ -93,7 +138,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.why_it_matters && (
         <GlassSection
           title="Why it matters"
-          icon={<Icon name="target" size={16} color={colors.textSecondary} />}
+          icon={
+            <View style={styles.sectionIconRow}>
+              <AccentDot color={SECTION_COLORS.why_it_matters} />
+              <Icon name="target" size={16} color={colors.textSecondary} />
+            </View>
+          }
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
@@ -106,7 +156,12 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
       {content.between_the_lines && (
         <GlassSection
           title="Between the lines"
-          icon={<Icon name="magnify" size={16} color={colors.textSecondary} />}
+          icon={
+            <View style={styles.sectionIconRow}>
+              <AccentDot color={SECTION_COLORS.between_the_lines} />
+              <Icon name="magnify" size={16} color={colors.textSecondary} />
+            </View>
+          }
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
@@ -131,6 +186,10 @@ const styles = StyleSheet.create({
   },
   section: {
     marginHorizontal: 8,
+  },
+  sectionIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   sectionBody: {
     fontSize: 15,

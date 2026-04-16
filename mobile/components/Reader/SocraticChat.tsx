@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Animated, Easing, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import Icon from '../ui/Icon';
 import { OrganicBackground } from '../ui';
-import GuruRings from '../ui/GuruRings';
+import { Triskelion } from '../Rings/Triskelion';
 import { Spacing } from '@/constants/liquidGlass';
 
 interface ChatMessage {
@@ -29,16 +29,16 @@ interface SocraticChatProps {
 const renderMarkdown = (text: string, isUser: boolean) => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  
+
   lines.forEach((line, lineIdx) => {
     const trimmed = line.trim();
-    
+
     // Skip empty lines but add spacing
     if (!trimmed) {
       elements.push(<View key={`space-${lineIdx}`} style={{ height: 8 }} />);
       return;
     }
-    
+
     // Numbered list item
     const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
     if (numberedMatch) {
@@ -52,7 +52,7 @@ const renderMarkdown = (text: string, isUser: boolean) => {
       );
       return;
     }
-    
+
     // Bullet list item
     if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
       elements.push(
@@ -65,7 +65,7 @@ const renderMarkdown = (text: string, isUser: boolean) => {
       );
       return;
     }
-    
+
     // Regular paragraph
     elements.push(
       <Text key={`line-${lineIdx}`} style={[markdownStyles.paragraph, isUser && markdownStyles.userText]}>
@@ -73,7 +73,7 @@ const renderMarkdown = (text: string, isUser: boolean) => {
       </Text>
     );
   });
-  
+
   return elements;
 };
 
@@ -84,7 +84,7 @@ const renderInlineMarkdown = (text: string, isUser: boolean): React.ReactNode[] 
   let lastIndex = 0;
   let match;
   let idx = 0;
-  
+
   while ((match = regex.exec(text)) !== null) {
     // Add text before the match
     if (match.index > lastIndex) {
@@ -99,12 +99,12 @@ const renderInlineMarkdown = (text: string, isUser: boolean): React.ReactNode[] 
     lastIndex = regex.lastIndex;
     idx++;
   }
-  
+
   // Add remaining text
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
-  
+
   return parts.length > 0 ? parts : [text];
 };
 
@@ -152,6 +152,28 @@ const markdownStyles = StyleSheet.create({
     color: '#E2E8F0',
   },
 });
+
+// Breathing animation for loading triskelion
+function BreathingTriskelion() {
+  const anim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: anim }}>
+      <Triskelion size={24} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
+    </Animated.View>
+  );
+}
 
 // Generate a UUID v4 (simplified for cross-platform)
 const generateUUID = (): string => {
@@ -284,36 +306,51 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
       keyboardVerticalOffset={100}
     >
       <OrganicBackground variant="catchup" />
-      {/* Header with Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+      {/* Glass Header */}
+      <View style={[
+        styles.header,
+        Platform.OS === 'web' && {
+          // @ts-ignore
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        } as any,
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={onBack || onClose}
         >
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.headerCenter}>
-          <GuruRings size="logo" dimensions={28} />
+          <Triskelion size={20} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
           <Text style={styles.headerTitle}>Guru</Text>
         </View>
-        
+
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Icon name="close" size={18} color="#6B7280" />
+          <Icon name="close" size={18} color="#94A3B8" />
         </TouchableOpacity>
       </View>
 
-      {/* Article Context Card */}
+      {/* Glass Article Context Card */}
       {articleTitle && showArticleContext && (
-        <TouchableOpacity 
-          style={styles.articleContext}
+        <TouchableOpacity
+          style={[
+            styles.articleContext,
+            Platform.OS === 'web' && {
+              // @ts-ignore
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+            } as any,
+          ]}
           onPress={onViewStory}
           activeOpacity={0.8}
         >
+          {/* Left accent bar */}
+          <View style={styles.articleContextAccentBar} />
           <View style={styles.articleContextContent}>
-            <Icon name="file-document-outline" size={18} color="#38BDF8" />
             <View style={styles.articleContextText}>
-              <Text style={styles.articleContextLabel}>From article:</Text>
+              <Text style={styles.articleContextLabel}>FROM ARTICLE</Text>
               <Text style={styles.articleContextTitle} numberOfLines={1}>
                 {articleTitle}
               </Text>
@@ -342,24 +379,36 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
               message.role === 'user' ? styles.userMessageWrapper : styles.assistantMessageWrapper,
             ]}
           >
-            {message.role === 'assistant' && (
-              <View style={styles.avatarContainer}>
-                <GuruRings size="logo" dimensions={32} />
-              </View>
-            )}
             <View
               style={[
                 styles.messageBubble,
                 message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                Platform.OS === 'web' && message.role === 'user' && {
+                  // @ts-ignore
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                } as any,
                 Platform.OS === 'web' && message.role === 'assistant' && {
-                  // @ts-ignore - Web-specific CSS properties
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(56,189,248,0.06) 50%, rgba(255,255,255,0.04) 100%)',
+                  // @ts-ignore
                   backdropFilter: 'blur(20px)',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)',
-                },
+                  WebkitBackdropFilter: 'blur(20px)',
+                } as any,
               ] as any}
             >
-              <View style={styles.messageContent}>
+              {/* Assistant bubble: left accent bar + triskelion */}
+              {message.role === 'assistant' && (
+                <>
+                  <View style={styles.assistantAccentBar} />
+                  <View style={styles.assistantBubbleHeader}>
+                    <Triskelion size={12} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
+                  </View>
+                </>
+              )}
+
+              <View style={[
+                styles.messageContent,
+                message.role === 'assistant' && { paddingLeft: 4 },
+              ]}>
                 {renderMarkdown(message.content, message.role === 'user')}
               </View>
 
@@ -381,11 +430,10 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
           </View>
         ))}
 
-        {/* Loading indicator */}
+        {/* Loading indicator — animated breathing triskelion */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#38BDF8" />
-            <Text style={styles.loadingText}>Thinking...</Text>
+            <BreathingTriskelion />
           </View>
         )}
 
@@ -423,11 +471,25 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
         )}
       </ScrollView>
 
-      {/* Input */}
-      <View style={styles.inputContainerOuter}>
+      {/* Glass Input Bar */}
+      <View style={[
+        styles.inputContainerOuter,
+        Platform.OS === 'web' && {
+          // @ts-ignore
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        } as any,
+      ]}>
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              Platform.OS === 'web' && {
+                // @ts-ignore
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              } as any,
+            ]}
             placeholder="Share your thoughts or ask a question..."
             placeholderTextColor="#9CA3AF"
             value={inputText}
@@ -441,7 +503,7 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
             onPress={handleSubmit}
             disabled={!inputText.trim() || isLoading}
           >
-            <Text style={styles.sendButtonText}>→</Text>
+            <Icon name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -452,9 +514,9 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E17',
+    backgroundColor: 'rgba(10, 14, 23, 0.92)',
   },
-  // Header with navigation
+  // Glass Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -462,9 +524,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'web' ? 12 : 50,
-    backgroundColor: 'rgba(15, 20, 35, 0.85)',
+    backgroundColor: 'rgba(15, 20, 35, 0.65)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255,255,255,0.12)',
   },
   backButton: {
     paddingVertical: Spacing.sm,
@@ -481,19 +545,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  guruLogoSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#38BDF8',
-  },
-  guruLogoText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -503,11 +554,10 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
-  closeButtonText: {
-    // Kept for backward compat
-  },
-  // Article context card
+  // Glass Article context card
   articleContext: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -515,10 +565,20 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(56,189,248,0.06)',
+    paddingLeft: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(56,189,248,0.12)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  articleContextAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: '#38BDF8',
   },
   articleContextContent: {
     flexDirection: 'row',
@@ -526,22 +586,21 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
-  articleContextIcon: {
-    // Kept for backward compat
-  },
   articleContextText: {
     flex: 1,
   },
   articleContextLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 10,
+    color: '#64748B',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    fontWeight: '600',
   },
   articleContextTitle: {
     fontSize: 14,
     fontWeight: '600',
     color: '#F1F5F9',
+    marginTop: 2,
   },
   articleContextSource: {
     fontSize: 12,
@@ -579,42 +638,39 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '85%',
   },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  avatar: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   messageBubble: {
     borderRadius: 20,
     padding: Spacing.md,
     flex: 1,
+    overflow: 'hidden',
   },
+  // User bubble: translucent teal/blue tint
   userBubble: {
-    backgroundColor: 'rgba(56, 189, 248, 0.30)',
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.35)',
+    borderColor: 'rgba(125, 211, 252, 0.25)',
     borderBottomRightRadius: 6,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      },
-      default: {},
-    }),
   },
+  // Assistant bubble: neutral glass with left accent bar
   assistantBubble: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderBottomLeftRadius: 6,
+    position: 'relative',
+  },
+  assistantAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: '#6366F1',
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 6,
+  },
+  assistantBubbleHeader: {
+    marginBottom: 6,
   },
   messageContent: {
     // Container for rendered markdown
@@ -650,22 +706,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderLeftColor: 'rgba(56,189,248,0.3)',
   },
+  // Loading: breathing triskelion
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingVertical: Spacing.md,
-    paddingLeft: 46,
+    paddingLeft: 16,
     gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#38BDF8',
-    fontWeight: '500',
   },
   promptsContainer: {
     marginTop: Spacing.md,
-    marginLeft: 46,
     marginRight: Spacing.md,
     backgroundColor: 'rgba(251,191,36,0.08)',
     borderRadius: Spacing.md,
@@ -678,9 +729,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     gap: Spacing.sm,
-  },
-  promptsIcon: {
-    // Kept for backward compat
   },
   promptsLabel: {
     fontSize: 12,
@@ -723,10 +771,11 @@ const styles = StyleSheet.create({
     color: '#78350F',
     fontWeight: '600',
   },
+  // Glass Input Bar
   inputContainerOuter: {
     backgroundColor: 'rgba(15,20,35,0.55)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -740,7 +789,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: Spacing.lg,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -748,22 +797,30 @@ const styles = StyleSheet.create({
     color: '#F1F5F9',
     maxHeight: 120,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.10)',
   },
+  // Glass circle send button
   sendButton: {
     width: Spacing.xxl,
     height: Spacing.xxl,
-    borderRadius: Spacing.lg,
-    backgroundColor: '#38BDF8',
+    borderRadius: Spacing.xxl / 2,
+    backgroundColor: 'rgba(56, 189, 248, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(125, 211, 252, 0.4)',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   sendButtonDisabled: {
     backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    shadowOpacity: 0,
   },
   sendButtonText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    // kept for backward compat
   },
 });

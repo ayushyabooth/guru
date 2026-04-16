@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Alert, SafeAreaView, Platform } from 'react-native';
 import { DiveinFeed, DiveinArticle } from '../../components/Divein/DiveinFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { userService, UserProfile } from '../../services/user-service';
@@ -10,6 +10,9 @@ import {
   Spacing,
   Typography,
   RingColors,
+  DarkGlassMaterials,
+  BorderRadius,
+  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -35,6 +38,11 @@ function mapArticle(article: DiveinArticleRaw): DiveinArticle {
     isSaved: article.is_saved || false,
     isEssential: article.is_essential || false,
   };
+}
+
+function formatDateHeader(): string {
+  const now = new Date();
+  return now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 export default function DiveinScreen() {
@@ -155,6 +163,20 @@ export default function DiveinScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <OrganicBackground variant="divein" />
 
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Dive-in</Text>
+        <View style={styles.headerMeta}>
+          <Text style={styles.headerDate}>{formatDateHeader()}</Text>
+          {articles.length > 0 && (
+            <>
+              <View style={styles.headerDot} />
+              <Text style={styles.headerCount}>{articles.length} article{articles.length !== 1 ? 's' : ''}</Text>
+            </>
+          )}
+        </View>
+      </View>
+
       <View style={styles.filterWrapper}>
         <FilterTabBar
           selectedContext={selectedContext}
@@ -179,6 +201,37 @@ export default function DiveinScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  headerTitle: {
+    ...Typography.displayMedium,
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  headerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.xs,
+  },
+  headerDate: {
+    ...Typography.bodySmall,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  headerDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: RingColors.divein.primary,
+    marginHorizontal: Spacing.sm,
+  },
+  headerCount: {
+    ...Typography.bodySmall,
+    color: RingColors.divein.primary,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,
@@ -207,6 +260,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterWrapper: {
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.xs,
   },
 });

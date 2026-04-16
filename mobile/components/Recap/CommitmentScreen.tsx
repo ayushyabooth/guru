@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Spacing, Typography, BorderRadius, RingColors, getBackdropBlur } from '../../constants/liquidGlass';
+import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import Icon from '../ui/Icon';
+import GlassButton from '../ui/GlassButton';
 
 interface CommitmentScreenProps {
   onSave: (commitmentText: string) => void;
@@ -37,20 +38,13 @@ export default function CommitmentScreen({ onSave, tier }: CommitmentScreenProps
             maxLength={500}
           />
 
-          <TouchableOpacity
-            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          <GlassButton
+            title={tier === 'full' ? 'Save & Unlock Audio' : 'Save & Complete'}
             onPress={() => canSave && onSave(text.trim())}
+            accentColor="#FB923C"
             disabled={!canSave}
-          >
-            {tier === 'full' ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.saveButtonText}>Save & Unlock Audio</Text>
-                <Icon name="headphones" size={18} color="#fff" />
-              </View>
-            ) : (
-              <Text style={styles.saveButtonText}>Save & Complete</Text>
-            )}
-          </TouchableOpacity>
+            size="lg"
+          />
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -69,17 +63,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   card: {
-    backgroundColor: 'rgba(20, 25, 40, 0.92)',
-    borderRadius: BorderRadius.xl,
+    ...DarkGlassMaterials.cardHeavy,
     padding: Spacing.xl,
     borderWidth: 2,
     borderColor: 'rgba(251, 146, 60, 0.35)',
     shadowColor: '#FB923C',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 24,
-    elevation: 8,
-    ...getBackdropBlur(24),
+    elevation: 10,
+    ...getBackdropBlur(28),
+    ...Platform.select({
+      web: { backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)' } as any,
+      default: {},
+    }),
   },
   heading: {
     ...Typography.headlineMedium,
@@ -89,32 +86,14 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    ...DarkGlassMaterials.input,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     minHeight: 100,
     ...Typography.bodyMedium,
     color: 'rgba(255, 255, 255, 0.9)',
-    borderWidth: 1,
     borderColor: 'rgba(251, 146, 60, 0.3)',
     marginBottom: Spacing.lg,
-  },
-  saveButton: {
-    backgroundColor: RingColors.recap.primary,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.pill,
-    alignItems: 'center',
-    shadowColor: RingColors.recap.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  saveButtonDisabled: { opacity: 0.4 },
-  saveButtonText: {
-    ...Typography.labelLarge,
-    color: '#fff',
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    ...getBackdropBlur(12),
   },
 });

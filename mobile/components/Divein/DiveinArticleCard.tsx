@@ -65,7 +65,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 }) => {
   const router = useRouter();
   const { isDark, colors } = useTheme();
-  
+
   // Use centralized color config from theme.ts
   const categoryColors = getFilterColors(article.industry);
   const filterColors = getFilterColors(filterContext);
@@ -80,7 +80,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays}d ago`;
@@ -99,10 +99,10 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 
   const getBadgeConfig = () => {
     if (article.isSaved) {
-      return { icon: '◈', label: 'SAVED', color: '#F59E0B' };
+      return { icon: 'bookmark', label: 'SAVED', color: '#F59E0B' };
     }
     if (article.isEssential) {
-      return { icon: '★', label: 'ESSENTIAL', color: RingColors.divein.primary };
+      return { icon: 'star', label: 'ESSENTIAL', color: RingColors.divein.primary };
     }
     return null;
   };
@@ -110,96 +110,150 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   const badge = getBadgeConfig();
   const whatsInArticle = article.richSummary?.whats_in_article || article.teaser;
 
-  // Dark glassmorphic style - uses filter context colors
-  const liquidGlassStyle = Platform.OS === 'web' ? {
-    background: `linear-gradient(145deg, rgba(15,20,35,0.65) 0%, rgba(15,20,35,0.55) 50%, rgba(15,20,35,0.60) 100%)`,
-    backdropFilter: 'blur(40px) saturate(200%)',
-    WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-    borderColor: 'rgba(255,255,255,0.08)',
-    boxShadow: `0 0 60px ${filterColors.accent}18, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+  // Glass card style — translucent fill, backdrop blur on web, gradient border
+  const liquidGlassStyle = isDark
+    ? (Platform.OS === 'web'
+        ? {
+            background: `linear-gradient(145deg, rgba(15,20,35,0.65) 0%, rgba(15,20,35,0.55) 50%, rgba(15,20,35,0.60) 100%)`,
+            backdropFilter: 'blur(40px) saturate(200%)',
+            WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            boxShadow: `0 0 60px ${filterColors.accent}18, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+          }
+        : {
+            backgroundColor: 'rgba(15,20,35,0.75)',
+            borderColor: 'rgba(255,255,255,0.08)',
+          })
+    : (Platform.OS === 'web'
+        ? {
+            // Solid white card + soft filter-context shadow in light mode.
+            background: '#FFFFFF',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            borderColor: 'rgba(15,23,42,0.08)',
+            boxShadow: `0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.08), 0 0 32px ${filterColors.accent}10`,
+          }
+        : {
+            backgroundColor: '#FFFFFF',
+            borderColor: 'rgba(15,23,42,0.08)',
+          });
+
+  // Accent bar glow (left edge)
+  const accentBarGlow = Platform.OS === 'web' ? {
+    boxShadow: `2px 0 8px ${categoryColors.accent}50`,
   } : {
-    backgroundColor: 'rgba(15,20,35,0.75)',
-    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: categoryColors.accent,
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
   };
 
+  // Gradient border (brighter top) for the glass card on web
+  const gradientBorderStyle = Platform.OS === 'web' && isDark ? {
+    borderImage: `linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%) 1`,
+  } : {};
+
   return (
-    <View style={[styles.card, liquidGlassStyle, !isDark && { backgroundColor: 'rgba(255,255,255,0.85)', borderColor: 'rgba(0,0,0,0.08)' }]}>
-      {/* Accent strip at top - uses filter context color */}
-      <View style={[styles.accentStrip, { backgroundColor: filterColors.accent }]} />
-      
-      {/* Header row with badge and category */}
-      <View style={styles.headerRow}>
-        {badge && (
-          <View style={[styles.badge, { backgroundColor: badge.color + '15' }]}>
-            <Text style={[styles.badgeIcon, { color: badge.color }]}>{badge.icon}</Text>
-            <Text style={[styles.badgeLabel, { color: badge.color }]}>{badge.label}</Text>
+    <View style={[styles.card, liquidGlassStyle, gradientBorderStyle]}>
+      {/* 3px accent bar on left edge with glow */}
+      <View style={[styles.accentBar, { backgroundColor: categoryColors.accent }, accentBarGlow]} />
+
+      {/* Main content row: text-first with small thumbnail on right */}
+      <View style={styles.contentRow}>
+        {/* Text content — takes priority */}
+        <View style={styles.textContent}>
+          {/* Top row: badge + category */}
+          <View style={styles.topRow}>
+            {badge && (
+              <View style={[styles.badge, { backgroundColor: badge.color + '15' }]}>
+                <Icon name={badge.icon} size={10} color={badge.color} />
+                <Text style={[styles.badgeLabel, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+            )}
+            <View style={[styles.categoryChip, { backgroundColor: colors.glassHighlight }]}>
+              <Icon name={industryIcon} size={12} color={categoryColors.accent} />
+              <Text style={[styles.categoryText, { color: categoryColors.accent }]}>
+                {article.context || article.industry}
+              </Text>
+            </View>
           </View>
-        )}
-        <View style={[styles.categoryChip, { backgroundColor: colors.glassHighlight }]}>
-          <Icon name={industryIcon} size={14} color={categoryColors.accent} />
-          <Text style={[styles.categoryText, { color: categoryColors.accent }]}>
-            {article.context || article.industry}
+
+          {/* Title */}
+          <Text
+            style={[styles.title, { color: colors.textPrimary }]}
+            numberOfLines={2}
+          >
+            {article.headline}
           </Text>
-        </View>
-      </View>
 
-      {/* Hero Image Section */}
-      <View style={styles.heroContainer}>
-        {article.thumbnailUrl ? (
-          <Image 
-            source={{ uri: article.thumbnailUrl }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <HeroGradientFallback
-            accentFrom={industryConfig.accent}
-            accentTo={industryConfig.accentSecondary || industryConfig.accent}
-            emoji={industryConfig.emoji}
-            height={140}
-          />
-        )}
-        
-        {/* Liquid glass overlay */}
-        <View style={styles.heroOverlay}>
-          <View style={styles.glassOverlay}>
-            <Text style={styles.heroTitle} numberOfLines={3}>{article.headline}</Text>
-            <Text style={styles.heroMeta}>
-              {cleanSource(article.source)} • {article.readingTime} min read • {formatDate(article.publishDate)}
-            </Text>
+          {/* Source + meta row */}
+          <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
+            {cleanSource(article.source)} · {article.readingTime} min · {formatDate(article.publishDate)}
+          </Text>
+
+          {/* 1-line teaser */}
+          <Text
+            style={[styles.teaser, { color: isDark ? colors.textTertiary : colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {whatsInArticle}
+          </Text>
+
+          {/* Inline CTAs: "Dive In" text link + bookmark icon + dismiss */}
+          <View style={styles.inlineCtas}>
+            <TouchableOpacity
+              onPress={handleDiveIn}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Dive in to ${article.headline}`}
+              style={styles.diveInLink}
+            >
+              <Icon name="book-open-variant" size={14} color={filterColors.accent} />
+              <Text style={[styles.diveInText, { color: filterColors.accent }]}>Dive In</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                // TODO(R5A): wire to save mutation; for now this is a no-op placeholder.
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={article.isSaved ? 'Unsave' : 'Save for later'}
+              style={styles.bookmarkButton}
+            >
+              <Icon
+                name={article.isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={16}
+                color={article.isSaved ? '#F59E0B' : (isDark ? colors.textTertiary : colors.textSecondary)}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onNotRelevant(article.id)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Mark not relevant"
+              style={styles.dismissButton}
+            >
+              <Icon name="close" size={14} color={isDark ? colors.textTertiary : colors.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
-      </View>
 
-      {/* Article summary */}
-      <View style={styles.contentSection}>
-        <Text style={[styles.contentText, { color: colors.textSecondary }]} numberOfLines={4}>
-          {whatsInArticle}
-        </Text>
-      </View>
-
-      {/* CTA Row */}
-      <View style={styles.ctaRow}>
-        <TouchableOpacity
-          style={[styles.ctaButton, styles.ctaPrimary, { backgroundColor: filterColors.accent + '4D' }]}
-          onPress={handleDiveIn}
-          activeOpacity={0.8}
-        >
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-            <Icon name="book-open-variant" size={16} color="#FFFFFF" />
-            <Text style={styles.ctaPrimaryText}>Dive In</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.ctaButton, styles.ctaSecondary]}
-          onPress={() => onNotRelevant(article.id)}
-          activeOpacity={0.7}
-        >
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
-            <Icon name="close" size={16} color={colors.textTertiary} />
-            <Text style={[styles.ctaSecondaryText, { color: colors.textSecondary }]}>Not Relevant</Text>
-          </View>
-        </TouchableOpacity>
+        {/* Small 52x52 thumbnail on the right */}
+        <View style={styles.thumbnailContainer}>
+          {article.thumbnailUrl ? (
+            <Image
+              source={{ uri: article.thumbnailUrl }}
+              style={styles.thumbnail}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.thumbnailFallback, { backgroundColor: `${categoryColors.accent}18` }]}>
+              <Icon name={industryIcon} size={20} color={categoryColors.accent} />
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -208,34 +262,42 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: Spacing.sm,
-    marginTop: Spacing.md,
+    marginTop: Spacing.sm,
     ...DarkGlassMaterials.card,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-  },
-  accentStrip: {
-    height: 3,
-    width: '100%',
-  },
-  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+  },
+  accentBar: {
+    width: 3,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  contentRow: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: Spacing.sm,
+    paddingLeft: Spacing.md,
+    gap: Spacing.sm,
+  },
+  textContent: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  topRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: 6,
+    gap: 6,
+    marginBottom: 2,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
-  },
-  badgeIcon: {
-    ...Typography.labelMedium,
-    fontWeight: '700',
-    marginRight: Spacing.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
+    gap: 3,
   },
   badgeLabel: {
     ...Typography.labelSmall,
@@ -245,128 +307,65 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
-  },
-  categoryEmoji: {
-    fontSize: 12,
-    marginRight: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    gap: 3,
   },
   categoryText: {
-    ...Typography.labelMedium,
+    ...Typography.labelSmall,
   },
-  heroContainer: {
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    overflow: 'hidden',
-    aspectRatio: 16 / 10,
-    maxHeight: 140,
+  title: {
+    ...Typography.headlineSmall,
+    fontSize: 15,
+    lineHeight: 20,
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  meta: {
+    ...Typography.labelSmall,
+    fontSize: 11,
   },
-  heroPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+  teaser: {
+    ...Typography.bodySmall,
+    fontSize: 12,
+    lineHeight: 16,
   },
-  heroPlaceholderEmoji: {
-    ...Typography.displayMedium,
-    opacity: 0.5,
-  },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  glassOverlay: {
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(16px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.06)',
-      },
-    }),
-  },
-  heroTitle: {
-    ...Typography.bodyLarge,
-    fontWeight: '700',
-    color: '#F1F5F9',
-    lineHeight: 22,
-    marginBottom: Spacing.xs,
-  },
-  heroMeta: {
-    ...Typography.labelMedium,
-    color: '#94A3B8',
-  },
-  contentSection: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-  },
-  contentHeader: {
+  inlineCtas: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    gap: 12,
+    marginTop: 4,
   },
-  contentHeaderEmoji: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  contentHeaderText: {
-    ...Typography.labelMedium,
-  },
-  contentDivider: {
-    height: 1,
-    marginBottom: 10,
-  },
-  contentText: {
-    ...Typography.bodyMedium,
-    lineHeight: 21,
-  },
-  ctaRow: {
+  diveInLink: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-    gap: Spacing.md,
-  },
-  ctaButton: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
     alignItems: 'center',
+    gap: 4,
+  },
+  diveInText: {
+    ...Typography.labelMedium,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  bookmarkButton: {
+    padding: 2,
+  },
+  dismissButton: {
+    padding: 2,
+    marginLeft: 'auto',
+  },
+  thumbnailContainer: {
     justifyContent: 'center',
   },
-  ctaPrimary: {
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: `${RingColors.divein.light}59`,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' },
-      default: {},
-    }),
+  thumbnail: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.sm,
   },
-  ctaPrimaryText: {
-    ...Typography.labelLarge,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  ctaSecondary: {
-    ...DarkGlassMaterials.button,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-  },
-  ctaSecondaryText: {
-    ...Typography.labelLarge,
+  thumbnailFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

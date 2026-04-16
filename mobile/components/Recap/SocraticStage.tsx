@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
+import GlassButton from '../ui/GlassButton';
 import { SocraticResponse, KeyInsight } from '../../services/recap-service';
 
 interface SocraticStageProps {
@@ -211,9 +212,12 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
           <Text style={[styles.concludedText, { color: colors.textSecondary }]}>
             {insightCount > 0 ? `${insightCount} insight${insightCount > 1 ? 's' : ''} captured during this dialogue` : 'Dialogue complete'}
           </Text>
-          <TouchableOpacity style={styles.continueButton} onPress={onComplete}>
-            <Text style={styles.continueText}>Continue →</Text>
-          </TouchableOpacity>
+          <GlassButton
+            title="Continue →"
+            onPress={onComplete}
+            accentColor="#FB923C"
+            size="lg"
+          />
         </View>
       ) : (
         <View style={styles.inputArea}>
@@ -271,19 +275,22 @@ const styles = StyleSheet.create({
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: DarkGlassMaterials.card.backgroundColor,
-    borderWidth: 1,
-    borderColor: 'rgba(251, 146, 60, 0.25)',
-    shadowColor: RingColors.recap.primary,
+    ...DarkGlassMaterials.card,
+    borderRadius: BorderRadius.lg,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#6366F1',
+    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.2)',
+    backgroundColor: 'rgba(20, 184, 166, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(20, 184, 166, 0.25)',
+    ...getBackdropBlur(12),
   },
   bubbleText: {
     ...Typography.bodyMedium,
@@ -310,10 +317,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    paddingBottom: 100,
     backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    ...getBackdropBlur(16),
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    ...getBackdropBlur(20),
     gap: Spacing.sm,
   },
   chatInput: {
@@ -323,7 +331,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     ...Typography.bodyMedium,
     maxHeight: 100,
-    borderColor: 'rgba(251, 146, 60, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: BorderRadius.lg,
+    ...getBackdropBlur(12),
   },
   sendButton: {
     width: 40,
@@ -342,24 +352,15 @@ const styles = StyleSheet.create({
   concludedArea: {
     alignItems: 'center',
     padding: Spacing.lg,
+    paddingBottom: 100,
     backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    ...getBackdropBlur(20),
   },
   concludedText: {
     ...Typography.bodyMedium,
     marginBottom: Spacing.md,
-  },
-  continueButton: {
-    backgroundColor: RingColors.recap.primary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.pill,
-  },
-  continueText: {
-    ...Typography.labelLarge,
-    color: '#fff',
-    fontWeight: '700',
   },
   // Article reference styles
   articleRefInline: {

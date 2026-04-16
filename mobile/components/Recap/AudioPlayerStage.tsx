@@ -398,6 +398,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 60,
     paddingHorizontal: Spacing.lg,
+    paddingBottom: 100,
     alignItems: 'center',
   },
   header: {
@@ -438,6 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
+    ...getBackdropBlur(16),
   },
   narratorOrb: {
     backgroundColor: 'rgba(251, 146, 60, 0.15)',
@@ -503,6 +505,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xl,
     marginBottom: Spacing.lg,
+    ...DarkGlassMaterials.card,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    ...getBackdropBlur(20),
   },
   skipButton: {
     width: 56,
@@ -510,9 +516,9 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DarkGlassMaterials.button.backgroundColor,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: DarkGlassMaterials.button.borderColor,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   skipText: {
     ...Typography.labelMedium,
@@ -565,12 +571,15 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.md,
-    marginBottom: 4,
+    marginBottom: 6,
+    backgroundColor: 'rgba(15, 20, 35, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   transcriptActive: {
     backgroundColor: 'rgba(251, 146, 60, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(251, 146, 60, 0.2)',
+    borderColor: 'rgba(251, 146, 60, 0.25)',
   },
   transcriptSpeaker: {
     ...Typography.labelSmall,
@@ -608,7 +617,12 @@ const styles = StyleSheet.create({
   },
   textRecapSegment: {
     marginBottom: Spacing.md,
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: 'rgba(15, 20, 35, 0.3)',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   textRecapSpeakerRow: {
     flexDirection: 'row',

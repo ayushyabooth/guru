@@ -264,7 +264,7 @@ export default function GoalsScreen() {
         <View style={styles.headerGlass}>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '100%' }]} />
+              <View style={[styles.progressFill, { width: '100%', backgroundColor: '#10B981' }]} />
             </View>
             <Text style={styles.progressText}>Final Step</Text>
           </View>
@@ -441,12 +441,13 @@ export default function GoalsScreen() {
             style={styles.backButton}
           />
           <GlassButton
-            title={isSubmitting ? "Saving..." : "Get Started"}
+            title={isSubmitting ? "Saving..." : "Complete Setup"}
             onPress={handleSubmit}
             disabled={isSubmitting}
             loading={isSubmitting}
             variant="primary"
             size="md"
+            accentColor="#10B981"
             fullWidth={false}
             style={styles.continueButton}
           />
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#10B981',
     textAlign: 'center',
   },
   title: {

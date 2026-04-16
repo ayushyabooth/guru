@@ -27,6 +27,7 @@ export interface TriskelionProgress {
 export interface TriskelionProps {
   size?: number;
   progress: TriskelionProgress;
+  mode?: 'logo' | 'progress';
   volumetric?: boolean;
   celebrate?: boolean;
   reducedMotion?: boolean;
@@ -392,10 +393,14 @@ function TriskelionNative({
 // ─── Platform-aware export ───────────────────────────────────────
 
 export function Triskelion(props: TriskelionProps) {
+  const resolvedProps = props.mode === 'logo'
+    ? { ...props, progress: { c: 1, d: 1, r: 1 } }
+    : props;
+
   if (Platform.OS === 'web') {
-    return <TriskelionCanvas {...props} />;
+    return <TriskelionCanvas {...resolvedProps} />;
   }
-  return <TriskelionNative {...props} />;
+  return <TriskelionNative {...resolvedProps} />;
 }
 
 export default Triskelion;

@@ -182,8 +182,10 @@ export default function SignupScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete="off"
+              autoComplete="email"
               icon="email"
+              accessibilityLabel="Email address"
+              textContentType="emailAddress"
             />
 
             {/* Password Input */}
@@ -196,8 +198,10 @@ export default function SignupScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
-              autoComplete="off"
+              autoComplete="new-password"
               icon="lock"
+              accessibilityLabel="Password"
+              textContentType="newPassword"
             />
 
             {/* Confirm Password Input */}
@@ -210,8 +214,10 @@ export default function SignupScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
-              autoComplete="off"
+              autoComplete="new-password"
               icon="lock"
+              accessibilityLabel="Confirm password"
+              textContentType="newPassword"
             />
 
             {/* Invite Code Input */}
@@ -224,8 +230,9 @@ export default function SignupScreen() {
               }}
               autoCapitalize="characters"
               autoCorrect={false}
-              autoComplete="off"
+              autoComplete="one-time-code"
               icon="key"
+              accessibilityLabel="Invite code"
             />
 
             {/* Signup Button */}
@@ -236,6 +243,7 @@ export default function SignupScreen() {
               disabled={status === 'success'}
               variant="primary"
               size="lg"
+              accentColor="#6366F1"
               style={styles.signupButton}
             />
 

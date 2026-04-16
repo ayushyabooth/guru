@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import Icon from '../ui/Icon';
+import GlassButton from '../ui/GlassButton';
 import {
   Spacing,
   Typography,
   BorderRadius,
   RingColors,
+  DarkGlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
@@ -152,10 +154,14 @@ export default function CelebrationOverlay({
         {/* Audio / Text recap button */}
         <View style={styles.audioSection}>
           {audioStatus === 'idle' && onGenerateAudio && (
-            <TouchableOpacity style={styles.audioButton} onPress={onGenerateAudio}>
-              <Icon name="headphones" size={18} color="#fff" />
-              <Text style={styles.audioButtonText}>Generate Your Recap</Text>
-            </TouchableOpacity>
+            <GlassButton
+              title="Generate Your Recap"
+              onPress={onGenerateAudio}
+              accentColor="#6366F1"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.xl }}
+            />
           )}
           {audioStatus === 'generating' && (
             <View style={styles.audioGenerating}>
@@ -164,16 +170,24 @@ export default function CelebrationOverlay({
             </View>
           )}
           {audioStatus === 'ready' && onListenAudio && (
-            <TouchableOpacity style={styles.audioButton} onPress={onListenAudio}>
-              <Icon name="headphones" size={18} color="#fff" />
-              <Text style={styles.audioButtonText}>Listen to Audio Recap</Text>
-            </TouchableOpacity>
+            <GlassButton
+              title="Listen to Audio Recap"
+              onPress={onListenAudio}
+              accentColor="#6366F1"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.xl }}
+            />
           )}
           {audioStatus === 'text_only' && onReadRecap && (
-            <TouchableOpacity style={styles.audioButton} onPress={onReadRecap}>
-              <Icon name="book-open-variant" size={18} color="#fff" />
-              <Text style={styles.audioButtonText}>Read Your Recap</Text>
-            </TouchableOpacity>
+            <GlassButton
+              title="Read Your Recap"
+              onPress={onReadRecap}
+              accentColor="#6366F1"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.xl }}
+            />
           )}
           {audioStatus === 'failed' && onGenerateAudio && (
             <TouchableOpacity style={styles.audioRetryButton} onPress={onGenerateAudio}>
@@ -185,13 +199,23 @@ export default function CelebrationOverlay({
         {/* Actions */}
         <View style={styles.actionsRow}>
           {onViewConstellation && (
-            <TouchableOpacity style={styles.secondaryButton} onPress={onViewConstellation}>
-              <Text style={styles.secondaryButtonText}>View Constellation</Text>
-            </TouchableOpacity>
+            <GlassButton
+              title="View Constellation"
+              onPress={onViewConstellation}
+              variant="secondary"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.lg }}
+            />
           )}
-          <TouchableOpacity style={styles.primaryButton} onPress={onBackToHome}>
-            <Text style={styles.primaryButtonText}>Back to Home</Text>
-          </TouchableOpacity>
+          <GlassButton
+            title="Back to Home"
+            onPress={onBackToHome}
+            accentColor="#FB923C"
+            fullWidth={false}
+            size="md"
+            style={{ paddingHorizontal: Spacing.lg }}
+          />
         </View>
       </Animated.View>
     </View>
@@ -218,8 +242,7 @@ const styles = StyleSheet.create({
     shadowRadius: 60,
   },
   card: {
-    backgroundColor: 'rgba(20, 25, 40, 0.92)',
-    borderRadius: BorderRadius.xl,
+    ...DarkGlassMaterials.cardHeavy,
     padding: Spacing.xl,
     marginHorizontal: Spacing.lg,
     borderWidth: 2,
@@ -229,7 +252,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 10,
-    ...getBackdropBlur(24),
+    ...getBackdropBlur(28),
     alignItems: 'center',
     width: width - Spacing.xl * 2,
   },
@@ -250,6 +273,12 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   statNumber: {
     ...Typography.headlineLarge,

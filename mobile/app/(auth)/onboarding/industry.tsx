@@ -321,6 +321,7 @@ export default function IndustryScreen() {
           disabled={!canProceed()}
           variant="primary"
           size="lg"
+          accentColor="#38BDF8"
           fullWidth
         />
       </View>
@@ -402,7 +403,12 @@ const styles = StyleSheet.create({
   gridCardSelected: {
     borderColor: '#38BDF8',
     borderWidth: 2,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
   iconBackground: {
     width: 72,

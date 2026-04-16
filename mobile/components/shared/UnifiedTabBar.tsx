@@ -36,6 +36,16 @@ const TAB_ICONS: Record<string, string> = {
   default: 'clipboard-text-outline',
 };
 
+/** Convert hex color to rgba string */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
   tabs,
   activeTabId,
@@ -52,16 +62,18 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
     if (variant === 'rich' && tab.type) {
       const colors = TAB_COLORS[tab.type] || TAB_COLORS.default;
       return {
-        bg: isActive ? colors.active + '38' : colors.inactive,
-        text: isActive ? (isDark ? '#E0F2FE' : '#0F172A') : colors.active,
-        border: isActive ? colors.active + '80' : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+        accent: colors.active,
+        bg: isActive ? hexToRgba(colors.active, 0.18) : hexToRgba(colors.active, 0.08),
+        text: isActive ? '#FFFFFF' : '#94A3B8',
+        border: isActive ? hexToRgba(colors.active, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
       };
     }
     const accent = accentColor || '#38BDF8';
     return {
-      bg: isActive ? `${accent}38` : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
-      text: isActive ? (isDark ? '#E0F2FE' : '#0F172A') : (isDark ? '#94A3B8' : '#475569'),
-      border: isActive ? `${accent}80` : (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)'),
+      accent,
+      bg: isActive ? hexToRgba(accent, 0.18) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
+      text: isActive ? '#FFFFFF' : '#94A3B8',
+      border: isActive ? hexToRgba(accent, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
     };
   };
 
@@ -83,26 +95,65 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
           const colors = getColors(tab, isActive);
           const icon = getIcon(tab);
 
+          // Build dynamic styles per pill
+          const pillStyle: any[] = [
+            styles.tab,
+            variant === 'rich' && styles.tabRich,
+            isMobile && styles.tabMobile,
+            {
+              backgroundColor: colors.bg,
+              borderColor: colors.border,
+            },
+          ];
+
+          // Active pill: glass treatment with accent glow + specular highlight
+          if (isActive) {
+            pillStyle.push({
+              shadowColor: colors.accent,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.35,
+              shadowRadius: 12,
+            });
+
+            if (Platform.OS === 'web') {
+              pillStyle.push({
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                boxShadow: `0 0 20px ${hexToRgba(colors.accent, 0.3)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`,
+              } as any);
+            }
+          } else {
+            // Inactive: subtle ghost glass
+            if (Platform.OS === 'web') {
+              pillStyle.push({
+                backdropFilter: 'blur(12px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(12px) saturate(150%)',
+              } as any);
+            }
+          }
+
           return (
             <TouchableOpacity
               key={tab.id || tab.context}
               onPress={() => onTabPress(tab.id || tab.context || '', tab.context || tab.value)}
-              style={[
-                styles.tab,
-                variant === 'rich' && styles.tabRich,
-                isMobile && styles.tabMobile,
-                {
-                  backgroundColor: colors.bg,
-                  borderColor: colors.border,
-                },
-                isActive && variant === 'minimal' && styles.tabActiveMinimal,
-                isActive && variant === 'minimal' && Platform.OS === 'web' && {
-                  // @ts-ignore - web-only boxShadow with dynamic accent color
-                  boxShadow: `0 0 16px ${(accentColor || '#38BDF8')}40, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12)`,
-                },
-              ]}
+              style={pillStyle}
               activeOpacity={0.7}
             >
+              {/* Inner specular highlight - 1px white line at top for active pill */}
+              {isActive && (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 8,
+                    right: 8,
+                    height: 1,
+                    borderRadius: 1,
+                    backgroundColor: 'rgba(255,255,255,0.18)',
+                  }}
+                />
+              )}
               {icon && <Icon name={icon} size={16} color={colors.text} style={styles.tabIcon} />}
               <Text
                 style={[
@@ -176,11 +227,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     flexDirection: 'row',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     elevation: 2,
   },
   tabRich: {
@@ -191,22 +242,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     minHeight: 28,
   },
-  tabActiveMinimal: {
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(16px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-      },
-    }),
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
   tabIcon: {
     marginRight: 8,
   },
   tabLabel: {
     fontSize: 12,
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
   tabLabelRich: {
     fontSize: 14,
@@ -216,6 +258,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   tabLabelActive: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
