@@ -29,6 +29,7 @@ import {
   BorderRadius,
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +43,12 @@ const CAPACITY_DEFAULTS = {
 export default function CapacityScreen() {
   const { state, setWeeklyCapacity, setCatchupGoals, nextStep, previousStep, canProceed } =
     useOnboarding();
+  const { isDark, colors } = useTheme();
+
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.07)';
+  const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
+  const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
   const handleCapacitySelect = (capacity: string) => {
     setWeeklyCapacity(capacity);
@@ -71,7 +78,7 @@ export default function CapacityScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 3D Glass Blob Background */}
       <OrganicBackground variant="onboarding" />
 
@@ -84,8 +91,8 @@ export default function CapacityScreen() {
             <Text style={styles.progressText}>Step 4 of 5</Text>
           </View>
 
-          <Text style={styles.title}>How much time can you dedicate weekly?</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>How much time can you dedicate weekly?</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             This helps us personalize your daily reading goals in the next step.
           </Text>
       </View>
@@ -103,14 +110,14 @@ export default function CapacityScreen() {
             return (
               <TouchableOpacity
                 key={option.value}
-                style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+                style={[styles.optionCard, { backgroundColor: cardBg, borderColor: cardBorder }, isSelected && styles.optionCardSelected]}
                 onPress={() => handleCapacitySelect(option.value)}
                 activeOpacity={0.7}
               >
                 <View style={styles.optionContent}>
                   <View style={styles.optionMain}>
                     <View style={styles.optionHeader}>
-                      <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
+                      <Text style={[styles.optionTitle, { color: colors.textPrimary }, isSelected && styles.optionTitleSelected]}>
                         {option.label}
                       </Text>
                       {isSelected && (
@@ -122,6 +129,7 @@ export default function CapacityScreen() {
                     <Text
                       style={[
                         styles.optionDescription,
+                        { color: colors.textSecondary },
                         isSelected && styles.optionDescriptionSelected,
                       ]}
                     >
@@ -131,12 +139,12 @@ export default function CapacityScreen() {
                     {/* Preview of what this means */}
                     <View style={[styles.previewBadges, isSelected && styles.previewBadgesSelected]}>
                       <View style={[styles.previewBadge, isSelected && styles.previewBadgeSelected]}>
-                        <Text style={[styles.previewBadgeText, isSelected && styles.previewBadgeTextSelected]}>
+                        <Text style={[styles.previewBadgeText, { color: colors.textSecondary }, isSelected && styles.previewBadgeTextSelected]}>
                           ~{defaults.articlesPerDay} articles/day
                         </Text>
                       </View>
                       <View style={[styles.previewBadge, isSelected && styles.previewBadgeSelected]}>
-                        <Text style={[styles.previewBadgeText, isSelected && styles.previewBadgeTextSelected]}>
+                        <Text style={[styles.previewBadgeText, { color: colors.textSecondary }, isSelected && styles.previewBadgeTextSelected]}>
                           {defaults.catchup + defaults.divein} min/day
                         </Text>
                       </View>
@@ -163,7 +171,7 @@ export default function CapacityScreen() {
                 <Text style={styles.connectionHighlight}>{currentDefaults.divein} min</Text> for
                 deep dives daily.
               </Text>
-              <Text style={styles.connectionSubtext}>
+              <Text style={[styles.connectionSubtext, { color: colors.textSecondary }]}>
                 You can customize these in the next step.
               </Text>
             </View>
@@ -171,14 +179,14 @@ export default function CapacityScreen() {
         )}
 
         {/* What this means section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>What each level means:</Text>
+        <View style={[styles.infoSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <Text style={[styles.infoTitle, { color: colors.textPrimary }]}>What each level means:</Text>
 
           <View style={styles.infoRow}>
             <View style={[styles.infoDot, { backgroundColor: '#10B981' }]} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Light (1-2 hours/week)</Text>
-              <Text style={styles.infoText}>
+              <Text style={[styles.infoLabel, { color: colors.textPrimary }]}>Light (1-2 hours/week)</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Stay informed with quick headlines and key insights. Perfect for busy professionals
                 who want to stay current without heavy time commitment.
               </Text>
@@ -188,8 +196,8 @@ export default function CapacityScreen() {
           <View style={styles.infoRow}>
             <View style={[styles.infoDot, { backgroundColor: '#EC4899' }]} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Medium (3-5 hours/week)</Text>
-              <Text style={styles.infoText}>
+              <Text style={[styles.infoLabel, { color: colors.textPrimary }]}>Medium (3-5 hours/week)</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Balanced approach with daily catch-ups plus deeper weekly reads. Ideal for building
                 solid industry knowledge over time.
               </Text>
@@ -199,8 +207,8 @@ export default function CapacityScreen() {
           <View style={styles.infoRow}>
             <View style={[styles.infoDot, { backgroundColor: '#7C3AED' }]} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Heavy (6+ hours/week)</Text>
-              <Text style={styles.infoText}>
+              <Text style={[styles.infoLabel, { color: colors.textPrimary }]}>Heavy (6+ hours/week)</Text>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Comprehensive coverage with in-depth analysis and expert insights. Best for those
                 aiming to become industry thought leaders.
               </Text>
@@ -213,7 +221,7 @@ export default function CapacityScreen() {
       </ScrollView>
 
       {/* Floating Footer */}
-      <View style={styles.footerContainer}>
+      <View style={[styles.footerContainer, { backgroundColor: footerBg, borderTopColor: footerBorder }]}>
         <View style={styles.footerButtons}>
           <GlassButton
             title="Back"

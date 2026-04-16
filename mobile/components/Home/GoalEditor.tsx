@@ -18,9 +18,11 @@ import {
   ActivityIndicator,
   Dimensions,
   PanResponder,
+  Platform,
 } from 'react-native';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
+import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
@@ -103,10 +105,38 @@ function CustomSlider({ value, min, max, step, color, onChange }: CustomSliderPr
 }
 
 export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditorProps) {
+  const { isDark } = useTheme();
   const [catchupGoal, setCatchupGoal] = useState(currentGoals.catchupDailyGoal || 20);
   const [diveinGoal, setDiveinGoal] = useState(currentGoals.diveinDailyGoal || 30);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const theme = isDark
+    ? {
+        overlay: 'rgba(0,0,0,0.55)',
+        surface: '#0F1423',
+        divider: 'rgba(255,255,255,0.08)',
+        cardBg: 'rgba(30,41,59,0.6)',
+        cardBorder: 'rgba(255,255,255,0.08)',
+        textPrimary: '#F1F5F9',
+        textSecondary: '#94A3B8',
+        textTertiary: '#64748B',
+        presetBg: 'rgba(255,255,255,0.05)',
+        presetBorder: 'rgba(255,255,255,0.1)',
+        summaryBg: 'rgba(30,41,59,0.4)',
+      }
+    : {
+        overlay: 'rgba(15,23,42,0.45)',
+        surface: '#FFFFFF',
+        divider: 'rgba(15,23,42,0.08)',
+        cardBg: 'rgba(241,245,249,0.7)',
+        cardBorder: 'rgba(15,23,42,0.08)',
+        textPrimary: '#0F172A',
+        textSecondary: '#475569',
+        textTertiary: '#64748B',
+        presetBg: 'rgba(15,23,42,0.04)',
+        presetBorder: 'rgba(15,23,42,0.1)',
+        summaryBg: 'rgba(241,245,249,0.9)',
+      };
 
   const handleSave = async () => {
     setSaving(true);
@@ -132,8 +162,19 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to save goals');
+        // Surface a human-readable error. FastAPI validation errors come as a
+        // structured JSON body (detail: [{msg, loc, ...}]); the raw .text()
+        // would paste a full JSON blob on screen which was what the user
+        // saw as "error" in the audit.
+        let message = `Failed to save goals (HTTP ${response.status})`;
+        try {
+          const body = await response.json();
+          if (typeof body?.detail === 'string') message = body.detail;
+          else if (Array.isArray(body?.detail) && body.detail[0]?.msg) message = body.detail[0].msg;
+        } catch {
+          // Body wasn't JSON — fall through with HTTP-status message.
+        }
+        throw new Error(message);
       }
 
       onSave();

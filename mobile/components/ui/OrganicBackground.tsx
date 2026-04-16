@@ -215,13 +215,24 @@ const BLOB_COLORS = {
   },
 };
 
-export default function OrganicBackground({
+export default function OrganicBackground(_props: OrganicBackgroundProps) {
+  // AppBackground (mounted once at the root layout) now owns the ambient
+  // background for every screen. Per-screen OrganicBackground is a no-op to
+  // prevent duplicated/clashing decoration layers that caused the "clunky"
+  // look in both themes. See components/ui/AppBackground.tsx and Figma file
+  // 7sgEGG13BI0Vksrg4hzpoQ page "🌌 AppBackground v1" (frames 83:5 / 83:12).
+  return null;
+}
+
+// Legacy implementation retained below so symbols are still available to any
+// code that imports internals; never invoked.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _OrganicBackgroundLegacy({
   filterContext,
   variant = 'login',
 }: OrganicBackgroundProps) {
   const { isDark } = useTheme();
 
-  // In dark mode, render MatrixBackground instead
   if (isDark) {
     const matrixVariant = DARK_VARIANT_MAP[variant] || 'home';
     return <MatrixBackground variant={matrixVariant} />;
