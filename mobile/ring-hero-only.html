@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Guru Rings — B2a Full Spec Sheet</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060A12;
+    color: #F1F5F9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 { font-size: 20px; font-weight: 300; letter-spacing: 2px; margin-bottom: 4px; }
+  .sub { font-size: 11px; color: rgba(148,163,184,0.5); margin-bottom: 20px; }
+  h2 { font-size: 13px; font-weight: 500; color: rgba(148,163,184,0.7); margin: 12px 0 10px; width: 100%; max-width: 1500px;
+    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 5px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 1500px; width: 100%; margin-bottom: 6px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 1500px; width: 100%; margin-bottom: 6px; }
+  .grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 1500px; width: 100%; margin-bottom: 6px; }
+  .card {
+    background: rgba(15,20,35,0.5);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+  }
+  .label { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .desc { font-size: 10px; color: rgba(148,163,184,0.45); margin-bottom: 6px; }
+  canvas { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<h1>B2a — INTENSE BLOOM SPEC</h1>
+<p class="sub">16px stroke · Blue #38BDF8 / Pink #EC4899 / Orange #FB923C · Intense glow multiplier</p>
+
+<h2>1. Hero Triskelion — Combined Progress States</h2>
+<div class="grid5">
+  <div class="card"><div class="label">Fresh Start</div><div class="desc">All 0%</div>
+    <canvas id="s0" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Morning Read</div><div class="desc">C:60 D:0 R:0</div>
+    <canvas id="s1" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Active Day</div><div class="desc">C:100 D:40 R:0</div>
+    <canvas id="s2" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Almost Done</div><div class="desc">C:100 D:80 R:50</div>
+    <canvas id="s3" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">All Complete!</div><div class="desc">C:100 D:100 R:100</div>
+    <canvas id="s4" width="280" height="280"></canvas></div>
+</div>
+
+<h2>2. Single Ring Fill States (Catch-up Blue)</h2>
+<div class="grid5">
+  <div class="card"><div class="label">0%</div>
+    <canvas id="f0" width="200" height="200"></canvas></div>
+  <div class="card"><div class="label">25%</div>
+    <canvas id="f25" width="200" height="200"></canvas></div>
+  <div class="card"><div class="label">50%</div>
+    <canvas id="f50" width="200" height="200"></canvas></div>
+  <div class="card"><div class="label">75%</div>
+    <canvas id="f75" width="200" height="200"></canvas></div>
+  <div class="card"><div class="label">100%</div>
+    <canvas id="f100" width="200" height="200"></canvas></div>
+</div>
+
+<h2>3. Celebration & Over-Goal</h2>
+<div class="grid3">
+  <div class="card"><div class="label">100% — Nexus Wake</div><div class="desc">All filled, bright nexus sphere</div>
+    <canvas id="cel1" width="340" height="340"></canvas></div>
+  <div class="card"><div class="label">Over-Goal — Halo Pulse</div><div class="desc">All 100%+, pulsing outward halo</div>
+    <canvas id="cel2" width="340" height="340"></canvas></div>
+  <div class="card"><div class="label">Over-Goal — Peak</div><div class="desc">Maximum celebration bloom</div>
+    <canvas id="cel3" width="340" height="340"></canvas></div>
+</div>
+
+<h2>4. Size Variants</h2>
+<div class="grid4">
+  <div class="card"><div class="label">Hero (200px)</div><div class="desc">Home screen center · Full effects</div>
+    <canvas id="szH" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Logo (40px)</div><div class="desc">Header brand mark · Simplified</div>
+    <canvas id="szL" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Tab Rings (24px)</div><div class="desc">Individual per tab · Minimal glow</div>
+    <canvas id="szT" width="280" height="280"></canvas></div>
+  <div class="card"><div class="label">Home Tab (26px)</div><div class="desc">Mini triskelion · Brand mark</div>
+    <canvas id="szM" width="280" height="280"></canvas></div>
+</div>
+
+<script>
+const BLUE   = { r: 56, g: 189, b: 248 };
+const PINK   = { r: 236, g: 72, b: 153 };
+const ORANGE = { r: 251, g: 146, b: 60 };
+const rgba = (c, a) => `rgba(${c.r},${c.g},${c.b},${a})`;
+const lighter = (c, amt) => ({ r: Math.min(255, c.r + amt), g: Math.min(255, c.g + amt), b: Math.min(255, c.b + amt) });
+
+function drawPlasmaRing(ctx, ring, R, SW, opts = {}) {
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (2 * Math.PI * Math.min(ring.fill, 1));
+  const gm = opts.glowMult || 1.6;
+  const minimal = opts.minimal || false;
+
+  // Wide diffuse aura
+  if (ring.fill > 0 && !minimal) {
+    ctx.save();
+    ctx.globalAlpha = 0.15 * gm;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 50 * gm;
+    ctx.lineCap = 'round';
+    ctx.filter = `blur(${30 * gm}px)`;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Track
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = rgba(ring.color, ring.fill > 0 ? 0.07 : 0.12);
+  ctx.lineWidth = SW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  if (!minimal) {
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R - SW/2 + 0.5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  if (ring.fill <= 0) return;
+
+  // Medium glow halo
+  if (!minimal) {
+    ctx.save();
+    ctx.globalAlpha = 0.45 * gm;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 14;
+    ctx.lineCap = 'round';
+    ctx.filter = `blur(${12 * gm}px)`;
+    ctx.stroke();
+    ctx.restore();
+  } else {
+    // Minimal glow for small sizes
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 4;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(3px)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Plasma body
+  ctx.save();
+  const grad = ctx.createLinearGradient(ring.cx - R, ring.cy - R, ring.cx + R, ring.cy + R);
+  grad.addColorStop(0, rgba(ring.color, 0.85));
+  grad.addColorStop(0.3, rgba(lighter(ring.color, 40), 0.95));
+  grad.addColorStop(0.7, rgba(ring.color, 0.9));
+  grad.addColorStop(1, rgba(lighter(ring.color, -30), 0.8));
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = SW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  if (!minimal) {
+    // Specular highlight
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R - SW/2 + 1, startAngle, startAngle + (endAngle - startAngle) * 0.55);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Inner shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R + SW/2 - 0.5, startAngle + 0.4, endAngle);
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Hot white core
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+  ctx.strokeStyle = `rgba(255,255,255,${minimal ? 0.35 : 0.45})`;
+  ctx.lineWidth = minimal ? 1 : 3;
+  ctx.lineCap = 'round';
+  ctx.filter = minimal ? 'blur(0.5px)' : 'blur(1.5px)';
+  ctx.stroke();
+  ctx.restore();
+
+  // Leading edge flare
+  if (!minimal) {
+    const ex = ring.cx + Math.cos(endAngle) * R;
+    const ey = ring.cy + Math.sin(endAngle) * R;
+    const flareR = 24;
+    const flare = ctx.createRadialGradient(ex, ey, 0, ex, ey, flareR);
+    flare.addColorStop(0, 'rgba(255,255,255,0.9)');
+    flare.addColorStop(0.2, rgba(lighter(ring.color, 80), 0.7));
+    flare.addColorStop(0.5, rgba(ring.color, 0.3));
+    flare.addColorStop(1, rgba(ring.color, 0));
+    ctx.fillStyle = flare;
+    ctx.fillRect(ex - flareR, ey - flareR, flareR * 2, flareR * 2);
+  }
+
+  // Particles
+  if (!minimal) {
+    for (let p = 0; p < 3; p++) {
+      const pa = endAngle + 0.04 + p * 0.05;
+      const pr = R + (p === 1 ? 4 : -3);
+      const px = ring.cx + Math.cos(pa) * pr;
+      const py = ring.cy + Math.sin(pa) * pr;
+      ctx.save();
+      ctx.globalAlpha = 0.5 - p * 0.15;
+      ctx.filter = 'blur(1.5px)';
+      ctx.fillStyle = rgba(lighter(ring.color, 60), 1);
+      ctx.beginPath();
+      ctx.arc(px, py, 3 - p * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function drawNexus(ctx, cx, cy, r, intensity) {
+  const n = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  const bright = intensity || 0.95;
+  n.addColorStop(0, `rgba(255,255,255,${bright})`);
+  n.addColorStop(0.08, `rgba(240,245,255,${bright * 0.7})`);
+  n.addColorStop(0.25, `rgba(180,200,255,${bright * 0.3})`);
+  n.addColorStop(0.5, `rgba(120,150,255,${bright * 0.08})`);
+  n.addColorStop(1, 'rgba(80,100,200,0)');
+  ctx.fillStyle = n;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBg(ctx, W, H, cx, cy) {
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.8);
+  bg.addColorStop(0, 'rgba(30,35,65,0.2)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawTriskelion(canvasId, fills, opts = {}) {
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height, CX = W/2, CY = H/2;
+  const scale = opts.scale || 1;
+  const R = 80 * scale, offset = 40 * scale, SW = (opts.sw || 16) * scale;
+  const minimal = opts.minimal || false;
+
+  drawBg(ctx, W, H, CX, CY);
+
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: fills[2] },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: fills[1] },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: fills[0] },
+  ];
+
+  for (const ring of rings) {
+    drawPlasmaRing(ctx, ring, R, SW, { minimal });
+  }
+
+  // Nexus (only when all have progress)
+  const allHaveProgress = fills.every(f => f > 0);
+  if (allHaveProgress) {
+    drawNexus(ctx, CX, CY, opts.nexusR || 40, opts.nexusBright);
+  }
+
+  // Over-goal halo
+  if (opts.halo) {
+    ctx.save();
+    const h = ctx.createRadialGradient(CX, CY, R * 0.8, CX, CY, R * 2.2 * opts.halo);
+    h.addColorStop(0, 'rgba(200,210,255,0)');
+    h.addColorStop(0.5, `rgba(180,200,255,${0.06 * opts.halo})`);
+    h.addColorStop(0.8, `rgba(150,170,255,${0.12 * opts.halo})`);
+    h.addColorStop(1, 'rgba(120,150,255,0)');
+    ctx.fillStyle = h;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
+// ===== Section 1: Combined Progress States =====
+drawTriskelion('s0', [0, 0, 0]);
+drawTriskelion('s1', [0.6, 0, 0]);
+drawTriskelion('s2', [1.0, 0.4, 0]);
+drawTriskelion('s3', [1.0, 0.8, 0.5]);
+drawTriskelion('s4', [1.0, 1.0, 1.0], { nexusBright: 1.0, nexusR: 45 });
+
+// ===== Section 2: Single Ring Fill States =====
+[0, 0.25, 0.5, 0.75, 1.0].forEach((fill, i) => {
+  const ids = ['f0','f25','f50','f75','f100'];
+  const c = document.getElementById(ids[i]);
+  const ctx = c.getContext('2d');
+  drawBg(ctx, 200, 200, 100, 100);
+  drawPlasmaRing(ctx, { color: BLUE, cx: 100, cy: 100, fill }, 60, 12);
+});
+
+// ===== Section 3: Celebration =====
+drawTriskelion('cel1', [1.0, 1.0, 1.0], { nexusBright: 1.0, nexusR: 50 });
+drawTriskelion('cel2', [1.0, 1.0, 1.0], { nexusBright: 1.0, nexusR: 55, halo: 1.0 });
+drawTriskelion('cel3', [1.0, 1.0, 1.0], { nexusBright: 1.0, nexusR: 60, halo: 1.8 });
+
+// ===== Section 4: Size Variants =====
+// Hero
+drawTriskelion('szH', [1.0, 0.75, 0.5], { scale: 1.0 });
+
+// Logo (40px = tiny)
+(() => {
+  const c = document.getElementById('szL');
+  const ctx = c.getContext('2d');
+  const CX = 140, CY = 140;
+  drawBg(ctx, 280, 280, CX, CY);
+  const R = 16, offset = 8, SW = 3.5;
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: 0.5 },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: 0.75 },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: 1.0 },
+  ];
+  for (const ring of rings) drawPlasmaRing(ctx, ring, R, SW, { minimal: true });
+  drawNexus(ctx, CX, CY, 8, 0.6);
+  ctx.fillStyle = 'rgba(148,163,184,0.4)'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Actual size: 40px', CX, CY + 32);
+  // Draw actual-size reference circle
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 0.5;
+  ctx.strokeRect(CX - 20, CY - 20, 40, 40);
+})();
+
+// Tab rings
+(() => {
+  const c = document.getElementById('szT');
+  const ctx = c.getContext('2d');
+  drawBg(ctx, 280, 280, 140, 140);
+  const R = 10, SW = 2.5;
+  const tabs = [
+    { color: BLUE, cx: 70, cy: 130, fill: 0.7, label: 'Catch-up' },
+    { color: PINK, cx: 140, cy: 130, fill: 0.45, label: 'Dive-in' },
+    { color: ORANGE, cx: 210, cy: 130, fill: 0.25, label: 'Recap' },
+  ];
+  for (const t of tabs) {
+    drawPlasmaRing(ctx, t, R, SW, { minimal: true });
+    ctx.fillStyle = 'rgba(148,163,184,0.5)'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(t.label, t.cx, t.cy + 22);
+  }
+  ctx.fillStyle = 'rgba(148,163,184,0.3)'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('24px each', 140, 170);
+})();
+
+// Mini triskelion
+(() => {
+  const c = document.getElementById('szM');
+  const ctx = c.getContext('2d');
+  const CX = 140, CY = 130;
+  drawBg(ctx, 280, 280, CX, CY);
+  const R = 10, offset = 5, SW = 2;
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: 0.5 },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: 0.75 },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: 1.0 },
+  ];
+  for (const ring of rings) drawPlasmaRing(ctx, ring, R, SW, { minimal: true });
+  const n = ctx.createRadialGradient(CX, CY, 0, CX, CY, 5);
+  n.addColorStop(0, 'rgba(255,255,255,0.6)');
+  n.addColorStop(1, 'rgba(200,210,255,0)');
+  ctx.fillStyle = n;
+  ctx.beginPath(); ctx.arc(CX, CY, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(148,163,184,0.4)'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('26px Home tab', CX, CY + 24);
+})();
+</script>
+</body>
+</html>

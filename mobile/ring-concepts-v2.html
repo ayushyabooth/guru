@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Guru Rings — Plasma Flow Refinements</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060A12;
+    color: #F1F5F9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px;
+  }
+  h1 { font-size: 22px; font-weight: 300; letter-spacing: 2px; margin-bottom: 6px; }
+  .subtitle { font-size: 12px; color: rgba(148,163,184,0.6); margin-bottom: 32px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: rgba(15,20,35,0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+  .label { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .desc { font-size: 10px; color: rgba(148,163,184,0.5); margin-bottom: 12px; line-height: 1.5; }
+  canvas { display: block; margin: 0 auto; }
+  .section-title {
+    font-size: 16px; font-weight: 600; color: rgba(241,245,249,0.7);
+    margin: 8px 0 16px; width: 100%; max-width: 1100px; text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>PLASMA FLOW — Refinements</h1>
+<p class="subtitle">Direction B with thick (14px) plasma strokes · Three variations on glow intensity and fill character</p>
+
+<div class="section-title">Hero Triskelion (200px) — Three Glow Treatments</div>
+<div class="grid">
+  <div class="card">
+    <div class="label">B1 — Warm Plasma</div>
+    <div class="desc">Saturated color body, moderate glow, warm white core. Balanced energy.</div>
+    <canvas id="b1" width="340" height="340"></canvas>
+  </div>
+  <div class="card">
+    <div class="label">B2 — Intense Bloom</div>
+    <div class="desc">Maximum glow radius, deeper color field. Rings feel like they're radiating light into the scene.</div>
+    <canvas id="b2" width="340" height="340"></canvas>
+  </div>
+  <div class="card">
+    <div class="label">B3 — Crystalline Plasma</div>
+    <div class="desc">Glass-like body with internal white hot wire. Material + energy hybrid. Most 3D.</div>
+    <canvas id="b3" width="340" height="340"></canvas>
+  </div>
+</div>
+
+<div class="section-title">Fill States — B2 at 0% / 30% / 60% / 100%</div>
+<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="card">
+    <div class="label">0% — Empty</div>
+    <canvas id="fill0" width="240" height="240"></canvas>
+  </div>
+  <div class="card">
+    <div class="label">30% — Morning</div>
+    <canvas id="fill30" width="240" height="240"></canvas>
+  </div>
+  <div class="card">
+    <div class="label">60% — Midday</div>
+    <canvas id="fill60" width="240" height="240"></canvas>
+  </div>
+  <div class="card">
+    <div class="label">100% — Complete</div>
+    <canvas id="fill100" width="240" height="240"></canvas>
+  </div>
+</div>
+
+<div class="section-title">Size Variants — Hero / Logo / Tab / Mini Triskelion</div>
+<div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="card" style="text-align:center;">
+    <div class="label">Hero (200px)</div>
+    <canvas id="sizeHero" width="240" height="240"></canvas>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div class="label">Logo (40px)</div>
+    <canvas id="sizeLogo" width="240" height="240"></canvas>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div class="label">Tab Ring (24px)</div>
+    <canvas id="sizeTab" width="240" height="240"></canvas>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div class="label">Tab Triskelion (26px)</div>
+    <canvas id="sizeMini" width="240" height="240"></canvas>
+  </div>
+</div>
+
+<script>
+const BLUE   = { r: 56, g: 189, b: 248 };
+const PINK   = { r: 236, g: 72, b: 153 };
+const ORANGE = { r: 251, g: 146, b: 60 };
+const rgba = (c, a) => `rgba(${c.r},${c.g},${c.b},${a})`;
+const lighter = (c, amt) => ({
+  r: Math.min(255, c.r + amt),
+  g: Math.min(255, c.g + amt),
+  b: Math.min(255, c.b + amt),
+});
+
+function getRingPositions(cx, cy, offset) {
+  return [
+    { color: BLUE,   cx: cx, cy: cy - offset, fill: 1.0 },
+    { color: PINK,   cx: cx + offset * 0.866, cy: cy + offset * 0.5, fill: 0.75 },
+    { color: ORANGE,  cx: cx - offset * 0.866, cy: cy + offset * 0.5, fill: 0.5 },
+  ];
+}
+
+// ========== Shared plasma ring renderer ==========
+function drawPlasmaRing(ctx, ring, R, SW, variant) {
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (2 * Math.PI * ring.fill);
+  const glowMult = variant === 'intense' ? 1.6 : variant === 'crystal' ? 1.2 : 1.0;
+  const coreOpacity = variant === 'crystal' ? 0.7 : variant === 'intense' ? 0.45 : 0.5;
+  const bodyOpacity = variant === 'crystal' ? 0.65 : 0.85;
+
+  // 1. Wide diffuse aura
+  if (ring.fill > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.15 * glowMult;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 50 * glowMult;
+    ctx.lineCap = 'round';
+    ctx.filter = `blur(${30 * glowMult}px)`;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 2. Track
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = rgba(ring.color, 0.06);
+  ctx.lineWidth = SW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Track specular hint
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R - SW/2 + 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.restore();
+
+  if (ring.fill <= 0) return;
+
+  // 3. Medium glow halo
+  ctx.save();
+  ctx.globalAlpha = 0.4 * glowMult;
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+  ctx.strokeStyle = rgba(ring.color, 1);
+  ctx.lineWidth = SW + 12;
+  ctx.lineCap = 'round';
+  ctx.filter = `blur(${10 * glowMult}px)`;
+  ctx.stroke();
+  ctx.restore();
+
+  // 4. Plasma body
+  ctx.save();
+  const grad = ctx.createLinearGradient(
+    ring.cx - R, ring.cy - R,
+    ring.cx + R, ring.cy + R
+  );
+  if (variant === 'crystal') {
+    // Glass-like: lighter, more translucent
+    grad.addColorStop(0, rgba(lighter(ring.color, 60), 0.5));
+    grad.addColorStop(0.4, rgba(lighter(ring.color, 30), 0.7));
+    grad.addColorStop(0.6, rgba(ring.color, 0.65));
+    grad.addColorStop(1, rgba(lighter(ring.color, -30), 0.5));
+  } else {
+    grad.addColorStop(0, rgba(ring.color, bodyOpacity));
+    grad.addColorStop(0.3, rgba(lighter(ring.color, 40), bodyOpacity + 0.1));
+    grad.addColorStop(0.7, rgba(ring.color, bodyOpacity));
+    grad.addColorStop(1, rgba(lighter(ring.color, -30), bodyOpacity - 0.1));
+  }
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = SW;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  // 5. Specular highlight (top rim)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R - SW/2 + 1, startAngle, startAngle + (endAngle - startAngle) * 0.6);
+  ctx.strokeStyle = `rgba(255,255,255,${variant === 'crystal' ? 0.45 : 0.3})`;
+  ctx.lineWidth = variant === 'crystal' ? 2 : 1.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  // 6. Inner shadow (bottom edge for depth)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R + SW/2 - 0.5, startAngle + 0.3, endAngle);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+
+  // 7. Hot white core
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+  ctx.strokeStyle = `rgba(255,255,255,${coreOpacity})`;
+  ctx.lineWidth = variant === 'crystal' ? 2 : 2.5;
+  ctx.lineCap = 'round';
+  ctx.filter = 'blur(1px)';
+  ctx.stroke();
+  ctx.restore();
+
+  // 8. Leading edge flare
+  const ex = ring.cx + Math.cos(endAngle) * R;
+  const ey = ring.cy + Math.sin(endAngle) * R;
+  const flareR = variant === 'intense' ? 22 : 16;
+  const flare = ctx.createRadialGradient(ex, ey, 0, ex, ey, flareR);
+  flare.addColorStop(0, 'rgba(255,255,255,0.9)');
+  flare.addColorStop(0.2, rgba(lighter(ring.color, 80), 0.7));
+  flare.addColorStop(0.5, rgba(ring.color, 0.3));
+  flare.addColorStop(1, rgba(ring.color, 0));
+  ctx.fillStyle = flare;
+  ctx.fillRect(ex - flareR, ey - flareR, flareR * 2, flareR * 2);
+
+  // 9. Particle wake
+  for (let p = 0; p < 3; p++) {
+    const pa = endAngle + 0.04 + p * 0.05;
+    const pr = R + (p === 1 ? 3 : -2);
+    const px = ring.cx + Math.cos(pa) * pr;
+    const py = ring.cy + Math.sin(pa) * pr;
+    const ps = 2.5 - p * 0.5;
+    ctx.save();
+    ctx.globalAlpha = 0.5 - p * 0.15;
+    ctx.filter = 'blur(1.5px)';
+    ctx.fillStyle = rgba(lighter(ring.color, 60), 1);
+    ctx.beginPath();
+    ctx.arc(px, py, ps, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawNexus(ctx, cx, cy, intensity) {
+  const r = intensity === 'intense' ? 40 : 30;
+  const n = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  n.addColorStop(0, `rgba(255,255,255,${intensity === 'intense' ? 0.95 : 0.8})`);
+  n.addColorStop(0.1, 'rgba(240,245,255,0.65)');
+  n.addColorStop(0.3, 'rgba(180,200,255,0.3)');
+  n.addColorStop(0.6, 'rgba(120,150,255,0.08)');
+  n.addColorStop(1, 'rgba(80,100,200,0)');
+  ctx.fillStyle = n;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawTriskelion(ctx, W, H, R, offset, SW, variant, fills) {
+  const CX = W/2, CY = H/2;
+  // Ambient bg
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, R * 2.5);
+  bg.addColorStop(0, 'rgba(30,35,65,0.2)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: fills ? fills[2] : 0.5 },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: fills ? fills[1] : 0.75 },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: fills ? fills[0] : 1.0 },
+  ];
+
+  for (const ring of rings) {
+    drawPlasmaRing(ctx, ring, R, SW, variant);
+  }
+  drawNexus(ctx, CX, CY, variant);
+}
+
+// ===== B1 — Warm Plasma =====
+(() => {
+  const c = document.getElementById('b1');
+  drawTriskelion(c.getContext('2d'), 340, 340, 80, 40, 14, 'warm');
+})();
+
+// ===== B2 — Intense Bloom =====
+(() => {
+  const c = document.getElementById('b2');
+  drawTriskelion(c.getContext('2d'), 340, 340, 80, 40, 14, 'intense');
+})();
+
+// ===== B3 — Crystalline Plasma =====
+(() => {
+  const c = document.getElementById('b3');
+  drawTriskelion(c.getContext('2d'), 340, 340, 80, 40, 14, 'crystal');
+})();
+
+// ===== Fill states (using intense variant) =====
+[0, 0.3, 0.6, 1.0].forEach((fillLevel, i) => {
+  const ids = ['fill0', 'fill30', 'fill60', 'fill100'];
+  const c = document.getElementById(ids[i]);
+  const ctx = c.getContext('2d');
+  // Single blue ring at different fill levels
+  const CX = 120, CY = 120, R = 60, SW = 14;
+  // Ambient
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 150);
+  bg.addColorStop(0, 'rgba(30,40,80,0.15)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 240, 240);
+  drawPlasmaRing(ctx, { color: BLUE, cx: CX, cy: CY, fill: fillLevel }, R, SW, 'intense');
+});
+
+// ===== Size Variants =====
+// Hero
+(() => {
+  const c = document.getElementById('sizeHero');
+  drawTriskelion(c.getContext('2d'), 240, 240, 60, 30, 10, 'intense', [1.0, 0.75, 0.5]);
+})();
+
+// Logo (40px = R=20)
+(() => {
+  const c = document.getElementById('sizeLogo');
+  const ctx = c.getContext('2d');
+  const CX = 120, CY = 120;
+  const R = 16, offset = 8, SW = 3.5;
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 60);
+  bg.addColorStop(0, 'rgba(30,40,80,0.15)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 240, 240);
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: 0.5 },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: 0.75 },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: 1.0 },
+  ];
+  for (const ring of rings) {
+    drawPlasmaRing(ctx, ring, R, SW, 'warm');
+  }
+  drawNexus(ctx, CX, CY, 'warm');
+  // Label
+  ctx.fillStyle = 'rgba(148,163,184,0.4)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('40px diameter', CX, CY + 36);
+})();
+
+// Tab single ring (24px = R=10)
+(() => {
+  const c = document.getElementById('sizeTab');
+  const ctx = c.getContext('2d');
+  const CX = 120, CY = 115;
+  const R = 10, SW = 2.5;
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 40);
+  bg.addColorStop(0, 'rgba(30,40,80,0.1)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 240, 240);
+
+  // Draw 3 separate tab ring examples
+  const tabRings = [
+    { color: BLUE, label: 'Catch-up', cx: CX - 50, cy: CY, fill: 0.7 },
+    { color: PINK, label: 'Dive-in', cx: CX, cy: CY, fill: 0.45 },
+    { color: ORANGE, label: 'Recap', cx: CX + 50, cy: CY, fill: 0.25 },
+  ];
+  for (const ring of tabRings) {
+    drawPlasmaRing(ctx, ring, R, SW, 'warm');
+    ctx.fillStyle = 'rgba(148,163,184,0.5)';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ring.label, ring.cx, ring.cy + 22);
+  }
+  ctx.fillStyle = 'rgba(148,163,184,0.4)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('24px each', CX, CY + 40);
+})();
+
+// Mini triskelion for Home tab (26px)
+(() => {
+  const c = document.getElementById('sizeMini');
+  const ctx = c.getContext('2d');
+  const CX = 120, CY = 115;
+  const R = 10, offset = 5, SW = 2;
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 40);
+  bg.addColorStop(0, 'rgba(30,40,80,0.1)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 240, 240);
+
+  const rings = [
+    { color: ORANGE, cx: CX - offset * 0.866, cy: CY + offset * 0.5, fill: 0.5 },
+    { color: PINK,   cx: CX + offset * 0.866, cy: CY + offset * 0.5, fill: 0.75 },
+    { color: BLUE,   cx: CX, cy: CY - offset, fill: 1.0 },
+  ];
+  for (const ring of rings) {
+    drawPlasmaRing(ctx, ring, R, SW, 'warm');
+  }
+  // Small nexus dot
+  const n = ctx.createRadialGradient(CX, CY, 0, CX, CY, 6);
+  n.addColorStop(0, 'rgba(255,255,255,0.7)');
+  n.addColorStop(0.5, 'rgba(200,210,255,0.2)');
+  n.addColorStop(1, 'rgba(150,170,255,0)');
+  ctx.fillStyle = n;
+  ctx.beginPath();
+  ctx.arc(CX, CY, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(148,163,184,0.4)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('26px Home tab', CX, CY + 28);
+})();
+</script>
+</body>
+</html>

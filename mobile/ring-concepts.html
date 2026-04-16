@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guru Rings — Concept Exploration</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060A12;
+    color: #F1F5F9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    color: rgba(241,245,249,0.9);
+  }
+  .subtitle {
+    font-size: 13px;
+    color: rgba(148,163,184,0.7);
+    margin-bottom: 40px;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+  .concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    max-width: 900px;
+  }
+  .concept-card {
+    background: rgba(15,20,35,0.6);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+  }
+  .concept-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  }
+  .concept-label {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: rgba(241,245,249,0.95);
+  }
+  .concept-desc {
+    font-size: 11px;
+    color: rgba(148,163,184,0.6);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 12px;
+  }
+  .manifesto {
+    margin-top: 40px;
+    padding: 20px 24px;
+    background: rgba(99,102,241,0.06);
+    border: 1px solid rgba(99,102,241,0.15);
+    border-radius: 12px;
+    max-width: 700px;
+    font-size: 11px;
+    color: rgba(148,163,184,0.7);
+    line-height: 1.7;
+  }
+  .manifesto strong { color: rgba(99,102,241,0.9); }
+</style>
+</head>
+<body>
+
+<h1>GURU RINGS</h1>
+<p class="subtitle">
+  Three interlocking efforts converging toward mastery.<br>
+  Color as light radiating through glass — not painted on top.
+</p>
+
+<div class="concepts-grid">
+  <div class="concept-card">
+    <div class="concept-label">A — Luminous Glass Torus</div>
+    <div class="concept-desc">Rings as translucent glass tubes with light radiating from within. Specular rim highlights, caustic overlaps, volumetric nexus.</div>
+    <canvas id="conceptA" width="380" height="380"></canvas>
+  </div>
+  <div class="concept-card">
+    <div class="concept-label">B — Plasma Flow</div>
+    <div class="concept-desc">Energy flowing through crystalline channels. Hot white core, diffuse aura, particle wake at leading edge. Organic, alive.</div>
+    <canvas id="conceptB" width="380" height="380"></canvas>
+  </div>
+  <div class="concept-card">
+    <div class="concept-label">C — Frosted Glass Orbital</div>
+    <div class="concept-desc">Thick frosted glass rings with brand colors glowing from beneath. Material honesty — blur declares depth. Ethereal.</div>
+    <canvas id="conceptC" width="380" height="380"></canvas>
+  </div>
+  <div class="concept-card">
+    <div class="concept-label">D — Neon Filament</div>
+    <div class="concept-desc">Thin luminous filaments with intense bloom halo. Minimal, striking, maximum contrast. Color IS light.</div>
+    <canvas id="conceptD" width="380" height="380"></canvas>
+  </div>
+</div>
+
+<div class="manifesto">
+  <strong>Design Manifesto Applied:</strong> Material honesty through layered translucency · Color as light, not pigment ·
+  Spatial rhythm of physical stacking · Liquid motion, never mechanical
+</div>
+
+<script>
+// ========== SHARED CONSTANTS ==========
+const BLUE  = { r: 56, g: 189, b: 248 };   // Catch-up #38BDF8
+const PINK  = { r: 236, g: 72, b: 153 };   // Dive-in #EC4899
+const ORANGE = { r: 251, g: 146, b: 60 };  // Recap   #FB923C
+
+const rgba = (c, a) => `rgba(${c.r},${c.g},${c.b},${a})`;
+
+// Ring layout: Borromean positions
+function getRingPositions(cx, cy, offset) {
+  return [
+    { color: BLUE,   label: 'Catch-up', cx: cx, cy: cy - offset, fill: 1.0 },           // TOP
+    { color: PINK,   label: 'Dive-in',  cx: cx + offset * 0.866, cy: cy + offset * 0.5, fill: 0.75 }, // BOTTOM-RIGHT
+    { color: ORANGE, label: 'Recap',     cx: cx - offset * 0.866, cy: cy + offset * 0.5, fill: 0.5 },  // BOTTOM-LEFT
+  ];
+}
+
+// ========== CONCEPT A: Luminous Glass Torus ==========
+(function() {
+  const canvas = document.getElementById('conceptA');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+  const R = 80, OFFSET = 40, SW = 12;
+
+  // Background ambient
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 200);
+  bg.addColorStop(0, 'rgba(30,40,80,0.3)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const rings = getRingPositions(CX, CY, OFFSET);
+  // Draw order: Orange, Pink, Blue (back to front for Borromean)
+  const drawOrder = [2, 1, 0]; // Recap, Dive-in, Catch-up
+
+  for (const idx of drawOrder) {
+    const ring = rings[idx];
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (2 * Math.PI * ring.fill);
+
+    // Layer 1: Deep ambient glow (color radiating from beneath glass)
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 30;
+    ctx.filter = 'blur(25px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 2: Track (glass tube, unfilled — translucent)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(ring.color, 0.08);
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 3: Filled arc — gradient for 3D torus illusion
+    ctx.save();
+    const fillGrad = ctx.createLinearGradient(
+      ring.cx - R, ring.cy - R,
+      ring.cx + R, ring.cy + R
+    );
+    fillGrad.addColorStop(0, rgba(ring.color, 0.95));
+    fillGrad.addColorStop(0.3, rgba({r: Math.min(255, ring.color.r + 60), g: Math.min(255, ring.color.g + 40), b: Math.min(255, ring.color.b + 30)}, 1));
+    fillGrad.addColorStop(0.7, rgba(ring.color, 1));
+    fillGrad.addColorStop(1, rgba({r: Math.max(0, ring.color.r - 40), g: Math.max(0, ring.color.g - 40), b: Math.max(0, ring.color.b - 30)}, 0.9));
+
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = fillGrad;
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 4: Specular highlight (top rim — light hitting glass)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R - SW/2 + 1, startAngle, endAngle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 5: Inner shadow (bottom rim — depth)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R + SW/2 - 1, startAngle, endAngle);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 6: Filled-arc glow (light radiating outward from fill)
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 10;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(10px)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Nexus — white glow where all 3 meet
+  const nexus = ctx.createRadialGradient(CX, CY, 0, CX, CY, 30);
+  nexus.addColorStop(0, 'rgba(255,255,255,0.85)');
+  nexus.addColorStop(0.15, 'rgba(220,230,255,0.6)');
+  nexus.addColorStop(0.4, 'rgba(150,170,255,0.2)');
+  nexus.addColorStop(1, 'rgba(100,120,200,0)');
+  ctx.fillStyle = nexus;
+  ctx.fillRect(CX - 30, CY - 30, 60, 60);
+})();
+
+// ========== CONCEPT B: Plasma Flow ==========
+(function() {
+  const canvas = document.getElementById('conceptB');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+  const R = 80, OFFSET = 40, SW = 10;
+
+  // Background energy field
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 200);
+  bg.addColorStop(0, 'rgba(40,30,80,0.25)');
+  bg.addColorStop(0.5, 'rgba(20,15,40,0.15)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const rings = getRingPositions(CX, CY, OFFSET);
+  const drawOrder = [2, 1, 0];
+
+  for (const idx of drawOrder) {
+    const ring = rings[idx];
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (2 * Math.PI * ring.fill);
+
+    // Layer 1: Wide diffuse aura (plasma field)
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 50;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(35px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 2: Track
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(ring.color, 0.06);
+    ctx.lineWidth = SW;
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 3: Outer glow of plasma
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 8;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(8px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 4: Main plasma body
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 0.9);
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 5: Hot white core (light from within)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(1.5px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 6: Leading edge — bright flare
+    const ex = ring.cx + Math.cos(endAngle) * R;
+    const ey = ring.cy + Math.sin(endAngle) * R;
+    const flare = ctx.createRadialGradient(ex, ey, 0, ex, ey, 18);
+    flare.addColorStop(0, 'rgba(255,255,255,0.9)');
+    flare.addColorStop(0.3, rgba(ring.color, 0.7));
+    flare.addColorStop(1, rgba(ring.color, 0));
+    ctx.fillStyle = flare;
+    ctx.fillRect(ex - 18, ey - 18, 36, 36);
+
+    // Particles ahead of leading edge
+    for (let p = 0; p < 3; p++) {
+      const pa = endAngle + 0.05 + p * 0.06;
+      const pr = R + (Math.random() - 0.5) * 6;
+      const px = ring.cx + Math.cos(pa) * pr;
+      const py = ring.cy + Math.sin(pa) * pr;
+      const ps = 2 + Math.random() * 3;
+
+      ctx.save();
+      ctx.globalAlpha = 0.6 - p * 0.18;
+      ctx.filter = 'blur(2px)';
+      ctx.fillStyle = rgba(ring.color, 1);
+      ctx.beginPath();
+      ctx.arc(px, py, ps, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Nexus — intense white energy point
+  const nexus = ctx.createRadialGradient(CX, CY, 0, CX, CY, 35);
+  nexus.addColorStop(0, 'rgba(255,255,255,0.95)');
+  nexus.addColorStop(0.1, 'rgba(240,245,255,0.8)');
+  nexus.addColorStop(0.3, 'rgba(180,200,255,0.4)');
+  nexus.addColorStop(0.6, 'rgba(120,140,255,0.1)');
+  nexus.addColorStop(1, 'rgba(80,100,200,0)');
+  ctx.fillStyle = nexus;
+  ctx.fillRect(CX - 35, CY - 35, 70, 70);
+})();
+
+// ========== CONCEPT C: Frosted Glass Orbital ==========
+(function() {
+  const canvas = document.getElementById('conceptC');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+  const R = 80, OFFSET = 40, SW = 16; // Thicker for glass material
+
+  // Background — subtle depth
+  const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 200);
+  bg.addColorStop(0, 'rgba(25,30,50,0.2)');
+  bg.addColorStop(1, 'rgba(6,10,18,0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const rings = getRingPositions(CX, CY, OFFSET);
+  const drawOrder = [2, 1, 0];
+
+  for (const idx of drawOrder) {
+    const ring = rings[idx];
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (2 * Math.PI * ring.fill);
+
+    // Layer 1: Color light radiating from BENEATH (manifesto: color as light not pigment)
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 40;
+    ctx.filter = 'blur(30px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 2: Glass track — thick, frosted, translucent
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,210,230,0.07)';
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    // Glass edge highlight (top)
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R - SW/2 + 0.5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 3: Frosted glass fill — brand color glowing through translucent material
+    ctx.save();
+    // First: the color light from within
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 16;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(12px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Then: the frosted glass surface on top
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    // Glass material: slightly desaturated, lighter version of brand color
+    const glassColor = {
+      r: Math.min(255, ring.color.r + 80),
+      g: Math.min(255, ring.color.g + 60),
+      b: Math.min(255, ring.color.b + 40),
+    };
+    ctx.strokeStyle = rgba(glassColor, 0.45);
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 4: Specular rim — light reflecting off glass surface
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R - SW/2 + 1, startAngle, startAngle + (endAngle - startAngle) * 0.7);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 5: Bottom edge shadow
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R + SW/2, startAngle + 0.5, endAngle - 0.2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Nexus — soft, warm white glow (less intense, more material)
+  const nexus = ctx.createRadialGradient(CX, CY, 0, CX, CY, 25);
+  nexus.addColorStop(0, 'rgba(255,255,255,0.7)');
+  nexus.addColorStop(0.2, 'rgba(240,245,255,0.4)');
+  nexus.addColorStop(0.5, 'rgba(200,220,255,0.15)');
+  nexus.addColorStop(1, 'rgba(150,180,255,0)');
+  ctx.fillStyle = nexus;
+  ctx.fillRect(CX - 25, CY - 25, 50, 50);
+})();
+
+// ========== CONCEPT D: Neon Filament ==========
+(function() {
+  const canvas = document.getElementById('conceptD');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CX = W/2, CY = H/2;
+  const R = 80, OFFSET = 40, SW = 3; // Thin filaments
+
+  // Background — very dark, maximum contrast for neon
+  ctx.fillStyle = 'rgba(4,6,12,0.5)';
+  ctx.fillRect(0, 0, W, H);
+
+  const rings = getRingPositions(CX, CY, OFFSET);
+  const drawOrder = [2, 1, 0];
+
+  for (const idx of drawOrder) {
+    const ring = rings[idx];
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (2 * Math.PI * ring.fill);
+
+    // Layer 1: Massive bloom halo (neon light spilling into air)
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = 60;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(30px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 2: Medium bloom
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = 20;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(12px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 3: Track — ghostly dim line
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(ring.color, 0.06);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 4: Tight glow around filament
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW + 4;
+    ctx.lineCap = 'round';
+    ctx.filter = 'blur(3px)';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 5: Core filament — bright, sharp
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rgba(ring.color, 1);
+    ctx.lineWidth = SW;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Layer 6: White-hot center of filament
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ring.cx, ring.cy, R, startAngle, endAngle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // Leading edge point light
+    const ex = ring.cx + Math.cos(endAngle) * R;
+    const ey = ring.cy + Math.sin(endAngle) * R;
+    const flare = ctx.createRadialGradient(ex, ey, 0, ex, ey, 12);
+    flare.addColorStop(0, 'rgba(255,255,255,0.9)');
+    flare.addColorStop(0.3, rgba(ring.color, 0.6));
+    flare.addColorStop(1, rgba(ring.color, 0));
+    ctx.fillStyle = flare;
+    ctx.fillRect(ex - 12, ey - 12, 24, 24);
+  }
+
+  // Nexus — intense pinpoint
+  const nexus = ctx.createRadialGradient(CX, CY, 0, CX, CY, 20);
+  nexus.addColorStop(0, 'rgba(255,255,255,0.95)');
+  nexus.addColorStop(0.15, 'rgba(255,255,255,0.7)');
+  nexus.addColorStop(0.4, 'rgba(200,210,255,0.2)');
+  nexus.addColorStop(1, 'rgba(150,160,255,0)');
+  ctx.fillStyle = nexus;
+  ctx.fillRect(CX - 20, CY - 20, 40, 40);
+})();
+</script>
+</body>
+</html>
