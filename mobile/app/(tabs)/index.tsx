@@ -16,6 +16,7 @@ import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
+import { Triskelion } from '../../components/Rings/Triskelion';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken } from '../../utils/auth';
 import GoalEditor from '../../components/Home/GoalEditor';
@@ -52,7 +53,7 @@ function useHomeColors() {
     borderGold: isDark ? 'rgba(251, 146, 60, 0.25)' : 'rgba(251, 146, 60, 0.15)',
     error: colors.error,
     errorBg: 'rgba(239, 68, 68, 0.1)',
-    glassBorder: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.8)',
+    glassBorder: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.07)',
     progressBarBg: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.08)',
     isDark,
   };
@@ -363,6 +364,7 @@ function HomeContent() {
   const { toggleTheme, isDark } = useTheme();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
   const blurStyle16 = COLORS.isDark ? getDarkBackdropBlur(16) : getBackdropBlur(16);
+  const containerBg = COLORS.isDark ? COLORS.background : 'transparent';
 
   // Prefetch catchup feed in the background so it's ready when user clicks the tab.
   // This fires once on mount — by the time the user navigates to Catch-up, data is cached.
@@ -434,7 +436,7 @@ function HomeContent() {
 
   if (state.loading && !displayMetrics.lastUpdated) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: COLORS.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="home" />
         <View style={styles.loadingPulse}>
           <Text style={styles.loadingEmoji}>...</Text>
@@ -445,7 +447,7 @@ function HomeContent() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: COLORS.background }]}>
+    <View style={[styles.container, { backgroundColor: containerBg }]}>
       {/* 3D Glass Blob Background */}
       <OrganicBackground variant="home" />
 
@@ -482,11 +484,11 @@ function HomeContent() {
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+                <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
                   <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                  <Text style={styles.logoutText}>Logout</Text>
+                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
+                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -496,14 +498,51 @@ function HomeContent() {
           </View>
         </View>
 
-        {/* GuruRings — hero display with liquid fill + glow */}
-        <GuruRings
-          size="hero"
-          metrics={displayMetrics}
-          onRingPress={handleRingPress}
-          showChangeGoals={true}
-          onChangeGoals={handleChangeGoals}
-        />
+        {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec) */}
+        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
+          {(() => {
+            // Pass raw ratios (un-clamped). Triskelion caps rendering at 1.0
+            // internally but uses values > 1 to trigger the Over-Goal halo
+            // (Figma 47:2). Clamping here would suppress that state.
+            const c = displayMetrics.catchup.dailyProgress / Math.max(displayMetrics.catchup.dailyGoal, 1);
+            const d = (displayMetrics.divein.dailyProgress || displayMetrics.divein.weeklyProgress) /
+              Math.max(displayMetrics.divein.dailyGoal || displayMetrics.divein.weeklyGoal, 1);
+            const r = displayMetrics.recap.status === 'completed' ? 1 : displayMetrics.recap.status === 'in_progress' ? 0.5 : 0;
+            const celebrate = c >= 1 && d >= 1 && r >= 1;
+            return (
+              <Triskelion
+                size={240}
+                progress={{ c, d, r }}
+                volumetric
+                celebrate={celebrate}
+              />
+            );
+          })()}
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.catchup.primary }} />
+              <Text style={{ ...Typography.labelSmall, color: RingColors.catchup.primary }}>Catch-up</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.divein.primary }} />
+              <Text style={{ ...Typography.labelSmall, color: RingColors.divein.primary }}>Dive-in</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.recap.primary }} />
+              <Text style={{ ...Typography.labelSmall, color: RingColors.recap.primary }}>Recap</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={handleChangeGoals}
+            style={{ marginTop: Spacing.sm }}
+            accessibilityRole="button"
+            accessibilityLabel="Adjust daily goals"
+          >
+            <Text style={{ ...Typography.labelMedium, color: RingColors.catchup.primary, textDecorationLine: 'underline' }}>
+              Adjust goals
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Feed Tab Bar */}
         {filterTabs.length > 0 && (

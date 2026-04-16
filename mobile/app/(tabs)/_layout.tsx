@@ -90,17 +90,17 @@ function TabsWithMetrics() {
     right: 16,
     height: 64,
     borderRadius: 24,
-    backgroundColor: isDark ? 'rgba(15, 20, 35, 0.80)' : 'rgba(255, 255, 255, 0.85)',
-    // Gradient border: brighter top, dimmer bottom
+    backgroundColor: isDark ? 'rgba(15, 20, 35, 0.80)' : 'rgba(255, 255, 255, 0.88)',
+    // Border: light strokes on dark glass, dark tint on light glass
     borderWidth: 1,
-    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.7)',
-    borderLeftColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(255, 255, 255, 0.5)',
-    borderRightColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(255, 255, 255, 0.5)',
-    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.3)',
+    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(15, 23, 42, 0.08)',
+    borderLeftColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.05)',
+    borderRightColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.05)',
+    borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(15, 23, 42, 0.04)',
     // Floating shadow
-    shadowColor: '#000',
+    shadowColor: isDark ? '#000' : '#0F172A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: isDark ? 0.5 : 0.15,
+    shadowOpacity: isDark ? 0.5 : 0.12,
     shadowRadius: 24,
     elevation: 12,
     paddingBottom: 0,
@@ -110,15 +110,15 @@ function TabsWithMetrics() {
       WebkitBackdropFilter: 'blur(36px) saturate(200%)',
       boxShadow: isDark
         ? '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)'
-        : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.5)',
+        : '0 4px 24px rgba(15,23,42,0.1), inset 0 1px 0 rgba(255,255,255,0.9)',
     } : {}),
   };
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: isDark ? '#F1F5F9' : Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: isDark ? '#64748B' : undefined,
+        tabBarActiveTintColor: isDark ? '#F1F5F9' : '#6366F1',
+        tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
