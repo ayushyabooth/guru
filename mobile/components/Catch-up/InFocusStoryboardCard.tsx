@@ -266,7 +266,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
     backdropFilter: 'blur(28px) saturate(180%)',
     WebkitBackdropFilter: 'blur(28px) saturate(180%)',
     background: isDark
-      ? 'rgba(15,20,35,0.20)'
+      ? 'rgba(15,20,35,0.18)'
       : 'rgba(255,255,255,0.15)',
     borderTopWidth: 1,
     borderTopColor: isDark

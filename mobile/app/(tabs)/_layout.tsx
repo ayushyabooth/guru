@@ -1,14 +1,68 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Platform, Animated, Easing } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import GuruRings from '../../components/ui/GuruRings';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MetricProvider, useMetrics } from '../../store/metric-context';
 import { useTheme } from '../../contexts/ThemeContext';
+import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
+import { Triskelion } from '../../components/Rings/Triskelion';
+
+/** Breathing scale animation wrapper for tab ring icons */
+function TabRingIcon({ color, progress, focused, size = 26 }: {
+  color: string; progress: number; focused: boolean; size?: number;
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (focused) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.06, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1.0, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      scaleAnim.stopAnimation();
+      scaleAnim.setValue(1);
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <PlasmaBlobRing progress={progress} color={color} size={size} stroke={2.5} minimal />
+    </Animated.View>
+  );
+}
+
+/** Breathing Triskelion for the Home tab */
+function TabHomeIcon({ focused, size = 28, catchupProgress, diveinProgress, recapProgress }: {
+  focused: boolean; size?: number; catchupProgress: number; diveinProgress: number; recapProgress: number;
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (focused) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.06, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1.0, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      scaleAnim.stopAnimation();
+      scaleAnim.setValue(1);
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Triskelion size={size} progress={{ c: catchupProgress, d: diveinProgress, r: recapProgress }} />
+    </Animated.View>
+  );
+}
 
 function TabsWithMetrics() {
   const colorScheme = useColorScheme();
@@ -77,7 +131,7 @@ function TabsWithMetrics() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ focused }) => <TabHomeIcon focused={focused} catchupProgress={catchupProgress} diveinProgress={diveinProgress} recapProgress={recapProgress} />,
         }}
       />
       <Tabs.Screen
@@ -85,14 +139,7 @@ function TabsWithMetrics() {
         options={{
           title: 'Catch-up',
           tabBarIcon: ({ color, focused }) => (
-            <GuruRings
-              size="tab"
-              ring="catchup"
-              progress={catchupProgress}
-              focused={focused}
-              color={color}
-              dimensions={30}
-            />
+            <TabRingIcon color="#38BDF8" progress={catchupProgress} focused={focused} />
           ),
         }}
       />
@@ -101,14 +148,7 @@ function TabsWithMetrics() {
         options={{
           title: 'Dive-in',
           tabBarIcon: ({ color, focused }) => (
-            <GuruRings
-              size="tab"
-              ring="divein"
-              progress={diveinProgress}
-              focused={focused}
-              color={color}
-              dimensions={30}
-            />
+            <TabRingIcon color="#EC4899" progress={diveinProgress} focused={focused} />
           ),
         }}
       />
@@ -117,14 +157,7 @@ function TabsWithMetrics() {
         options={{
           title: 'Recap',
           tabBarIcon: ({ color, focused }) => (
-            <GuruRings
-              size="tab"
-              ring="recap"
-              progress={recapProgress}
-              focused={focused}
-              color={color}
-              dimensions={30}
-            />
+            <TabRingIcon color="#FB923C" progress={recapProgress} focused={focused} />
           ),
         }}
       />

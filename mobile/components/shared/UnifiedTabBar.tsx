@@ -63,7 +63,7 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
       const colors = TAB_COLORS[tab.type] || TAB_COLORS.default;
       return {
         accent: colors.active,
-        bg: isActive ? hexToRgba(colors.active, 0.18) : hexToRgba(colors.active, 0.08),
+        bg: isActive ? hexToRgba(colors.active, 0.14) : hexToRgba(colors.active, 0.08),
         text: isActive ? '#FFFFFF' : '#94A3B8',
         border: isActive ? hexToRgba(colors.active, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
       };
@@ -71,7 +71,7 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
     const accent = accentColor || '#38BDF8';
     return {
       accent,
-      bg: isActive ? hexToRgba(accent, 0.18) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
+      bg: isActive ? hexToRgba(accent, 0.14) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
       text: isActive ? '#FFFFFF' : '#94A3B8',
       border: isActive ? hexToRgba(accent, 0.5) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
     };
@@ -119,7 +119,7 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
               pillStyle.push({
                 backdropFilter: 'blur(24px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                boxShadow: `0 0 20px ${hexToRgba(colors.accent, 0.3)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`,
+                boxShadow: `0 0 20px ${hexToRgba(colors.accent, 0.25)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`,
               } as any);
             }
           } else {

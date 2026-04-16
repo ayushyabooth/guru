@@ -118,7 +118,20 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
             {content.spotlight_quotes.slice(0, 3).map((quote, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.quoteCard, { borderLeftColor: categoryAccent, backgroundColor: colors.glassHighlight, borderColor: isDarkProp ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}
+                style={[
+                  styles.quoteCard,
+                  {
+                    borderLeftColor: categoryAccent,
+                    backgroundColor: colors.glassHighlight,
+                    borderColor: isDarkProp ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+                  },
+                  Platform.OS === 'web' ? { boxShadow: `2px 0 8px ${categoryAccent}40` } as any : {
+                    shadowColor: categoryAccent,
+                    shadowOffset: { width: 2, height: 0 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 8,
+                  },
+                ]}
                 onPress={() => onQuotePress?.(quote)}
                 activeOpacity={0.7}
               >
@@ -127,6 +140,11 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
                 </Text>
                 {onQuotePress && (
                   <Text style={styles.quoteHint}>Tap to find in article →</Text>
+                )}
+                {onQuotePress && (
+                  <TouchableOpacity onPress={() => onQuotePress(quote)} activeOpacity={0.7} style={{ marginTop: 6 }}>
+                    <Text style={{ color: '#6366F1', fontSize: 12, fontWeight: '600' }}>Ask Guru about this →</Text>
+                  </TouchableOpacity>
                 )}
               </TouchableOpacity>
             ))}
