@@ -208,8 +208,8 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
               accessibilityLabel={`Dive in to ${article.headline}`}
               style={styles.diveInLink}
             >
-              <Icon name="book-open-variant" size={14} color={filterColors.accent} />
-              <Text style={[styles.diveInText, { color: filterColors.accent }]}>Dive In</Text>
+              <Icon name="book-open-variant" size={14} color={isDark ? filterColors.accent : RingColors.divein.primary} />
+              <Text style={[styles.diveInText, { color: isDark ? filterColors.accent : RingColors.divein.primary }]}>Dive In</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

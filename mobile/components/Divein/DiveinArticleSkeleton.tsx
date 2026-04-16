@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const Shimmer: React.FC<{ style?: any }> = ({ style }) => {
+  const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -23,12 +25,15 @@ const Shimmer: React.FC<{ style?: any }> = ({ style }) => {
     outputRange: [-width, width],
   });
 
+  const shimmerBaseBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
+  const shimmerOverlayBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)';
+
   return (
-    <View style={[styles.shimmerBase, style]}>
+    <View style={[styles.shimmerBase, { backgroundColor: shimmerBaseBg }, style]}>
       <Animated.View
         style={[
           styles.shimmerOverlay,
-          { transform: [{ translateX }] },
+          { transform: [{ translateX }], backgroundColor: shimmerOverlayBg },
         ]}
       />
     </View>
@@ -36,43 +41,49 @@ const Shimmer: React.FC<{ style?: any }> = ({ style }) => {
 };
 
 /** A single skeleton card matching DiveinArticleCard layout */
-const SkeletonCard: React.FC = () => (
-  <View style={styles.card}>
-    {/* Badges row */}
-    <View style={styles.badgeRow}>
-      <Shimmer style={styles.badgeSmall} />
-      <Shimmer style={styles.badgeMedium} />
+const SkeletonCard: React.FC = () => {
+  const { isDark } = useTheme();
+  const cardBg = isDark ? 'rgba(15,20,35,0.55)' : 'rgba(255,255,255,0.85)';
+  const cardBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)';
+
+  return (
+    <View style={[styles.card, { backgroundColor: cardBg, borderColor: cardBorderColor }]}>
+      {/* Badges row */}
+      <View style={styles.badgeRow}>
+        <Shimmer style={styles.badgeSmall} />
+        <Shimmer style={styles.badgeMedium} />
+      </View>
+
+      {/* Thumbnail */}
+      <Shimmer style={styles.thumbnail} />
+
+      {/* Title lines */}
+      <Shimmer style={styles.titleLine1} />
+      <Shimmer style={styles.titleLine2} />
+
+      {/* Source + reading time */}
+      <View style={styles.metaRow}>
+        <Shimmer style={styles.metaText} />
+        <Shimmer style={styles.metaDot} />
+        <Shimmer style={styles.metaSmall} />
+      </View>
+
+      {/* Summary section */}
+      <Shimmer style={styles.sectionLabel} />
+      <View style={styles.summaryArea}>
+        <Shimmer style={styles.summaryLine} />
+        <Shimmer style={styles.summaryLine} />
+        <Shimmer style={styles.summaryLineShort} />
+      </View>
+
+      {/* Action buttons */}
+      <View style={styles.actionRow}>
+        <Shimmer style={styles.actionBtn} />
+        <Shimmer style={styles.actionBtn} />
+      </View>
     </View>
-
-    {/* Thumbnail */}
-    <Shimmer style={styles.thumbnail} />
-
-    {/* Title lines */}
-    <Shimmer style={styles.titleLine1} />
-    <Shimmer style={styles.titleLine2} />
-
-    {/* Source + reading time */}
-    <View style={styles.metaRow}>
-      <Shimmer style={styles.metaText} />
-      <Shimmer style={styles.metaDot} />
-      <Shimmer style={styles.metaSmall} />
-    </View>
-
-    {/* Summary section */}
-    <Shimmer style={styles.sectionLabel} />
-    <View style={styles.summaryArea}>
-      <Shimmer style={styles.summaryLine} />
-      <Shimmer style={styles.summaryLine} />
-      <Shimmer style={styles.summaryLineShort} />
-    </View>
-
-    {/* Action buttons */}
-    <View style={styles.actionRow}>
-      <Shimmer style={styles.actionBtn} />
-      <Shimmer style={styles.actionBtn} />
-    </View>
-  </View>
-);
+  );
+};
 
 /** Renders a 2-column grid of 4 skeleton cards */
 export const DiveinArticleSkeleton: React.FC = () => (
@@ -123,8 +134,8 @@ const styles = StyleSheet.create({
   },
   card: {
     width: cardWidth,
-    backgroundColor: 'rgba(15,20,35,0.55)',
     borderRadius: 14,
+    borderWidth: 1,
     padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -216,12 +227,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   shimmerBase: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
     overflow: 'hidden',
   },
   shimmerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     width: '50%',
   },
 });
