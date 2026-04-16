@@ -1,11 +1,11 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime
 
 
 class UserSignupRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=8, max_length=128, description="Password must be at least 8 characters")
     invite_code: str = ""
 
 
@@ -17,7 +17,7 @@ class UserSignupResponse(BaseModel):
 
 class UserLoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=128)
 
 
 class UserLoginResponse(BaseModel):

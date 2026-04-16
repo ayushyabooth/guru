@@ -266,7 +266,7 @@ def _extract_structured_text_from_html(html_content: str) -> Optional[str]:
         xml_text = trafilatura.extract(html_content, output_format='xmltei')
         if not xml_text:
             return None
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
         ns = '{http://www.tei-c.org/ns/1.0}'
         root = ET.fromstring(xml_text)
         body = root.find(f'.//{ns}body')
@@ -324,7 +324,7 @@ def _extract_headings_from_html(html_content: str) -> set:
         xml_text = trafilatura.extract(html_content, output_format='xmltei')
         if not xml_text:
             return set()
-        import xml.etree.ElementTree as ET
+        import defusedxml.ElementTree as ET
         ns = '{http://www.tei-c.org/ns/1.0}'
         root = ET.fromstring(xml_text)
         headings = set()
@@ -908,17 +908,30 @@ def _extract_with_beautifulsoup(html_content: str) -> Optional[str]:
 
 def validate_url(url: str) -> bool:
     """
-    Validate if URL is properly formatted
-    
+    Validate if URL is properly formatted and not targeting internal/private networks.
+
     Args:
         url: URL to validate
-    
+
     Returns:
-        True if valid, False otherwise
+        True if valid and safe, False otherwise
     """
     try:
         parsed = urlparse(url)
-        return bool(parsed.scheme and parsed.netloc)
+        if not (parsed.scheme in ('http', 'https') and parsed.netloc):
+            return False
+        # Block private/internal IPs (SSRF protection)
+        import socket
+        from ipaddress import ip_address
+        hostname = parsed.netloc.split(':')[0]
+        try:
+            resolved_ip = ip_address(socket.gethostbyname(hostname))
+            if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_reserved or resolved_ip.is_link_local:
+                logger.warning(f"SSRF blocked: {url} resolves to private IP {resolved_ip}")
+                return False
+        except (socket.gaierror, ValueError):
+            pass  # DNS resolution failure or non-IP hostname — allow but will fail on fetch
+        return True
     except:
         return False
 

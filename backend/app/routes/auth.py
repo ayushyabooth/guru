@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from jose import JWTError
 from app.db.database import get_db
@@ -8,6 +8,14 @@ from app.services.auth_service import hash_password, verify_password, generate_j
 from app.services.industries_config import IndustriesConfig
 from app.config import settings
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Rate limiting
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
@@ -30,7 +38,8 @@ def _get_default_industry_and_specialization():
 
 
 @router.post("/signup", response_model=UserSignupResponse)
-async def signup(user_data: UserSignupRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def signup(request: Request, user_data: UserSignupRequest, db: Session = Depends(get_db)):
     """Create a new user account with default profile"""
 
     # Validate invite code
@@ -93,17 +102,19 @@ async def signup(user_data: UserSignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=UserLoginResponse)
-async def login(user_data: UserLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, user_data: UserLoginRequest, db: Session = Depends(get_db)):
     """Authenticate user and return tokens"""
     
     # Find user
     user = db.query(User).filter(User.email == user_data.email).first()
     if not user or not verify_password(user_data.password, user.password_hash):
+        logger.warning(f"AUTH: Failed login attempt for email={user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -114,6 +125,7 @@ async def login(user_data: UserLoginRequest, db: Session = Depends(get_db)):
     access_token = generate_jwt(user.id, token_type='access')
     refresh_token = create_refresh_token(user.id)
     
+    logger.info(f"AUTH: Successful login for user_id={user.id}")
     return UserLoginResponse(
         access_token=access_token,
         refresh_token=refresh_token

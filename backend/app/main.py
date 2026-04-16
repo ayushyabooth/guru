@@ -1,9 +1,12 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
 import time
 from app.config import settings
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging so app-level loggers output to console
 logging.basicConfig(
@@ -24,6 +27,11 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+# Rate limiting
+from app.routes.auth import limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -31,9 +39,14 @@ app.add_middleware(
     allow_origin_regex=r"^chrome-extension://.*$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["X-Response-Time-Ms"],
 )
+
+# HTTPS redirect in production
+if settings.APP_ENV == "production":
+    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+    app.add_middleware(HTTPSRedirectMiddleware)
 
 # API timing middleware - logs response time and records to PerfStore
 @app.middleware("http")
@@ -80,6 +93,14 @@ app.include_router(cache_status.router)
 
 # Import and include config router
 app.include_router(config.router)
+
+
+# Production: mask internal error details from clients
+if settings.APP_ENV == "production":
+    @app.exception_handler(500)
+    async def internal_error_handler(request: Request, exc: Exception):
+        logger.error(f"Internal error on {request.method} {request.url.path}: {exc}", exc_info=True)
+        return JSONResponse(status_code=500, content={"detail": "An internal error occurred. Please try again."})
 
 
 def _cleanup_stale_content(max_age_days: int = 30):

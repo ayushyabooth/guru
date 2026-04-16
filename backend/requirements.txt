@@ -31,6 +31,12 @@ cloudscraper>=1.2.71
 httpx>=0.25.0
 pillow>=10.0.0
 
+# Rate limiting
+slowapi>=0.1.9
+
+# XML security
+defusedxml>=0.7.1
+
 # Scheduling
 apscheduler==3.10.4
 

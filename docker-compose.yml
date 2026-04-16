@@ -5,12 +5,12 @@ services:
   postgres:
     image: postgres:15
     environment:
-      # DEV ONLY — change these for any non-local deployment
-      POSTGRES_DB: guru_db
-      POSTGRES_USER: guru_user
-      POSTGRES_PASSWORD: guru_password
+      # DEV ONLY — set these in your shell or a .env file, never commit real values
+      POSTGRES_DB: ${POSTGRES_DB:-guru_db}
+      POSTGRES_USER: ${POSTGRES_USER:-guru_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in environment}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Bind to localhost only
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -37,9 +37,9 @@ services:
       - "8000:8000"
     environment:
       # DEV ONLY — use environment variables or secrets manager in production
-      - DATABASE_URL=postgresql://guru_user:guru_password@postgres:5432/guru_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-guru_user}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-guru_db}
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET_KEY=development-secret-key-change-in-production
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in environment}
       - APP_ENV=development
       - DEBUG=true
     depends_on:

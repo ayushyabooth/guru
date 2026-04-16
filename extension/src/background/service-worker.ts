@@ -17,7 +17,7 @@ async function lookupArticleByUrl(url: string): Promise<ByUrlResponse | null> {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    console.log('[Guru] Checking URL:', url);
+    // console.log('[Guru] Checking URL:', url);
     const res = await fetch(`${API_BASE_URL}/reader/articles/by-url?url=${encodedUrl}`, { headers });
 
     if (res.status === 404) {
@@ -26,16 +26,16 @@ async function lookupArticleByUrl(url: string): Promise<ByUrlResponse | null> {
     }
 
     if (!res.ok) {
-      console.warn('[Guru] URL lookup returned', res.status);
+      // console.warn('[Guru] URL lookup returned', res.status);
       return null;
     }
 
     const data: ByUrlResponse = await res.json();
-    console.log('[Guru] Match found:', data.headline);
+    // console.log('[Guru] Match found:', data.headline);
     urlCache.set(url, data);
     return data;
   } catch (e) {
-    console.error('[Guru] URL lookup failed:', e);
+    // console.error('[Guru] URL lookup failed:', e);
     return null;
   }
 }
@@ -78,7 +78,7 @@ chrome.runtime.onMessage.addListener(
 
     if (message.type === 'SYNC_TOKEN') {
       setStoredToken(message.token).then(() => {
-        console.log('[Guru] Token synced from web app');
+        // console.log('[Guru] Token synced from web app');
         sendResponse({ ok: true });
       });
       return true;
@@ -111,7 +111,7 @@ chrome.runtime.onMessage.addListener(
       (async () => {
         try {
           const token = await getValidToken();
-          console.log('[Guru] Chat request — token:', token ? 'present' : 'MISSING', 'article_id:', message.payload?.article_id);
+          // console.log('[Guru] Chat request — token:', token ? 'present' : 'MISSING', 'article_id:', message.payload?.article_id);
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -120,17 +120,17 @@ chrome.runtime.onMessage.addListener(
             headers,
             body: JSON.stringify(message.payload),
           });
-          console.log('[Guru] Chat response status:', res.status);
+          // console.log('[Guru] Chat response status:', res.status);
           if (!res.ok) {
             const errorBody = await res.text();
-            console.error('[Guru] Chat error body:', errorBody);
+            // console.error('[Guru] Chat error body:', errorBody);
             sendResponse({ error: `HTTP ${res.status}: ${errorBody}` });
             return;
           }
           const data = await res.json();
           sendResponse({ data });
         } catch (e: any) {
-          console.error('[Guru] Chat fetch failed:', e);
+          // console.error('[Guru] Chat fetch failed:', e);
           sendResponse({ error: e.message || 'Fetch failed' });
         }
       })();
@@ -141,23 +141,23 @@ chrome.runtime.onMessage.addListener(
       (async () => {
         try {
           const token = await getValidToken();
-          console.log('[Guru] Fetching chat history — token:', token ? 'present' : 'MISSING');
+          // console.log('[Guru] Fetching chat history — token:', token ? 'present' : 'MISSING');
           const headers: Record<string, string> = {};
           if (token) headers['Authorization'] = `Bearer ${token}`;
 
           const res = await fetch(`${API_BASE_URL}/socratic/history/${message.articleId}`, { headers });
-          console.log('[Guru] Chat history response:', res.status);
+          // console.log('[Guru] Chat history response:', res.status);
           if (!res.ok) {
             const body = await res.text();
-            console.error('[Guru] Chat history error:', body);
+            // console.error('[Guru] Chat history error:', body);
             sendResponse({ data: { messages: [], conversation_id: '' } });
             return;
           }
           const data = await res.json();
-          console.log('[Guru] Chat history loaded:', data.messages?.length, 'messages');
+          // console.log('[Guru] Chat history loaded:', data.messages?.length, 'messages');
           sendResponse({ data });
         } catch (e) {
-          console.error('[Guru] Chat history fetch failed:', e);
+          // console.error('[Guru] Chat history fetch failed:', e);
           sendResponse({ data: { messages: [], conversation_id: '' } });
         }
       })();
@@ -168,23 +168,23 @@ chrome.runtime.onMessage.addListener(
       (async () => {
         try {
           const token = await getValidToken();
-          console.log('[Guru] Fetching annotations — token:', token ? 'present' : 'MISSING');
+          // console.log('[Guru] Fetching annotations — token:', token ? 'present' : 'MISSING');
           const headers: Record<string, string> = {};
           if (token) headers['Authorization'] = `Bearer ${token}`;
 
           const res = await fetch(`${API_BASE_URL}/articles/${message.articleId}/annotations`, { headers });
-          console.log('[Guru] Annotations response:', res.status);
+          // console.log('[Guru] Annotations response:', res.status);
           if (!res.ok) {
             const body = await res.text();
-            console.error('[Guru] Annotations error:', body);
+            // console.error('[Guru] Annotations error:', body);
             sendResponse({ data: [] });
             return;
           }
           const data = await res.json();
-          console.log('[Guru] Annotations loaded:', data?.length, 'items');
+          // console.log('[Guru] Annotations loaded:', data?.length, 'items');
           sendResponse({ data });
         } catch (e) {
-          console.error('[Guru] Annotations fetch failed:', e);
+          // console.error('[Guru] Annotations fetch failed:', e);
           sendResponse({ data: [] });
         }
       })();

@@ -687,7 +687,11 @@ async def upload_expert_links(
         upload_dir = Path(__file__).parent.parent.parent.parent.parent / "expert-links"
 
     upload_dir.mkdir(parents=True, exist_ok=True)
-    dest = upload_dir / file.filename
+    # Sanitize filename to prevent path traversal
+    safe_filename = os.path.basename(file.filename).replace('..', '').lstrip('.')
+    if not safe_filename or not safe_filename.endswith('.md'):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    dest = upload_dir / safe_filename
     dest.write_bytes(content)
     logger.info(f"Expert links file uploaded: {dest} ({len(content)} bytes)")
 

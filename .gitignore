@@ -14,10 +14,12 @@ backend/venv/
 *.sqlite
 *.sqlite3
 
-# Environment files
+# Environment files & secrets
 .env
 .env.local
 .env.*.local
+.secrets.local
+*.secret
 
 # Node
 node_modules/

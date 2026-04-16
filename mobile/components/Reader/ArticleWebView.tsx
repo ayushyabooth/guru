@@ -201,7 +201,7 @@ function WebIframeView({ url, onMessage, onScroll, onLoadComplete, onError, high
         } as any}
         onLoad={handleIframeLoad}
         onError={() => { setIframeBlocked(true); onError?.('Failed to load article'); }}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        sandbox="allow-scripts allow-popups allow-forms"
         title="Article"
       />
       {iframeBlocked && (
@@ -258,11 +258,7 @@ function NativeWebViewImpl(
           case 'PAGE_LOADED':
             onLoadComplete?.();
             if (highlightQuote && webViewRef.current) {
-              const escaped = highlightQuote
-                .replace(/\\/g, '\\\\')
-                .replace(/'/g, "\\'")
-                .replace(/\n/g, ' ');
-              webViewRef.current.injectJavaScript(`window.find('${escaped}'); true;`);
+              webViewRef.current.injectJavaScript(`window.find(${JSON.stringify(highlightQuote.replace(/\n/g, ' '))}); true;`);
             }
             break;
           case 'PAGE_ERROR':

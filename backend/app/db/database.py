@@ -105,8 +105,14 @@ def _run_column_migrations():
         ("qa_exchanges", "conversation_id", "VARCHAR(36)"),
         ("qa_exchanges", "exchange_type", "VARCHAR(20) DEFAULT 'direct'"),
     ]
+    import re
+    _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
     with engine.connect() as conn:
         for table, column, col_type in migrations:
+            # Validate identifiers to prevent SQL injection
+            if not _SAFE_IDENTIFIER.match(table) or not _SAFE_IDENTIFIER.match(column):
+                logger.error(f"Migration skipped: unsafe identifier {table}.{column}")
+                continue
             try:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
                 conn.commit()

@@ -13,6 +13,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from app.deps import get_current_user
+from app.models.user import User
 
 from app.db.database import get_db
 from app.models.ingestion_run import IngestionRun
@@ -128,7 +130,7 @@ async def get_ingestion_runs(
 
 
 @router.post("/trigger/{tier}", response_model=TriggerResponse)
-async def trigger_ingestion(tier: str):
+async def trigger_ingestion(tier: str, current_user: User = Depends(get_current_user)):
     """
     Manually trigger an ingestion run for a specific tier.
 
