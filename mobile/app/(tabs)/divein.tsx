@@ -113,6 +113,7 @@ export default function DiveinScreen() {
   const tabs = (() => {
     if (!userProfile) return [];
     const rawTabs = [
+      { label: 'All', context: 'all' },
       { label: userProfile.core_industry_display || userProfile.core_industry, context: 'core' },
       ...userProfile.specializations.map((specId: string, i: number) => ({
         label: userProfile.specializations_display?.[i] || specId,
@@ -131,6 +132,9 @@ export default function DiveinScreen() {
       return true;
     });
   })();
+
+  // Label of the selected tab — used for client-side filtering in DiveinFeed
+  const selectedLabel = tabs.find(t => t.context === selectedContext)?.label;
 
   // In light mode, let AppBackground show through instead of a solid fill
   const containerBg = isDark ? colors.background : 'transparent';
@@ -204,6 +208,7 @@ export default function DiveinScreen() {
         hasMore={false}
         isLoading={isLoading}
         filterContext={selectedContext}
+        filterLabel={selectedLabel}
       />
     </SafeAreaView>
   );

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../ui/Icon';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface WebViewToolbarProps {
   onBack: () => void;
@@ -26,9 +27,14 @@ export default function WebViewToolbar({
   onUnsave,
 }: WebViewToolbarProps) {
   const insets = useSafeAreaInsets();
+  const { isDark, colors } = useTheme();
+
+  const containerBg = isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(248, 250, 252, 0.92)';
+  const iconColor = isDark ? '#FFFFFF' : colors.textPrimary;
+  const sourceColor = isDark ? '#FFFFFF' : colors.textPrimary;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: containerBg }]}>
       <View style={styles.row}>
         <TouchableOpacity
           onPress={onBack}
@@ -37,10 +43,10 @@ export default function WebViewToolbar({
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="arrow-left" size={22} color="#FFFFFF" />
+          <Icon name="arrow-left" size={22} color={iconColor} />
         </TouchableOpacity>
 
-        <Text style={styles.source} numberOfLines={1}>
+        <Text style={[styles.source, { color: sourceColor }]} numberOfLines={1}>
           {source}
         </Text>
 
@@ -54,13 +60,13 @@ export default function WebViewToolbar({
           <Icon
             name={isSaved ? 'bookmark' : 'bookmark-outline'}
             size={22}
-            color="#FFFFFF"
+            color={isSaved ? '#F59E0B' : iconColor}
           />
         </TouchableOpacity>
       </View>
 
       {/* Progress bar */}
-      <View style={styles.progressTrack}>
+      <View style={[styles.progressTrack, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 23, 42, 0.12)' }]}>
         <View
           style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]}
         />
@@ -75,7 +81,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     zIndex: 90,
   },
   row: {
@@ -93,7 +98,6 @@ const styles = StyleSheet.create({
   },
   source: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
@@ -101,7 +105,6 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   progressFill: {
     height: 2,

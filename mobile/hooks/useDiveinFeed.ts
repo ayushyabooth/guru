@@ -45,8 +45,10 @@ async function fetchDiveinFeed(filter: string): Promise<DiveinFeedResponse> {
   const token = await getAuthToken();
   if (!token) throw new Error('Not authenticated');
 
+  // 'all' is a client-side concept — map to 'core' for the API
+  const apiFilter = filter === 'all' ? 'core' : filter;
   const response = await fetch(
-    `${API_BASE_URL}/divein-feed?limit=10&offset=0&filter=${filter}`,
+    `${API_BASE_URL}/divein-feed?limit=10&offset=0&filter=${apiFilter}`,
     { headers: { 'Authorization': `Bearer ${token}` } }
   );
 

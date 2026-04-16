@@ -16,6 +16,7 @@ import {
   Typography,
   BorderRadius,
   DarkGlassMaterials,
+  GlassMaterials,
   RingColors,
 } from '../../constants/liquidGlass';
 import Icon from '../ui/Icon';
@@ -153,8 +154,12 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
     borderImage: `linear-gradient(to bottom, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%) 1`,
   } : {};
 
+  // Apply the correct material base (for shadows, border-width, etc.) per theme,
+  // then let liquidGlassStyle override the bg/border colors.
+  const cardMaterial = isDark ? DarkGlassMaterials.card : GlassMaterials.card;
+
   return (
-    <View style={[styles.card, liquidGlassStyle, gradientBorderStyle]}>
+    <View style={[styles.card, cardMaterial, liquidGlassStyle, gradientBorderStyle]}>
       {/* 3px accent bar on left edge with glow */}
       <View style={[styles.accentBar, { backgroundColor: categoryColors.accent }, accentBarGlow]} />
 
@@ -263,7 +268,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: Spacing.sm,
     marginTop: Spacing.sm,
-    ...DarkGlassMaterials.card,
+    // Material (shadows, bg, border) applied dynamically via cardMaterial in render
     borderRadius: 16,
     overflow: 'hidden',
     flexDirection: 'row',
