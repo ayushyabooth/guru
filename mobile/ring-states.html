@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Guru Rings — Individual States</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #060A12; }
+  .state { display: none; width: 400px; height: 400px; position: relative; }
+  .state.active { display: block; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<!-- One canvas per state, selected via ?state=NAME query param -->
+<div id="container"></div>
+
+<script>
+const BLUE   = { r: 56, g: 189, b: 248 };
+const PINK   = { r: 236, g: 72, b: 153 };
+const ORANGE = { r: 251, g: 146, b: 60 };
+const rgba = (c, a) => `rgba(${c.r},${c.g},${c.b},${a})`;
+const rgbaHex = (hex, a) => { const [r,g,b] = hex2rgb(hex); return `rgba(${r},${g},${b},${a})`; };
+const hex2rgb = (hex) => { const h = hex.replace('#',''); return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)]; };
+const lighter = (c, amt) => ({ r: Math.min(255, c.r+amt), g: Math.min(255, c.g+amt), b: Math.min(255, c.b+amt) });
+const darken = (c, amt) => ({ r: Math.max(0, c.r-amt), g: Math.max(0, c.g-amt), b: Math.max(0, c.b-amt) });
+
+function paintPlasmaRing(ctx, cx, cy, R, SW, color, fill, minimal) {
+  const p = Math.max(0, Math.min(1, fill));
+  const sa = -Math.PI/2, ea = sa + 2*Math.PI*p;
+  const GM = 1.6;
+
+  if (p > 0 && !minimal) {
+    ctx.save(); ctx.globalAlpha = 0.15*GM;
+    ctx.beginPath(); ctx.arc(cx,cy,R,sa,ea);
+    ctx.strokeStyle = rgba(color,1); ctx.lineWidth = SW+50*GM; ctx.lineCap='round'; ctx.filter=`blur(${30*GM}px)`;
+    ctx.stroke(); ctx.restore();
+  }
+
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.strokeStyle = rgba(color, p>0?0.07:0.12); ctx.lineWidth=SW; ctx.lineCap='round'; ctx.stroke();
+  if(!minimal){ctx.beginPath();ctx.arc(cx,cy,R-SW/2+0.5,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=0.5;ctx.stroke();}
+  ctx.restore();
+
+  if(p<=0)return;
+
+  if(!minimal){
+    ctx.save();ctx.globalAlpha=0.45*GM;ctx.beginPath();ctx.arc(cx,cy,R,sa,ea);
+    ctx.strokeStyle=rgba(color,1);ctx.lineWidth=SW+14;ctx.lineCap='round';ctx.filter=`blur(${12*GM}px)`;ctx.stroke();ctx.restore();
+  } else {
+    ctx.save();ctx.globalAlpha=0.5;ctx.beginPath();ctx.arc(cx,cy,R,sa,ea);
+    ctx.strokeStyle=rgba(color,1);ctx.lineWidth=SW+4;ctx.lineCap='round';ctx.filter='blur(3px)';ctx.stroke();ctx.restore();
+  }
+
+  ctx.save();
+  const grad=ctx.createLinearGradient(cx-R,cy-R,cx+R,cy+R);
+  grad.addColorStop(0,rgba(color,0.85));grad.addColorStop(0.3,rgba(lighter(color,40),1));
+  grad.addColorStop(0.7,rgba(color,0.9));grad.addColorStop(1,rgba(darken(color,30),0.8));
+  ctx.beginPath();ctx.arc(cx,cy,R,sa,ea);ctx.strokeStyle=grad;ctx.lineWidth=SW;ctx.lineCap='round';ctx.stroke();ctx.restore();
+
+  if(!minimal){
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R-SW/2+1,sa,sa+(ea-sa)*0.55);
+    ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();ctx.restore();
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R+SW/2-0.5,sa+0.4,ea);
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();ctx.restore();
+  }
+
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,sa,ea);
+  ctx.strokeStyle=`rgba(255,255,255,${minimal?0.35:0.45})`;ctx.lineWidth=minimal?1:3;ctx.lineCap='round';ctx.filter=minimal?'blur(0.5px)':'blur(1.5px)';ctx.stroke();ctx.restore();
+
+  if(!minimal){
+    const ex=cx+Math.cos(ea)*R,ey=cy+Math.sin(ea)*R,fR=24;
+    const fl=ctx.createRadialGradient(ex,ey,0,ex,ey,fR);
+    fl.addColorStop(0,'rgba(255,255,255,0.9)');fl.addColorStop(0.2,rgba(lighter(color,80),0.7));
+    fl.addColorStop(0.5,rgba(color,0.3));fl.addColorStop(1,rgba(color,0));
+    ctx.fillStyle=fl;ctx.fillRect(ex-fR,ey-fR,fR*2,fR*2);
+    for(let i=0;i<3;i++){const pa=ea+0.04+i*0.05,pr=R+(i===1?4:-3),px=cx+Math.cos(pa)*pr,py=cy+Math.sin(pa)*pr;
+    ctx.save();ctx.globalAlpha=0.5-i*0.15;ctx.filter='blur(1.5px)';ctx.fillStyle=rgba(lighter(color,60),1);ctx.beginPath();ctx.arc(px,py,3-i*0.5,0,Math.PI*2);ctx.fill();ctx.restore();}
+  }
+}
+
+function paintNexus(ctx,cx,cy,r,bright){
+  const n=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  n.addColorStop(0,`rgba(255,255,255,${bright})`);n.addColorStop(0.08,`rgba(240,245,255,${bright*0.7})`);
+  n.addColorStop(0.25,`rgba(180,200,255,${bright*0.3})`);n.addColorStop(0.5,`rgba(120,150,255,${bright*0.08})`);
+  n.addColorStop(1,'rgba(80,100,200,0)');ctx.fillStyle=n;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+}
+
+function drawTriskelion(ctx,W,H,fills,opts={}){
+  const CX=W/2,CY=H/2,R=W*0.32,offset=W*0.175,SW=Math.max(2.5,R*0.2);
+  const minimal=opts.minimal||false;
+  const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,W*0.8);bg.addColorStop(0,'rgba(30,35,65,0.2)');bg.addColorStop(1,'rgba(6,10,18,0)');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  if(opts.halo){const h=ctx.createRadialGradient(CX,CY,R*0.8,CX,CY,R*2.2*opts.halo);
+  h.addColorStop(0,'rgba(200,210,255,0)');h.addColorStop(0.5,`rgba(180,200,255,${0.06*opts.halo})`);
+  h.addColorStop(0.8,`rgba(150,170,255,${0.12*opts.halo})`);h.addColorStop(1,'rgba(120,150,255,0)');ctx.fillStyle=h;ctx.fillRect(0,0,W,H);}
+
+  const rings=[
+    {color:ORANGE,cx:CX-offset*0.866,cy:CY+offset*0.5,fill:fills[2]},
+    {color:PINK,cx:CX+offset*0.866,cy:CY+offset*0.5,fill:fills[1]},
+    {color:BLUE,cx:CX,cy:CY-offset,fill:fills[0]},
+  ];
+  for(const ring of rings)paintPlasmaRing(ctx,ring.cx,ring.cy,R,SW,ring.color,ring.fill,minimal);
+  const anyP=fills.some(f=>f>0),allF=fills.every(f=>f>=1);
+  if(anyP)paintNexus(ctx,CX,CY,allF?W*0.15:W*0.08,allF?0.95:0.5);
+}
+
+function drawSingleRing(ctx,W,H,color,fill){
+  const CX=W/2,CY=H/2,R=W*0.35,SW=Math.max(2.5,R*0.18);
+  const bg=ctx.createRadialGradient(CX,CY,0,CX,CY,W*0.7);bg.addColorStop(0,'rgba(30,40,80,0.15)');bg.addColorStop(1,'rgba(6,10,18,0)');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  paintPlasmaRing(ctx,CX,CY,R,SW,color,fill,false);
+}
+
+// State definitions
+const STATES = {
+  // Hero triskelion combined
+  'hero-fresh':    { type:'tri', fills:[0,0,0], size:400 },
+  'hero-morning':  { type:'tri', fills:[0.6,0,0], size:400 },
+  'hero-active':   { type:'tri', fills:[1.0,0.4,0], size:400 },
+  'hero-almost':   { type:'tri', fills:[1.0,0.8,0.5], size:400 },
+  'hero-complete': { type:'tri', fills:[1.0,1.0,1.0], size:400 },
+  // Celebration
+  'cel-nexus':     { type:'tri', fills:[1.0,1.0,1.0], size:400 },
+  'cel-halo':      { type:'tri', fills:[1.0,1.0,1.0], size:400, halo:1.0 },
+  'cel-peak':      { type:'tri', fills:[1.0,1.0,1.0], size:400, halo:1.8 },
+  // Single ring fills
+  'ring-0':        { type:'single', color:BLUE, fill:0, size:300 },
+  'ring-25':       { type:'single', color:BLUE, fill:0.25, size:300 },
+  'ring-50':       { type:'single', color:BLUE, fill:0.50, size:300 },
+  'ring-75':       { type:'single', color:BLUE, fill:0.75, size:300 },
+  'ring-100':      { type:'single', color:BLUE, fill:1.0, size:300 },
+  // Size variants
+  'size-hero':     { type:'tri', fills:[1.0,0.75,0.5], size:400 },
+  'size-logo':     { type:'tri', fills:[1.0,0.75,0.5], size:80, minimal:true },
+  'size-tab':      { type:'single', color:BLUE, fill:0.7, size:48, minimal:true },
+  'size-mini':     { type:'tri', fills:[1.0,0.75,0.5], size:52, minimal:true },
+};
+
+// Render requested state
+const params = new URLSearchParams(window.location.search);
+const stateName = params.get('state') || 'hero-complete';
+const stateConf = STATES[stateName];
+
+if (stateConf) {
+  const W = stateConf.size, H = stateConf.size;
+  // Use a padded canvas for small sizes so glow isn't clipped
+  const PAD = stateConf.size < 100 ? 120 : 0;
+  const cW = W + PAD*2, cH = H + PAD*2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cW; canvas.height = cH;
+  canvas.style.width = cW + 'px'; canvas.style.height = cH + 'px';
+  document.getElementById('container').appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  if (stateConf.type === 'tri') {
+    // Offset drawing into padded area
+    ctx.save(); ctx.translate(PAD, PAD);
+    drawTriskelion(ctx, W, H, stateConf.fills, { halo: stateConf.halo, minimal: stateConf.minimal });
+    ctx.restore();
+  } else {
+    ctx.save(); ctx.translate(PAD, PAD);
+    drawSingleRing(ctx, W, H, stateConf.color, stateConf.fill);
+    ctx.restore();
+  }
+}
+
+// If state=all, render a grid of all states
+if (stateName === 'all') {
+  document.getElementById('container').innerHTML = '';
+  const allNames = Object.keys(STATES);
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;padding:16px;';
+
+  for (const name of allNames) {
+    const conf = STATES[name];
+    const W = Math.min(conf.size, 300), H = Math.min(conf.size, 300);
+    const PAD = conf.size < 100 ? 80 : 0;
+    const cW = W+PAD*2, cH = H+PAD*2;
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `text-align:center;background:rgba(15,20,35,0.5);border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,0.05);`;
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'color:rgba(241,245,249,0.7);font:12px sans-serif;margin-bottom:4px;';
+    lbl.textContent = name;
+    wrap.appendChild(lbl);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = cW; canvas.height = cH;
+    canvas.style.width = Math.min(cW, 300)+'px'; canvas.style.height = Math.min(cH, 300)+'px';
+    const ctx = canvas.getContext('2d');
+
+    ctx.save(); ctx.translate(PAD, PAD);
+    if(conf.type==='tri') drawTriskelion(ctx,W,H,conf.fills,{halo:conf.halo,minimal:conf.minimal});
+    else drawSingleRing(ctx,W,H,conf.color,conf.fill);
+    ctx.restore();
+
+    wrap.appendChild(canvas);
+    grid.appendChild(wrap);
+  }
+  document.getElementById('container').appendChild(grid);
+}
+</script>
+</body>
+</html>
