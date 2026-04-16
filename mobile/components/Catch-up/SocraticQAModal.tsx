@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal } from 'react-native';
+import { Modal, View, StyleSheet, Platform } from 'react-native';
 import { SocraticChat } from '../Reader/SocraticChat';
 
 interface SocraticQAModalProps {
@@ -13,7 +13,7 @@ interface SocraticQAModalProps {
 
 /**
  * SocraticQAModal - Wrapper modal that opens the Guru Q&A chat directly.
- * The intermediate reflection modal has been removed - we go straight to Guru chat.
+ * Uses a semi-transparent blurred backdrop instead of opaque dark background.
  */
 const SocraticQAModal: React.FC<SocraticQAModalProps> = ({
   visible,
@@ -27,17 +27,34 @@ const SocraticQAModal: React.FC<SocraticQAModalProps> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="fullScreen"
+      transparent={false}
       onRequestClose={onClose}
     >
-      <SocraticChat
-        articleId={articleId}
-        articleTitle={articleTitle}
-        initialQuestion={question}
-        onClose={onClose}
-        onBack={onClose}
-      />
+      <View style={[
+        styles.backdrop,
+        Platform.OS === 'web' && {
+          // @ts-ignore
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        } as any,
+      ]}>
+        <SocraticChat
+          articleId={articleId}
+          articleTitle={articleTitle}
+          initialQuestion={question}
+          onClose={onClose}
+          onBack={onClose}
+        />
+      </View>
     </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+});
 
 export default SocraticQAModal;

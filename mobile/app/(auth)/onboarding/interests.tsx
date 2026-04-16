@@ -115,7 +115,7 @@ export default function InterestsScreen() {
       <View style={styles.headerContainer}>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '60%' }]} />
+            <View style={[styles.progressFill, { width: '60%', backgroundColor: '#EC4899' }]} />
           </View>
           <Text style={styles.progressText}>Step 3 of 5</Text>
         </View>
@@ -232,6 +232,7 @@ export default function InterestsScreen() {
             onPress={handleContinue}
             variant="primary"
             size="md"
+            accentColor="#EC4899"
             fullWidth={false}
             style={styles.continueButton}
           />
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#EC4899',
     textAlign: 'center',
   },
   title: {
@@ -290,14 +291,14 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   selectionBadge: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: 'rgba(236, 72, 153, 0.1)',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.pill,
   },
   selectionCount: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#EC4899',
   },
   optionalBadge: {
     backgroundColor: 'rgba(148, 163, 184, 0.15)',
@@ -333,10 +334,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderColor: '#38BDF8',
-    shadowColor: '#38BDF8',
-    shadowOpacity: 0.15,
+    backgroundColor: 'rgba(236, 72, 153, 0.18)',
+    borderColor: '#EC4899',
+    shadowColor: '#EC4899',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
   optionCardDisabled: {
     backgroundColor: 'rgba(248, 250, 252, 0.5)',
@@ -373,7 +377,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   optionTextSelected: {
-    color: '#38BDF8',
+    color: '#EC4899',
   },
   optionTextDisabled: {
     color: DarkThemeColors.textTertiary,
@@ -385,11 +389,11 @@ const styles = StyleSheet.create({
   checkmark: {
     width: 32,
     height: 32,
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#EC4899',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#38BDF8',
+    shadowColor: '#EC4899',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

@@ -2,7 +2,7 @@
  * GlassButton - Liquid glass styled button
  *
  * Variants:
- * - primary: Glossy teal gradient with glass effect (main CTA like mockup)
+ * - primary: Glossy gradient with glass effect (main CTA like mockup)
  * - secondary: Glass background with colored border
  * - tertiary: Text only with subtle background
  */
@@ -29,11 +29,39 @@ import {
 import DarkThemeColors from '../../constants/darkTheme';
 import { useTheme } from '../../contexts/ThemeContext';
 
+/** Convert a hex color (#RGB or #RRGGBB) to rgba string */
+function hexToRgba(hex: string, alpha: number): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  }
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Lighten a hex color by mixing it toward white */
+function lightenHex(hex: string, amount: number): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  }
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  const lr = Math.round(r + (255 - r) * amount);
+  const lg = Math.round(g + (255 - g) * amount);
+  const lb = Math.round(b + (255 - b) * amount);
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
+}
+
 interface GlassButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'tertiary';
   filterContext?: string;
+  accentColor?: string;
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -47,6 +75,7 @@ export default function GlassButton({
   onPress,
   variant = 'primary',
   filterContext,
+  accentColor,
   loading = false,
   disabled = false,
   fullWidth = true,
@@ -64,12 +93,15 @@ export default function GlassButton({
 
   const isDisabled = disabled || loading;
 
-  // Primary button — interactive indigo with glass blur
+  // Primary button — interactive accent color with glass blur
   if (variant === 'primary') {
+    const accent = accentColor || '#6366F1';
+    const lightenedAccent = lightenHex(accent, 0.2);
+
     const webGlassStyle = Platform.OS === 'web' ? {
       backdropFilter: 'blur(16px) saturate(180%)',
       WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-      boxShadow: '0 0 24px rgba(99,102,241,0.25), inset 0 1px 0 rgba(255,255,255,0.12)',
+      boxShadow: `0 0 24px ${hexToRgba(accent, 0.25)}, inset 0 1px 0 rgba(255,255,255,0.12)`,
     } : {};
 
     return (
@@ -83,6 +115,9 @@ export default function GlassButton({
             height,
             borderRadius: BorderRadius.lg,
             width: fullWidth ? '100%' : undefined,
+            backgroundColor: hexToRgba(accent, 0.35),
+            borderColor: hexToRgba(lightenedAccent, 0.45),
+            shadowColor: accent,
           },
           webGlassStyle as any,
           isDisabled && styles.disabled,
@@ -166,10 +201,7 @@ const styles = StyleSheet.create({
   primaryContainer: {
     position: 'relative',
     overflow: 'hidden',
-    backgroundColor: 'rgba(99, 102, 241, 0.35)',
     borderWidth: 1.5,
-    borderColor: 'rgba(129, 140, 248, 0.45)',
-    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 16,

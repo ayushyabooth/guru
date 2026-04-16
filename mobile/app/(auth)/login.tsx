@@ -193,8 +193,10 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete="off"
+              autoComplete="email"
               icon="email"
+              accessibilityLabel="Email address"
+              textContentType="emailAddress"
             />
 
             {/* Password Input */}
@@ -207,8 +209,10 @@ export default function LoginScreen() {
               }}
               secureTextEntry
               autoCapitalize="none"
-              autoComplete="off"
+              autoComplete="current-password"
               icon="lock"
+              accessibilityLabel="Password"
+              textContentType="password"
             />
 
             {/* Forgot Password Link */}
@@ -226,6 +230,7 @@ export default function LoginScreen() {
               loading={loading}
               variant="primary"
               size="lg"
+              accentColor="#6366F1"
               style={styles.loginButton}
             />
 

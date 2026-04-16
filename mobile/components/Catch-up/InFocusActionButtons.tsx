@@ -10,6 +10,8 @@ interface InFocusActionButtonsProps {
   onNotRelevant: (storyboardId: string) => void;
   storyboardId: string;
   isDark?: boolean;
+  /** Category accent color for the primary Dive In button */
+  accentColor?: string;
 }
 
 export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
@@ -19,12 +21,43 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
   onSave,
   onNotRelevant,
   storyboardId,
-  isDark = false
+  isDark = false,
+  accentColor,
 }) => {
+  // Derive button color from accent or fall back to indigo
+  const primaryBg = accentColor || '#6366F1';
+  const primaryBorder = accentColor ? `${accentColor}CC` : '#4F46E5';
+
+  // Web glass shadow using accent color
+  const primaryWebStyle = Platform.OS === 'web' ? {
+    backdropFilter: 'blur(12px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+    boxShadow: `0 2px 12px ${primaryBg}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+  } : {};
+
   return (
     <View style={styles.container}>
+      {/* Dive In — primary CTA with accent color glass */}
       <TouchableOpacity
-        style={[styles.primaryButton, styles.startReadingButton]}
+        style={[
+          styles.primaryButton,
+          {
+            backgroundColor: primaryBg,
+            borderWidth: 1,
+            borderColor: primaryBorder,
+          },
+          Platform.select({
+            ios: {
+              shadowColor: primaryBg,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+            },
+            android: { elevation: 4 },
+            default: {},
+          }),
+          primaryWebStyle,
+        ]}
         onPress={() => onStartReading(articleId)}
         activeOpacity={0.8}
       >
@@ -32,6 +65,7 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
         <Text style={styles.primaryButtonText}>Dive In</Text>
       </TouchableOpacity>
 
+      {/* Save — neutral glass secondary button */}
       <TouchableOpacity
         style={[
           styles.secondaryButton,
@@ -48,6 +82,7 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
         </Text>
       </TouchableOpacity>
 
+      {/* Not Relevant — minimal tertiary glass */}
       <TouchableOpacity
         style={[styles.tertiaryButton, isDark && styles.tertiaryButtonDark]}
         onPress={() => {
@@ -87,30 +122,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
-  startReadingButton: {
-    backgroundColor: 'rgba(56, 189, 248, 0.30)',
-    borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.35)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#38BDF8',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-      web: {
-        backdropFilter: 'blur(12px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-        boxShadow: '0 2px 8px rgba(56,189,248,0.20), inset 0 1px 0 rgba(255,255,255,0.10)',
-      },
-    }),
-  },
-  primaryButtonEmoji: {
-    fontSize: 16,
-  },
   primaryButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -133,9 +144,6 @@ const styles = StyleSheet.create({
   },
   savedButton: {
     backgroundColor: 'rgba(56,189,248,0.15)',
-  },
-  secondaryButtonEmoji: {
-    fontSize: 14,
   },
   secondaryButtonText: {
     fontSize: 14,
@@ -160,9 +168,6 @@ const styles = StyleSheet.create({
   },
   tertiaryButtonDark: {
     borderColor: 'rgba(255,255,255,0.15)',
-  },
-  tertiaryButtonEmoji: {
-    fontSize: 14,
   },
   tertiaryButtonText: {
     fontSize: 14,

@@ -126,7 +126,7 @@ export default function SpecializationsScreen() {
       <View style={styles.headerContainer}>
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '40%' }]} />
+            <View style={[styles.progressFill, { width: '40%', backgroundColor: '#0D9488' }]} />
           </View>
           <Text style={styles.progressText}>Step 2 of 5</Text>
         </View>
@@ -182,7 +182,7 @@ export default function SpecializationsScreen() {
                       <Icon
                         name="tag-outline"
                         size={22}
-                        color={isSelected ? '#38BDF8' : (!canSelect ? DarkThemeColors.textTertiary : DarkThemeColors.textSecondary)}
+                        color={isSelected ? '#0D9488' : (!canSelect ? DarkThemeColors.textTertiary : DarkThemeColors.textSecondary)}
                       />
                     </View>
                     <View style={styles.optionLeft}>
@@ -245,6 +245,7 @@ export default function SpecializationsScreen() {
             disabled={!canProceed()}
             variant="primary"
             size="md"
+            accentColor="#0D9488"
             fullWidth={false}
             style={styles.continueButton}
           />
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#0D9488',
     textAlign: 'center',
   },
   title: {
@@ -298,14 +299,14 @@ const styles = StyleSheet.create({
   },
   selectionBadge: {
     alignSelf: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: 'rgba(13, 148, 136, 0.1)',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.pill,
   },
   selectionCount: {
     ...Typography.labelMedium,
-    color: '#38BDF8',
+    color: '#0D9488',
   },
   content: {
     flex: 1,
@@ -331,10 +332,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   optionCardSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-    borderColor: '#38BDF8',
-    shadowColor: '#38BDF8',
-    shadowOpacity: 0.15,
+    backgroundColor: 'rgba(13, 148, 136, 0.18)',
+    borderColor: '#0D9488',
+    shadowColor: '#0D9488',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
   optionCardDisabled: {
     backgroundColor: 'rgba(248, 250, 252, 0.5)',
@@ -349,7 +353,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: 'rgba(13, 148, 136, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -364,7 +368,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   optionTextSelected: {
-    color: '#38BDF8',
+    color: '#0D9488',
   },
   optionTextDisabled: {
     color: DarkThemeColors.textTertiary,
@@ -379,11 +383,11 @@ const styles = StyleSheet.create({
   checkmark: {
     width: 32,
     height: 32,
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#0D9488',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#38BDF8',
+    shadowColor: '#0D9488',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,

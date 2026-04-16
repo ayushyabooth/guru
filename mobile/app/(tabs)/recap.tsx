@@ -13,7 +13,10 @@ import {
 import { useRouter } from 'expo-router';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
+import GlassButton from '../../components/ui/GlassButton';
 import GuruRings from '../../components/ui/GuruRings';
+import { Triskelion } from '../../components/Rings/Triskelion';
+import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import { useMetrics } from '../../store/metric-context';
 import {
   recapService,
@@ -45,7 +48,6 @@ import {
   getBackdropBlur,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -525,15 +527,27 @@ export default function RecapScreen() {
 
   // ── Render Journey Stages ───────────────────────────────────────
 
+  // In light mode, let AppBackground show through instead of a solid fill
+  const containerBg = isDark ? colors.background : 'transparent';
+
+  // Theme-aware glass card style for light/dark surfaces
+  const glassCard = isDark
+    ? { backgroundColor: 'rgba(15,20,35,0.42)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 32, shadowOffset: { width: 0, height: 8 }, elevation: 8 }
+    : { backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: 'rgba(15,23,42,0.08)', shadowColor: '#0F172A', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 4 };
+
+  const glassPill = isDark
+    ? { backgroundColor: 'rgba(15,20,35,0.42)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }
+    : { backgroundColor: 'rgba(255,255,255,0.75)', borderWidth: 1, borderColor: 'rgba(15,23,42,0.07)', shadowColor: '#0F172A', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 };
+
   // Loading state
   if (viewState === 'loading') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={RingColors.recap.primary} />
           <Text style={styles.loadingText}>Preparing your weekly recap...</Text>
-          <Text style={styles.loadingSubtext}>Gathering your articles and insights</Text>
+          <Text style={[styles.loadingSubtext, { color: colors.textSecondary }]}>Gathering your articles and insights</Text>
         </View>
       </SafeAreaView>
     );
@@ -567,7 +581,7 @@ export default function RecapScreen() {
   // Stage 1: Snapshot / Glass Memory Wall
   if (viewState === 'snapshot' && snapshot) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         {/* Floating ring progress */}
         <View style={styles.floatingRing}>
@@ -584,7 +598,7 @@ export default function RecapScreen() {
   // Stage 2: Guided Questions
   if (viewState === 'questions' && questions.length > 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -606,7 +620,7 @@ export default function RecapScreen() {
   // Stage 3: Socratic Dialogue
   if (viewState === 'socratic') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -626,7 +640,7 @@ export default function RecapScreen() {
   // Commitment Screen
   if (viewState === 'commitment') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -645,7 +659,7 @@ export default function RecapScreen() {
   // Celebration Overlay
   if (viewState === 'celebration') {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
         <CelebrationOverlay
           insightCount={insights.length}
@@ -681,7 +695,7 @@ export default function RecapScreen() {
   // ── Default: Entry Screen ───────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
       <OrganicBackground variant="recap" />
 
       <ScrollView
@@ -691,8 +705,8 @@ export default function RecapScreen() {
       >
         {/* Header */}
         <View style={[styles.header, {
-          backgroundColor: isDark ? 'rgba(15, 20, 35, 0.75)' : 'rgba(255, 255, 255, 0.65)',
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.7)',
+          backgroundColor: isDark ? 'rgba(15, 20, 35, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)',
         }]}>
           <View style={styles.headerRow}>
             <Text style={[styles.title, { color: colors.recap }]}>Recap</Text>
@@ -705,32 +719,44 @@ export default function RecapScreen() {
 
         {/* Ghost Ring Entry Area */}
         <View style={styles.entrySection}>
-          <Text style={styles.weekLabel}>{weekLabel}</Text>
+          <Text style={[styles.weekLabel, { color: colors.textSecondary }]}>{weekLabel}</Text>
 
-          <GuruRings size="ghost" metrics={displayMetrics} dimensions={220} />
+          {/* Recap hero ring — orange Plasma Blob per BRD §C (ring color token assertion) */}
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <PlasmaBlobRing
+              progress={ringProgress}
+              color={RingColors.recap.primary}
+              size={240}
+              stroke={16}
+              animated
+              glow
+            />
+          </View>
           {/* Tier badge removed — no tiers in the app */}
 
           {/* Activity summary pills */}
           <View style={styles.activityPills}>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{weeklyReadMinutes}m reading</Text>
+            <View style={[styles.pill, glassPill]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{weeklyReadMinutes}m reading</Text>
             </View>
-            <View style={styles.pillDot} />
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{filtersExplored} filters</Text>
+            <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
+            <View style={[styles.pill, glassPill]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} filters</Text>
             </View>
-            <View style={styles.pillDot} />
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{displayMetrics.divein?.weeklyProgress || 0}m deep dives</Text>
+            <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
+            <View style={[styles.pill, glassPill]}>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{displayMetrics.divein?.weeklyProgress || 0}m deep dives</Text>
             </View>
           </View>
 
           {/* CTA */}
           {hasCompletedRecap ? (
-            <View style={styles.completedCard}>
+            <View style={[styles.completedCard, glassCard, {
+              borderColor: isDark ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.3)',
+            }]}>
               <Icon name="star-four-points" size={32} color={RingColors.recap.primary} style={{ marginBottom: Spacing.sm }} />
               <Text style={styles.completedTitle}>Recap Complete</Text>
-              <Text style={styles.completedSubtitle}>
+              <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
                 You've completed your weekly learning recap.
               </Text>
               <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
@@ -747,29 +773,38 @@ export default function RecapScreen() {
               <Text style={[styles.ctaText, { fontSize: 14, fontWeight: '500', color: colors.textSecondary }]}>
                 Read some articles in Catch-up or Dive-in first to unlock your weekly recap.
               </Text>
-              <View style={[styles.beginButton, { opacity: 0.4 }]}>
-                <Text style={styles.beginButtonText}>Begin Journey</Text>
-              </View>
+              <GlassButton
+                title="Begin Journey"
+                onPress={() => {}}
+                accentColor="#FB923C"
+                disabled
+                fullWidth={false}
+                size="lg"
+                style={{ paddingHorizontal: 32 }}
+              />
             </View>
           ) : (
             <View style={styles.ctaSection}>
-              <Text style={styles.ctaText}>
+              <Text style={[styles.ctaText, { color: colors.textSecondary }]}>
                 {isInProgress
                   ? 'Continue where you left off'
                   : 'Fill your last ring \u2014 consolidate what you learned this week'
                 }
               </Text>
-              <TouchableOpacity style={styles.beginButton} onPress={handleBeginJourney}>
-                <Text style={styles.beginButtonText}>
-                  {isInProgress ? 'Continue Journey' : 'Begin Journey'}
-                </Text>
-              </TouchableOpacity>
+              <GlassButton
+                title={isInProgress ? 'Continue Journey' : 'Begin Journey'}
+                onPress={handleBeginJourney}
+                accentColor="#FB923C"
+                fullWidth={false}
+                size="lg"
+                style={{ paddingHorizontal: 32 }}
+              />
             </View>
           )}
         </View>
 
         {/* Journey Stages — interactive */}
-        <View style={[styles.stagesPreview, { backgroundColor: isDark ? 'rgba(15,20,35,0.42)' : 'rgba(255,255,255,0.85)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}>
+        <View style={[styles.stagesPreview, glassCard, { borderColor: isDark ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.15)' }]}>
           <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
@@ -820,8 +855,12 @@ export default function RecapScreen() {
                     )}
                   </View>
                   <View style={styles.stageContent}>
-                    <Text style={styles.stageName}>{stage.name}</Text>
-                    <Text style={styles.stageDescription}>
+                    {/* Theme-aware stage title: the static stageName style
+                        used a faint peach (`RingColors.recap.light`) which
+                        rendered almost invisible on a white card in light
+                        mode. Override to the theme's primary text token. */}
+                    <Text style={[styles.stageName, { color: colors.textPrimary }]}>{stage.name}</Text>
+                    <Text style={[styles.stageDescription, { color: colors.textSecondary }]}>
                       {tierLocked && stage.lockHint ? stage.lockHint : stage.desc}
                     </Text>
                   </View>
@@ -876,14 +915,13 @@ const styles = StyleSheet.create({
   },
   loadingSubtext: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
   },
   // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   // Header
   header: {
@@ -911,7 +949,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
   },
   archiveButton: {
     paddingHorizontal: Spacing.md,
@@ -935,7 +972,6 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textSecondary,
     marginBottom: Spacing.lg,
   },
   // Activity pills
@@ -952,13 +988,11 @@ const styles = StyleSheet.create({
   },
   pillText: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
   },
   pillDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: DarkThemeColors.textTertiary,
     marginHorizontal: Spacing.sm,
   },
   // CTA
@@ -968,15 +1002,17 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
     maxWidth: 280,
   },
   beginButton: {
-    backgroundColor: 'rgba(251, 146, 60, 0.30)',
+    // Opaque recap-orange for AA white-text contrast in both themes
+    // (GUR-100 systemic-contrast-sweep follow-up). Previously 30%-alpha
+    // on white card yielded ~1.9:1.
+    backgroundColor: '#FB923C',
     borderWidth: 1.5,
-    borderColor: 'rgba(253, 186, 116, 0.40)',
+    borderColor: '#EA580C',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 999,
@@ -1013,7 +1049,6 @@ const styles = StyleSheet.create({
   },
   completedSubtitle: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
@@ -1064,7 +1099,6 @@ const styles = StyleSheet.create({
   },
   stagesTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     marginBottom: Spacing.lg,
   },
   stageItem: {
@@ -1103,12 +1137,10 @@ const styles = StyleSheet.create({
   },
   stageName: {
     ...Typography.labelLarge,
-    color: DarkThemeColors.textPrimary,
     marginBottom: 2,
   },
   stageDescription: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
   },
   // Error
   errorCard: {
@@ -1122,7 +1154,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.error,
+    color: '#DC2626',
     textAlign: 'center',
   },
   // Archive link

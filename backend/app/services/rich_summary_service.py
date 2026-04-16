@@ -66,10 +66,13 @@ class RichSummaryService:
             )
             
             # Call Claude (use client.messages since self.claude is ClaudeClient wrapper)
+            # NOTE: context_summary is NOT generated here — it's lazily generated
+            # on first Q&A access via ensure_context_summary() to save tokens.
+            # Most articles are never opened for Q&A, so generating upfront is wasteful.
             from app.config import settings
             response = self.claude.client.messages.create(
                 model=settings.CLAUDE_HAIKU_MODEL,
-                max_tokens=3000,  # Increased for context_summary field
+                max_tokens=1000,  # Reduced from 3000 — 5 display fields only
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -81,7 +84,7 @@ class RichSummaryService:
                 logger.warning(f"Failed to parse rich content for article {article.id}")
                 return None
             
-            # Create and save the rich content
+            # Create and save the rich content (context_summary deferred, see above)
             rich_content = ArticleRichContent(
                 article_id=article.id,
                 summary_whats_in=parsed.get("whats_in", ""),
@@ -89,7 +92,7 @@ class RichSummaryService:
                 summary_between_lines=parsed.get("between_lines", ""),
                 spotlight_quotes=parsed.get("spotlight_quotes", []),
                 socratic_prompts=parsed.get("socratic_prompts", []),
-                context_summary=parsed.get("context_summary", ""),
+                context_summary=None,  # Lazy — generated on first Q&A access
                 industry_context=industry,
                 specialization_context=specialization,
                 model_used=settings.CLAUDE_HAIKU_MODEL
@@ -130,6 +133,64 @@ class RichSummaryService:
             article, industry, specialization, related_article_titles
         )
     
+    def ensure_context_summary(self, article: Article) -> Optional[str]:
+        """
+        Lazily generate the dense Q&A context summary on first access.
+        Cached on ArticleRichContent.context_summary after first call.
+
+        Cost: one Haiku call (~1500 tokens out) per article the first time
+        any user opens Q&A for it. Most articles never hit this path.
+        """
+        rc = self.db.query(ArticleRichContent).filter(
+            ArticleRichContent.article_id == article.id
+        ).first()
+
+        if rc and rc.context_summary:
+            return rc.context_summary
+
+        article_text = self._get_article_text(article)
+        if not article_text:
+            return None
+
+        from app.config import settings
+        prompt = f"""Write a dense factual summary of this article optimized for use as Q&A context. Include all key facts, data points, names, dates, quotes, and arguments. Be comprehensive and factual, not editorial. Aim for 500-1000 words. This is NOT user-facing — it will be used as context for an AI assistant answering questions.
+
+ARTICLE TITLE: {article.title}
+SOURCE: {article.source}
+
+ARTICLE CONTENT:
+{article_text}
+
+Return only the summary, no preamble."""
+
+        try:
+            response = self.claude.client.messages.create(
+                model=settings.CLAUDE_HAIKU_MODEL,
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            summary = response.content[0].text.strip()
+
+            if rc:
+                rc.context_summary = summary
+                self.db.commit()
+            else:
+                # Shouldn't usually happen — rich content is generated at ingestion
+                rc = ArticleRichContent(
+                    article_id=article.id,
+                    context_summary=summary,
+                    model_used=settings.CLAUDE_HAIKU_MODEL,
+                )
+                self.db.add(rc)
+                self.db.commit()
+
+            logger.info(f"Lazily generated context_summary for article {article.id}")
+            return summary
+        except Exception as e:
+            logger.error(f"Failed to lazy-generate context_summary for {article.id}: {e}")
+            self.db.rollback()
+            return None
+
     def _get_article_text(self, article: Article) -> Optional[str]:
         """Get article text, falling back to expert notes if paywalled."""
         if article.raw_text and len(article.raw_text) > 100:
@@ -184,16 +245,13 @@ Generate the following components in JSON format:
    - Prompt deeper thinking about implications
    - Be specific to {specialization} context
 
-6. "context_summary" (string, 500-1000 words): Write a dense factual summary of the article optimized for use as Q&A context. Include all key facts, data points, names, dates, and arguments. This is NOT user-facing — it will be used as context for an AI assistant answering questions about the article. Be comprehensive and factual, not editorial.
-
-Return ONLY valid JSON with these 6 keys. Example format:
+Return ONLY valid JSON with these 5 keys. Example format:
 {{
   "whats_in": "...",
   "why_matters": "...",
   "between_lines": "...",
   "spotlight_quotes": ["quote 1", "quote 2"],
-  "socratic_prompts": ["question 1?", "question 2?", "question 3?"],
-  "context_summary": "..."
+  "socratic_prompts": ["question 1?", "question 2?", "question 3?"]
 }}"""
     
     def _parse_response(self, content: str) -> Optional[Dict[str, Any]]:

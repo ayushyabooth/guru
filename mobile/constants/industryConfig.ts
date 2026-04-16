@@ -37,10 +37,8 @@ export interface IndustryVisualConfig {
   accent: string;
   /** Secondary accent for gradients (hex, optional — defaults to accent) */
   accentSecondary?: string;
-  /** Vector icon name from MaterialCommunityIcons (or MaterialIcons when noted) */
+  /** Phosphor icon name (mapped via Icon.tsx) */
   icon: string;
-  /** Icon library: 'mci' = MaterialCommunityIcons, 'mi' = MaterialIcons */
-  iconLibrary?: 'mci' | 'mi';
   /** Legacy emoji (kept for backward compat, will be phased out) */
   emoji: string;
   /** Category: which parent group this belongs to */
@@ -75,7 +73,7 @@ const STATIC_REGISTRY: IndustryVisualConfig[] = [
   // ── Consumer Specializations ──
   { id: 'food_beverage',                    displayName: 'Food & Beverage',                  accent: '#10B981', icon: 'food-apple-outline',         emoji: '🍔', category: 'consumer' },
   { id: 'health_beauty_personal_care',      displayName: 'Health/Beauty/Personal Care',       accent: '#EC4899', icon: 'spa-outline',                emoji: '💄', category: 'consumer' },
-  { id: 'apparel_footwear',                 displayName: 'Apparel & Footwear',                accent: '#A855F7', icon: 'shoe-sneaker',               emoji: '👟', category: 'consumer' },
+  { id: 'apparel_footwear',                 displayName: 'Apparel & Footwear',                accent: '#A855F7', icon: 'sneaker',                    emoji: '👟', category: 'consumer' },
   { id: 'home_furniture',                   displayName: 'Home & Furniture',                  accent: '#F59E0B', icon: 'home-outline',               emoji: '🏠', category: 'consumer' },
   { id: 'general_merchandise_mass_retail',  displayName: 'General Merchandise & Mass Retail', accent: '#3B82F6', icon: 'store-outline',              emoji: '🏬', category: 'consumer' },
   { id: 'specialty_retail_ecommerce',       displayName: 'Specialty Retail & E-commerce',     accent: '#06B6D4', icon: 'cart-outline',               emoji: '🛒', category: 'consumer' },
@@ -85,25 +83,25 @@ const STATIC_REGISTRY: IndustryVisualConfig[] = [
   { id: 'enterprise_saas_software',         displayName: 'Enterprise SaaS & Software',        accent: '#4F46E5', icon: 'briefcase-outline',          emoji: '💼', category: 'technology' },
   { id: 'consumer_internet_social',         displayName: 'Consumer Internet & Social Media',  accent: '#3B82F6', icon: 'cellphone',                  emoji: '📱', category: 'technology' },
   { id: 'semiconductors_components',        displayName: 'Semiconductors & Components',       accent: '#6B7280', icon: 'chip',                       emoji: '🔌', category: 'technology' },
-  { id: 'hardware_iot',                     displayName: 'Hardware & IoT',                    accent: '#0EA5E9', icon: 'access-point',               emoji: '📡', category: 'technology' },
-  { id: 'cloud_infrastructure_it_services', displayName: 'Cloud Infrastructure & IT Services',accent: '#7C3AED', icon: 'cloud-outline',              emoji: '☁️', category: 'technology' },
-  { id: 'fintech_technology',               displayName: 'FinTech (Technology focus)',         accent: '#22C55E', icon: 'credit-card-outline',        emoji: '💳', category: 'technology' },
-  { id: 'media_entertainment_telecom',      displayName: 'Media/Entertainment/Telecom',       accent: '#EC4899', icon: 'movie-open-outline',         emoji: '🎬', category: 'technology' },
+  { id: 'hardware_iot',                     displayName: 'Hardware & IoT',                    accent: '#0EA5E9', icon: 'broadcast',                  emoji: '📡', category: 'technology' },
+  { id: 'cloud_infrastructure_it_services', displayName: 'Cloud Infrastructure & IT Services',accent: '#7C3AED', icon: 'laptop',                     emoji: '☁️', category: 'technology' },
+  { id: 'fintech_technology',               displayName: 'FinTech (Technology focus)',         accent: '#22C55E', icon: 'chart-line',                 emoji: '💳', category: 'technology' },
+  { id: 'media_entertainment_telecom',      displayName: 'Media/Entertainment/Telecom',       accent: '#EC4899', icon: 'broadcast',                  emoji: '🎬', category: 'technology' },
 
   // ── Finance Specializations ──
-  { id: 'banking_diversified_financials',       displayName: 'Banking & Diversified Financials',      accent: '#2563EB', icon: 'bank-outline',             emoji: '🏦', category: 'finance' },
-  { id: 'capital_markets_investment_banking',   displayName: 'Capital Markets & Investment Banking',   accent: '#1E40AF', icon: 'trending-up',             emoji: '📈', category: 'finance' },
-  { id: 'asset_wealth_management',              displayName: 'Asset & Wealth Management',              accent: '#A855F7', icon: 'diamond-outline',          emoji: '💎', category: 'finance' },
-  { id: 'insurance',                            displayName: 'Insurance',                              accent: '#F59E0B', icon: 'shield-outline',           emoji: '🛡️', category: 'finance' },
-  { id: 'private_capital_pe_vc',                displayName: 'Private Capital (PE/VC)',                 accent: '#6B7280', icon: 'office-building-outline',  emoji: '🏢', category: 'finance' },
-  { id: 'specialty_finance_alternative_lenders',displayName: 'Specialty Finance & Alternative Lenders', accent: '#EF4444', icon: 'cash-multiple',            emoji: '💵', category: 'finance' },
-  { id: 'financial_technology_fintech',         displayName: 'Financial Technology (FinTech)',           accent: '#22C55E', icon: 'cellphone-link',           emoji: '📲', category: 'finance' },
+  { id: 'banking_diversified_financials',       displayName: 'Banking & Diversified Financials',      accent: '#2563EB', icon: 'briefcase-outline',    emoji: '🏦', category: 'finance' },
+  { id: 'capital_markets_investment_banking',   displayName: 'Capital Markets & Investment Banking',   accent: '#1E40AF', icon: 'chart-line',           emoji: '📈', category: 'finance' },
+  { id: 'asset_wealth_management',              displayName: 'Asset & Wealth Management',              accent: '#A855F7', icon: 'briefcase-outline',    emoji: '💎', category: 'finance' },
+  { id: 'insurance',                            displayName: 'Insurance',                              accent: '#F59E0B', icon: 'briefcase-outline',    emoji: '🛡️', category: 'finance' },
+  { id: 'private_capital_pe_vc',                displayName: 'Private Capital (PE/VC)',                 accent: '#6B7280', icon: 'briefcase-outline',    emoji: '🏢', category: 'finance' },
+  { id: 'specialty_finance_alternative_lenders',displayName: 'Specialty Finance & Alternative Lenders', accent: '#EF4444', icon: 'chart-line',           emoji: '💵', category: 'finance' },
+  { id: 'financial_technology_fintech',         displayName: 'Financial Technology (FinTech)',           accent: '#22C55E', icon: 'cellphone',            emoji: '📲', category: 'finance' },
 
   // ── Cross-cutting Interests ──
-  { id: 'sustainability',          displayName: 'Sustainability',          accent: '#22C55E', icon: 'leaf',                  emoji: '🌱', category: 'interest' },
-  { id: 'innovation',              displayName: 'Innovation',              accent: '#A855F7', icon: 'lightbulb-on-outline',  emoji: '💡', category: 'interest' },
-  { id: 'digital_transformation',  displayName: 'Digital Transformation',  accent: '#06B6D4', icon: 'refresh',               emoji: '🔄', category: 'interest' },
-  { id: 'ai_ml',                   displayName: 'AI/ML',                   accent: '#7C3AED', icon: 'robot-outline',          emoji: '🤖', category: 'interest' },
+  { id: 'sustainability',          displayName: 'Sustainability',          accent: '#22C55E', icon: 'food-apple',            emoji: '🌱', category: 'interest' },
+  { id: 'innovation',              displayName: 'Innovation',              accent: '#A855F7', icon: 'lightning-bolt',         emoji: '💡', category: 'interest' },
+  { id: 'digital_transformation',  displayName: 'Digital Transformation',  accent: '#06B6D4', icon: 'monitor',               emoji: '🔄', category: 'interest' },
+  { id: 'ai_ml',                   displayName: 'AI/ML',                   accent: '#7C3AED', icon: 'chip',                  emoji: '🤖', category: 'interest' },
 ];
 
 // ── Default/Fallback configs ─────────────────────────────────────────
@@ -111,7 +109,7 @@ const DEFAULT_CONFIG: IndustryVisualConfig = {
   id: 'default', displayName: 'General', accent: '#6B7280', icon: 'newspaper', emoji: '📰',
 };
 const CORE_CONFIG: IndustryVisualConfig = {
-  id: 'core', displayName: 'Core', accent: '#38BDF8', icon: 'compass-outline', emoji: '📊', category: 'core',
+  id: 'core', displayName: 'Core', accent: '#38BDF8', icon: 'newspaper', emoji: '📊', category: 'core',
 };
 
 // ── Build lookup index (normalized keys → config) ────────────────────
@@ -229,11 +227,11 @@ export function getIndustryAccent(key?: string): string {
 }
 
 /**
- * Get the vector icon name + library for a filter context.
+ * Get the vector icon name for a filter context.
  */
-export function getIndustryIcon(key?: string): { name: string; library: 'mci' | 'mi' } {
+export function getIndustryIcon(key?: string): { name: string } {
   const config = getIndustryConfig(key);
-  return { name: config.icon, library: config.iconLibrary || 'mci' };
+  return { name: config.icon };
 }
 
 /**
@@ -257,7 +255,6 @@ export interface FilterColorConfig {
   accent: string;
   emoji: string;
   icon: string;
-  iconLibrary: 'mci' | 'mi';
 }
 
 /**
@@ -270,7 +267,6 @@ export function getFilterColors(filterContext?: string): FilterColorConfig {
     accent: config.accent,
     emoji: config.emoji,
     icon: config.icon,
-    iconLibrary: config.iconLibrary || 'mci',
   };
 }
 
@@ -299,7 +295,7 @@ export function getFilterPalette(filterKey?: string): FilterPalette {
 // ── Annotation type config (Reader Mode) ─────────────────────────────
 
 export const AnnotationTypeConfig = {
-  reflection:       { accent: '#10B981', icon: 'thought-bubble-outline', iconLibrary: 'mci' as const, label: 'Reflection' },
-  expert_insight:   { accent: '#F59E0B', icon: 'lightbulb-outline',      iconLibrary: 'mci' as const, label: 'Expert Insight' },
-  leading_question: { accent: '#38BDF8', icon: 'help-circle-outline',    iconLibrary: 'mci' as const, label: 'Leading Question' },
+  reflection:       { accent: '#10B981', icon: 'thought-bubble-outline', label: 'Reflection' },
+  expert_insight:   { accent: '#F59E0B', icon: 'lightbulb-outline',      label: 'Expert Insight' },
+  leading_question: { accent: '#38BDF8', icon: 'help-circle-outline',    label: 'Leading Question' },
 } as const;

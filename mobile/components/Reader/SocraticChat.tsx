@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Animated, Easing, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import Icon from '../ui/Icon';
 import { OrganicBackground } from '../ui';
-import GuruRings from '../ui/GuruRings';
+import { Triskelion } from '../Rings/Triskelion';
 import { Spacing } from '@/constants/liquidGlass';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -26,65 +27,65 @@ interface SocraticChatProps {
 }
 
 // Simple markdown renderer for bold and lists
-const renderMarkdown = (text: string, isUser: boolean) => {
+const renderMarkdown = (text: string, isUser: boolean, textColor: string, accentColor: string) => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  
+
   lines.forEach((line, lineIdx) => {
     const trimmed = line.trim();
-    
+
     // Skip empty lines but add spacing
     if (!trimmed) {
       elements.push(<View key={`space-${lineIdx}`} style={{ height: 8 }} />);
       return;
     }
-    
+
     // Numbered list item
     const numberedMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
     if (numberedMatch) {
       elements.push(
         <View key={`line-${lineIdx}`} style={markdownStyles.listItem}>
-          <Text style={[markdownStyles.listNumber, isUser && markdownStyles.userText]}>{numberedMatch[1]}.</Text>
-          <Text style={[markdownStyles.listText, isUser && markdownStyles.userText]}>
-            {renderInlineMarkdown(numberedMatch[2], isUser)}
+          <Text style={[markdownStyles.listNumber, { color: isUser ? '#FFFFFF' : accentColor }]}>{numberedMatch[1]}.</Text>
+          <Text style={[markdownStyles.listText, { color: textColor }]}>
+            {renderInlineMarkdown(numberedMatch[2], isUser, textColor, accentColor)}
           </Text>
         </View>
       );
       return;
     }
-    
+
     // Bullet list item
     if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
       elements.push(
         <View key={`line-${lineIdx}`} style={markdownStyles.listItem}>
-          <Text style={[markdownStyles.bullet, isUser && markdownStyles.userText]}>•</Text>
-          <Text style={[markdownStyles.listText, isUser && markdownStyles.userText]}>
-            {renderInlineMarkdown(trimmed.substring(2), isUser)}
+          <Text style={[markdownStyles.bullet, { color: isUser ? '#FFFFFF' : accentColor }]}>•</Text>
+          <Text style={[markdownStyles.listText, { color: textColor }]}>
+            {renderInlineMarkdown(trimmed.substring(2), isUser, textColor, accentColor)}
           </Text>
         </View>
       );
       return;
     }
-    
+
     // Regular paragraph
     elements.push(
-      <Text key={`line-${lineIdx}`} style={[markdownStyles.paragraph, isUser && markdownStyles.userText]}>
-        {renderInlineMarkdown(trimmed, isUser)}
+      <Text key={`line-${lineIdx}`} style={[markdownStyles.paragraph, { color: textColor }]}>
+        {renderInlineMarkdown(trimmed, isUser, textColor, accentColor)}
       </Text>
     );
   });
-  
+
   return elements;
 };
 
 // Render inline markdown (bold)
-const renderInlineMarkdown = (text: string, isUser: boolean): React.ReactNode[] => {
+const renderInlineMarkdown = (text: string, isUser: boolean, textColor: string, accentColor: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
   const regex = /\*\*(.+?)\*\*/g;
   let lastIndex = 0;
   let match;
   let idx = 0;
-  
+
   while ((match = regex.exec(text)) !== null) {
     // Add text before the match
     if (match.index > lastIndex) {
@@ -92,19 +93,19 @@ const renderInlineMarkdown = (text: string, isUser: boolean): React.ReactNode[] 
     }
     // Add bold text
     parts.push(
-      <Text key={`bold-${idx}`} style={[markdownStyles.bold, isUser && markdownStyles.userBold]}>
+      <Text key={`bold-${idx}`} style={[markdownStyles.bold, { color: isUser ? '#FFFFFF' : accentColor, fontWeight: '700' }]}>
         {match[1]}
       </Text>
     );
     lastIndex = regex.lastIndex;
     idx++;
   }
-  
+
   // Add remaining text
   if (lastIndex < text.length) {
     parts.push(text.substring(lastIndex));
   }
-  
+
   return parts.length > 0 ? parts : [text];
 };
 
@@ -112,7 +113,6 @@ const markdownStyles = StyleSheet.create({
   paragraph: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#E2E8F0',
     marginBottom: Spacing.sm,
   },
   userText: {
@@ -120,7 +120,6 @@ const markdownStyles = StyleSheet.create({
   },
   bold: {
     fontWeight: '700',
-    color: '#38BDF8',
   },
   userBold: {
     color: '#FFFFFF',
@@ -134,14 +133,12 @@ const markdownStyles = StyleSheet.create({
   listNumber: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#38BDF8',
     fontWeight: '600',
     width: 24,
   },
   bullet: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#38BDF8',
     fontWeight: '600',
     width: 16,
   },
@@ -149,9 +146,30 @@ const markdownStyles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    color: '#E2E8F0',
   },
 });
+
+// Breathing animation for loading triskelion
+function BreathingTriskelion() {
+  const anim = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: anim }}>
+      <Triskelion size={24} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
+    </Animated.View>
+  );
+}
 
 // Generate a UUID v4 (simplified for cross-platform)
 const generateUUID = (): string => {
@@ -173,6 +191,43 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
   existingConversationId,
   previousMessages,
 }) => {
+  const { isDark, colors: themeColors } = useTheme();
+
+  // Theme tokens for Guru Chat
+  // Light: indigo (#6366F1) accent; Dark: sky blue (#38BDF8) accent
+  const CHAT_ACCENT = isDark ? '#38BDF8' : '#6366F1';
+  const containerBg = isDark ? 'rgba(10, 14, 23, 0.92)' : 'transparent';
+  const headerBg = isDark ? 'rgba(15, 20, 35, 0.65)' : 'rgba(255,255,255,0.80)';
+  const headerBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+  const backBtnColor = isDark ? '#38BDF8' : '#6366F1';
+  const headerTitleColor = isDark ? '#F1F5F9' : themeColors.textPrimary;
+  const contextChipBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.04)';
+  const contextChipBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.20)';
+  const contextLabelColor = isDark ? '#64748B' : '#94A3B8';
+  const contextTitleColor = isDark ? '#F1F5F9' : '#475569';
+  const userBubbleBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(99,102,241,0.90)';
+  const userBubbleBorder = isDark ? 'rgba(125, 211, 252, 0.25)' : 'rgba(99,102,241,0.40)';
+  const userTextColor = '#FFFFFF';
+  const assistantBubbleBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.90)';
+  const assistantBubbleBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.15)';
+  const assistantAccentBarColor = isDark ? '#6366F1' : '#6366F1';
+  const assistantTextColor = isDark ? '#E2E8F0' : '#334155';
+  const guruLabelColor = '#6366F1';
+  const inputOuterBg = isDark ? 'rgba(15,20,35,0.55)' : 'rgba(255,255,255,0.90)';
+  const inputOuterBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.20)';
+  const inputFieldBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.95)';
+  const inputFieldBorderColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(99,102,241,0.20)';
+  const inputTextColor = isDark ? '#F1F5F9' : themeColors.textPrimary;
+  const inputPlaceholderColor = isDark ? '#9CA3AF' : '#94A3B8';
+  const sendBtnBg = isDark ? 'rgba(56, 189, 248, 0.85)' : '#6366F1';
+  const sendBtnBorder = isDark ? 'rgba(125, 211, 252, 0.4)' : 'rgba(99,102,241,0.40)';
+  const sendBtnDisabledBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  const followUpBg = isDark ? 'rgba(251,191,36,0.08)' : 'rgba(0,0,0,0.04)';
+  const followUpBorderColor = isDark ? 'rgba(251,191,36,0.2)' : 'rgba(0,0,0,0.10)';
+  const followUpTextColor = isDark ? '#FBBF24' : '#6366F1';
+  const followUpPromptBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(99,102,241,0.05)';
+  const followUpPromptBorder = isDark ? 'rgba(251,191,36,0.2)' : 'rgba(99,102,241,0.15)';
+
   const [messages, setMessages] = useState<ChatMessage[]>(previousMessages || []);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -279,51 +334,68 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: containerBg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={100}
     >
       <OrganicBackground variant="catchup" />
-      {/* Header with Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+      {/* Glass Header */}
+      <View style={[
+        styles.header,
+        { backgroundColor: headerBg, borderBottomColor: headerBorderColor },
+        Platform.OS === 'web' && {
+          // @ts-ignore
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        } as any,
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={onBack || onClose}
         >
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: backBtnColor }]}>← Back</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.headerCenter}>
-          <GuruRings size="logo" dimensions={28} />
-          <Text style={styles.headerTitle}>Guru</Text>
+          <Triskelion size={20} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
+          <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Guru</Text>
         </View>
-        
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Icon name="close" size={18} color="#6B7280" />
+
+        <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]} onPress={onClose}>
+          <Icon name="close" size={18} color={isDark ? '#94A3B8' : themeColors.textTertiary} />
         </TouchableOpacity>
       </View>
 
-      {/* Article Context Card */}
+      {/* Glass Article Context Card */}
       {articleTitle && showArticleContext && (
-        <TouchableOpacity 
-          style={styles.articleContext}
+        <TouchableOpacity
+          style={[
+            styles.articleContext,
+            { backgroundColor: contextChipBg, borderColor: contextChipBorderColor },
+            Platform.OS === 'web' && {
+              // @ts-ignore
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+            } as any,
+          ]}
           onPress={onViewStory}
           activeOpacity={0.8}
         >
+          {/* Left accent bar */}
+          <View style={[styles.articleContextAccentBar, { backgroundColor: CHAT_ACCENT }]} />
           <View style={styles.articleContextContent}>
-            <Icon name="file-document-outline" size={18} color="#38BDF8" />
             <View style={styles.articleContextText}>
-              <Text style={styles.articleContextLabel}>From article:</Text>
-              <Text style={styles.articleContextTitle} numberOfLines={1}>
+              <Text style={[styles.articleContextLabel, { color: contextLabelColor }]}>FROM ARTICLE:</Text>
+              <Text style={[styles.articleContextTitle, { color: contextTitleColor }]} numberOfLines={1}>
                 {articleTitle}
               </Text>
               {articleSource && (
-                <Text style={styles.articleContextSource}>{articleSource}</Text>
+                <Text style={[styles.articleContextSource, { color: isDark ? '#94A3B8' : themeColors.textTertiary }]}>{articleSource}</Text>
               )}
             </View>
           </View>
           {onViewStory && (
-            <Text style={styles.articleContextAction}>View Story →</Text>
+            <Text style={[styles.articleContextAction, { color: CHAT_ACCENT }]}>View Story →</Text>
           )}
         </TouchableOpacity>
       )}
@@ -342,36 +414,56 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
               message.role === 'user' ? styles.userMessageWrapper : styles.assistantMessageWrapper,
             ]}
           >
-            {message.role === 'assistant' && (
-              <View style={styles.avatarContainer}>
-                <GuruRings size="logo" dimensions={32} />
-              </View>
-            )}
             <View
               style={[
                 styles.messageBubble,
-                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                message.role === 'user'
+                  ? { backgroundColor: userBubbleBg, borderColor: userBubbleBorder, borderBottomRightRadius: 6 }
+                  : { backgroundColor: assistantBubbleBg, borderColor: assistantBubbleBorder, borderBottomLeftRadius: 6 },
+                { borderWidth: 1, borderRadius: 20 },
+                Platform.OS === 'web' && message.role === 'user' && {
+                  // @ts-ignore
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                } as any,
                 Platform.OS === 'web' && message.role === 'assistant' && {
-                  // @ts-ignore - Web-specific CSS properties
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(56,189,248,0.06) 50%, rgba(255,255,255,0.04) 100%)',
+                  // @ts-ignore
                   backdropFilter: 'blur(20px)',
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)',
-                },
+                  WebkitBackdropFilter: 'blur(20px)',
+                } as any,
               ] as any}
             >
-              <View style={styles.messageContent}>
-                {renderMarkdown(message.content, message.role === 'user')}
+              {/* Assistant bubble: left accent bar + Guru label */}
+              {message.role === 'assistant' && (
+                <>
+                  <View style={[styles.assistantAccentBar, { backgroundColor: assistantAccentBarColor }]} />
+                  <View style={styles.assistantBubbleHeader}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: guruLabelColor, textTransform: 'uppercase', letterSpacing: 0.5 }}>Guru</Text>
+                  </View>
+                </>
+              )}
+
+              <View style={[
+                styles.messageContent,
+                message.role === 'assistant' && { paddingLeft: 4 },
+              ]}>
+                {renderMarkdown(
+                  message.content,
+                  message.role === 'user',
+                  message.role === 'user' ? userTextColor : assistantTextColor,
+                  CHAT_ACCENT,
+                )}
               </View>
 
               {/* Citations */}
               {message.citations && message.citations.length > 0 && (
-                <View style={styles.citationsContainer}>
+                <View style={[styles.citationsContainer, { borderTopColor: `${CHAT_ACCENT}26` }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
-                    <Icon name="bookshelf" size={13} color="#38BDF8" />
-                    <Text style={[styles.citationsLabel, { marginBottom: 0 }]}>Related Articles</Text>
+                    <Icon name="bookshelf" size={13} color={CHAT_ACCENT} />
+                    <Text style={[styles.citationsLabel, { marginBottom: 0, color: CHAT_ACCENT }]}>Related Articles</Text>
                   </View>
                   {message.citations.map((citation, idx) => (
-                    <Text key={idx} style={styles.citationText}>
+                    <Text key={idx} style={[styles.citationText, { color: isDark ? '#94A3B8' : themeColors.textTertiary, borderLeftColor: `${CHAT_ACCENT}4D` }]}>
                       {citation}
                     </Text>
                   ))}
@@ -381,27 +473,27 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
           </View>
         ))}
 
-        {/* Loading indicator */}
+        {/* Loading indicator — animated breathing triskelion */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#38BDF8" />
-            <Text style={styles.loadingText}>Thinking...</Text>
+            <BreathingTriskelion />
           </View>
         )}
 
         {/* Follow-up prompts - Dynamic Socratic questions */}
         {!isLoading && followUpPrompts.length > 0 && (
-          <View style={styles.promptsContainer}>
+          <View style={[styles.promptsContainer, { backgroundColor: followUpBg, borderColor: followUpBorderColor }]}>
             <View style={styles.promptsHeader}>
-              <Icon name="lightbulb-outline" size={16} color="#B45309" />
-              <Text style={styles.promptsLabel}>Go deeper</Text>
+              <Icon name="lightbulb-outline" size={16} color={followUpTextColor} />
+              <Text style={[styles.promptsLabel, { color: followUpTextColor }]}>Go deeper</Text>
             </View>
             {followUpPrompts.map((prompt, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={[
                   styles.promptButton,
-                  idx === 0 && styles.promptButtonPrimary,
+                  { backgroundColor: followUpPromptBg, borderColor: followUpPromptBorder },
+                  idx === 0 && { backgroundColor: isDark ? '#FBBF24' : CHAT_ACCENT, borderColor: isDark ? '#F59E0B' : CHAT_ACCENT },
                   Platform.OS === 'web' && {
                     // @ts-ignore
                     transition: 'all 0.2s ease',
@@ -411,10 +503,10 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.promptContent}>
-                  <Text style={styles.promptArrow}>→</Text>
+                  <Text style={[styles.promptArrow, { color: idx === 0 ? '#FFFFFF' : followUpTextColor }]}>→</Text>
                   <Text style={[
                     styles.promptButtonText,
-                    idx === 0 && styles.promptButtonTextPrimary,
+                    { color: idx === 0 ? '#FFFFFF' : followUpTextColor },
                   ]}>{prompt}</Text>
                 </View>
               </TouchableOpacity>
@@ -423,13 +515,29 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
         )}
       </ScrollView>
 
-      {/* Input */}
-      <View style={styles.inputContainerOuter}>
+      {/* Glass Input Bar */}
+      <View style={[
+        styles.inputContainerOuter,
+        { backgroundColor: inputOuterBg, borderTopColor: inputOuterBorderColor, borderTopWidth: isDark ? 1 : 1.5 },
+        Platform.OS === 'web' && {
+          // @ts-ignore
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        } as any,
+      ]}>
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
-            placeholder="Share your thoughts or ask a question..."
-            placeholderTextColor="#9CA3AF"
+            style={[
+              styles.input,
+              { backgroundColor: inputFieldBg, borderColor: inputFieldBorderColor, color: inputTextColor },
+              Platform.OS === 'web' && {
+                // @ts-ignore
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              } as any,
+            ]}
+            placeholder="Ask about this article..."
+            placeholderTextColor={inputPlaceholderColor}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -437,11 +545,15 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
             editable={!isLoading}
           />
           <TouchableOpacity
-            style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              { backgroundColor: sendBtnBg, borderColor: sendBtnBorder },
+              (!inputText.trim() || isLoading) && { backgroundColor: sendBtnDisabledBg, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', shadowOpacity: 0 },
+            ]}
             onPress={handleSubmit}
             disabled={!inputText.trim() || isLoading}
           >
-            <Text style={styles.sendButtonText}>→</Text>
+            <Icon name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -452,9 +564,8 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E17',
   },
-  // Header with navigation
+  // Glass Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -462,9 +573,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
     paddingTop: Platform.OS === 'web' ? 12 : 50,
-    backgroundColor: 'rgba(15, 20, 35, 0.85)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   backButton: {
     paddingVertical: Spacing.sm,
@@ -473,7 +582,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#38BDF8',
     fontWeight: '500',
   },
   headerCenter: {
@@ -481,33 +589,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  guruLogoSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#38BDF8',
-  },
-  guruLogoText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F1F5F9',
   },
   closeButton: {
     padding: Spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 20,
+    borderWidth: 1,
   },
-  closeButtonText: {
-    // Kept for backward compat
-  },
-  // Article context card
+  // Glass Article context card
   articleContext: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -515,10 +606,17 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginTop: 12,
     padding: 12,
-    backgroundColor: 'rgba(56,189,248,0.06)',
+    paddingLeft: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(56,189,248,0.12)',
+    overflow: 'hidden',
+  },
+  articleContextAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
   },
   articleContextContent: {
     flexDirection: 'row',
@@ -526,30 +624,25 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
-  articleContextIcon: {
-    // Kept for backward compat
-  },
   articleContextText: {
     flex: 1,
   },
   articleContextLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
+    fontSize: 10,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    fontWeight: '600',
   },
   articleContextTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F1F5F9',
+    marginTop: 2,
   },
   articleContextSource: {
     fontSize: 12,
-    color: '#94A3B8',
   },
   articleContextAction: {
     fontSize: 12,
-    color: '#38BDF8',
     fontWeight: '600',
   },
   // Messages area
@@ -579,42 +672,29 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '85%',
   },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  avatar: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   messageBubble: {
-    borderRadius: 20,
+    borderRadius: 16,
     padding: Spacing.md,
     flex: 1,
+    overflow: 'hidden',
   },
-  userBubble: {
-    backgroundColor: 'rgba(56, 189, 248, 0.30)',
-    borderWidth: 1,
-    borderColor: 'rgba(125, 211, 252, 0.35)',
-    borderBottomRightRadius: 6,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      },
-      default: {},
-    }),
-  },
+  // Bubble shape variants (overridden inline with theme colors)
+  userBubble: {},
   assistantBubble: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    position: 'relative',
+  },
+  assistantAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    borderTopLeftRadius: 16,
     borderBottomLeftRadius: 6,
+  },
+  assistantBubbleHeader: {
+    marginBottom: 6,
+    paddingLeft: 4,
   },
   messageContent: {
     // Container for rendered markdown
@@ -626,52 +706,39 @@ const styles = StyleSheet.create({
   userText: {
     color: '#FFFFFF',
   },
-  assistantText: {
-    color: '#E2E8F0',
-  },
+  assistantText: {},
   citationsContainer: {
     marginTop: Spacing.md,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(56,189,248,0.15)',
   },
   citationsLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#38BDF8',
     marginBottom: Spacing.sm,
   },
   citationText: {
     fontSize: 12,
-    color: '#94A3B8',
     lineHeight: 20,
     marginBottom: Spacing.xs,
     paddingLeft: Spacing.sm,
     borderLeftWidth: 2,
-    borderLeftColor: 'rgba(56,189,248,0.3)',
   },
+  // Loading: breathing triskelion
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingVertical: Spacing.md,
-    paddingLeft: 46,
+    paddingLeft: 16,
     gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#38BDF8',
-    fontWeight: '500',
   },
   promptsContainer: {
     marginTop: Spacing.md,
-    marginLeft: 46,
     marginRight: Spacing.md,
-    backgroundColor: 'rgba(251,191,36,0.08)',
     borderRadius: Spacing.md,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.2)',
   },
   promptsHeader: {
     flexDirection: 'row',
@@ -679,29 +746,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: Spacing.sm,
   },
-  promptsIcon: {
-    // Kept for backward compat
-  },
   promptsLabel: {
     fontSize: 12,
-    color: '#FBBF24',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   promptButton: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
     paddingVertical: 14,
     paddingHorizontal: Spacing.md,
     borderRadius: 12,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.2)',
   },
-  promptButtonPrimary: {
-    backgroundColor: '#FBBF24',
-    borderColor: '#F59E0B',
-  },
+  promptButtonPrimary: {},
   promptContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -709,25 +767,19 @@ const styles = StyleSheet.create({
   },
   promptArrow: {
     fontSize: 16,
-    color: '#B45309',
     fontWeight: '700',
   },
   promptButtonText: {
     flex: 1,
     fontSize: 14,
-    color: '#FBBF24',
     fontWeight: '500',
     lineHeight: 20,
   },
   promptButtonTextPrimary: {
-    color: '#78350F',
     fontWeight: '600',
   },
-  inputContainerOuter: {
-    backgroundColor: 'rgba(15,20,35,0.55)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-  },
+  // Glass Input Bar
+  inputContainerOuter: {},
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -740,30 +792,28 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: Spacing.lg,
     paddingHorizontal: 20,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#F1F5F9',
     maxHeight: 120,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
+  // Glass circle send button
   sendButton: {
     width: Spacing.xxl,
     height: Spacing.xxl,
-    borderRadius: Spacing.lg,
-    backgroundColor: '#38BDF8',
+    borderRadius: Spacing.xxl / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  sendButtonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
+  sendButtonDisabled: {},
   sendButtonText: {
-    fontSize: 22,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    // kept for backward compat
   },
 });

@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet, RefreshControl, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet, RefreshControl, Platform, Animated } from 'react-native';
 import Icon from '../ui/Icon';
 import { useCatchupFeed } from '../../hooks/useCatchupFeed';
 import { CatchupService } from '../../services/article-service';
 import { InFocusStoryboardCard } from './InFocusStoryboardCard';
 import { StoryboardSkeleton } from './StoryboardSkeleton';
-import { useTheme } from '../../contexts/ThemeContext';
+import { DarkTheme } from '../../constants/darkTheme';
 import {
   Spacing,
   Typography,
@@ -14,6 +14,26 @@ import {
   RingColors,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
+
+/** Lightweight stagger wrapper — fades + slides each card with a 50ms offset */
+function StaggeredCard({ children, index }: { children: React.ReactNode; index: number }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const delay = index * 50;
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 350, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 350, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+}
 
 interface CatchupFeedProps {
   context: string;           // 'core', 'specialization:X', 'interest:Y'
@@ -26,7 +46,6 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   onArticleSave,
   onNotRelevant,
 }) => {
-  const { colors } = useTheme();
   const {
     storyboards,
     isLoading,
@@ -59,15 +78,15 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   if (error && storyboards.length === 0) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={[styles.errorText, { color: colors.error }]}>Failed to load stories</Text>
-        <Text style={[styles.errorSubtext, { color: colors.textTertiary }]}>{error}</Text>
+        <Text style={styles.errorText}>Failed to load stories</Text>
+        <Text style={styles.errorSubtext}>{error}</Text>
         {error.includes('Unauthorized') && (
-          <Text style={[styles.authHint, { color: colors.textSecondary }]}>
+          <Text style={styles.authHint}>
             Please sign up or log in to access your personalized feed
           </Text>
         )}
         <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-          <Text style={[styles.retryButtonText, { color: colors.textPrimary }]}>Try Again</Text>
+          <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -80,13 +99,15 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   if (storyboards.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: colors.textPrimary }]}>No stories available</Text>
-        <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
-          Check back later for new content in this category
-        </Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={refresh}>
-          <Text style={[styles.refreshButtonText, { color: colors.textSecondary }]}>Refresh</Text>
-        </TouchableOpacity>
+        <View style={[styles.emptyGlassCard, Platform.OS === 'web' && styles.emptyGlassCardWeb as any]}>
+          <Text style={styles.emptyText}>All caught up!</Text>
+          <Text style={styles.emptySubtext}>
+            Check back later for new content in this category
+          </Text>
+          <TouchableOpacity style={styles.refreshButton} onPress={refresh}>
+            <Text style={styles.refreshButtonText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -94,7 +115,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: 0 }}
+      contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
       refreshControl={
         <RefreshControl
           refreshing={isLoading && storyboards.length > 0}
@@ -104,31 +125,32 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
         />
       }
     >
-      {storyboards.map(storyboard => (
-        <InFocusStoryboardCard
-          key={storyboard.id}
-          storyboard={storyboard}
-          onSave={handleSaveArticle}
-          onNotRelevant={handleNotRelevant}
-        />
+      {storyboards.map((storyboard, index) => (
+        <StaggeredCard key={storyboard.id} index={index}>
+          <InFocusStoryboardCard
+            storyboard={storyboard}
+            onSave={handleSaveArticle}
+            onNotRelevant={handleNotRelevant}
+          />
+        </StaggeredCard>
       ))}
       
       {error && storyboards.length > 0 && (
         <View style={styles.errorBanner}>
-          <Text style={[styles.errorBannerText, { color: colors.error }]}>Failed to load more stories</Text>
+          <Text style={styles.errorBannerText}>Failed to load more stories</Text>
         </View>
       )}
-
+      
       {hasMore && !isLoading && (
-        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { ...getDarkBackdropBlur(12), boxShadow: `0 0 16px ${colors.catchupGlow}, inset 0 1px 0 ${colors.glassHighlight}` } as any]} onPress={loadMore}>
-          <Text style={[styles.loadMoreButtonText, { color: colors.textPrimary }]}>Load More Stories</Text>
+        <TouchableOpacity style={[styles.loadMoreButton, Platform.OS === 'web' && { ...getDarkBackdropBlur(12), boxShadow: `0 0 16px ${DarkTheme.catchupGlow}, inset 0 1px 0 ${DarkTheme.glassHighlight}` } as any]} onPress={loadMore}>
+          <Text style={styles.loadMoreButtonText}>Load More Stories</Text>
         </TouchableOpacity>
       )}
-
+      
       {isLoading && storyboards.length > 0 && (
         <View style={styles.loadingMore}>
           <ActivityIndicator size="small" color={RingColors.catchup.primary} />
-          <Text style={[styles.loadingMoreText, { color: colors.textSecondary }]}>Loading more...</Text>
+          <Text style={styles.loadingMoreText}>Loading more...</Text>
         </View>
       )}
       
@@ -159,6 +181,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: Spacing.md,
     ...Typography.bodyLarge,
+    color: DarkTheme.textSecondary,
     textAlign: 'center',
   },
   errorContainer: {
@@ -169,11 +192,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.headlineSmall,
+    color: DarkTheme.error,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   errorSubtext: {
     ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
@@ -184,6 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   retryButtonText: {
+    color: DarkTheme.textPrimary,
     ...Typography.labelLarge,
   },
   emptyContainer: {
@@ -192,13 +218,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.xl,
   },
+  emptyGlassCard: {
+    ...DarkGlassMaterials.card,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  emptyGlassCardWeb: {
+    ...getDarkBackdropBlur(16),
+  },
   emptyText: {
     ...Typography.headlineSmall,
+    color: 'rgba(255,255,255,0.45)',
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   emptySubtext: {
     ...Typography.bodyMedium,
+    color: DarkTheme.textTertiary,
     textAlign: 'center',
     marginBottom: Spacing.lg,
   },
@@ -208,6 +245,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   refreshButtonText: {
+    color: DarkTheme.textSecondary,
     ...Typography.labelLarge,
   },
   errorBanner: {
@@ -218,6 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorBannerText: {
+    color: DarkTheme.error,
     ...Typography.bodyMedium,
     fontWeight: '500',
   },
@@ -231,6 +270,7 @@ const styles = StyleSheet.create({
     borderColor: `${RingColors.catchup.light}59`,
   },
   loadMoreButtonText: {
+    color: DarkTheme.textPrimary,
     ...Typography.labelLarge,
   },
   loadingMore: {
@@ -242,6 +282,7 @@ const styles = StyleSheet.create({
   },
   loadingMoreText: {
     ...Typography.bodyMedium,
+    color: DarkTheme.textSecondary,
   },
   endMessage: {
     padding: Spacing.lg,
@@ -258,6 +299,7 @@ const styles = StyleSheet.create({
   },
   authHint: {
     ...Typography.bodyMedium,
+    color: DarkTheme.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.md,
     fontStyle: 'italic',

@@ -74,16 +74,26 @@ async def socratic_chat(
             UserProfile.user_id == current_user.id
         ).first()
         
-        # Build context from article — prefer context_summary (legally safe, dense RAG context)
+        # Build context from article — prefer context_summary (legally safe, dense RAG context).
+        # Lazily generate context_summary on first Q&A access (saves tokens at ingestion for
+        # articles that never get opened).
         from app.models.article_rich_content import ArticleRichContent
+        from app.services.rich_summary_service import RichSummaryService
         rich_content = db.query(ArticleRichContent).filter(
             ArticleRichContent.article_id == request.article_id
         ).first()
-        context_text = (
-            (rich_content.context_summary if rich_content and rich_content.context_summary else None)
-            or (article.raw_text[:3000] if article.raw_text else None)
-            or (expert_note.notes_text if expert_note else 'Content not available')
-        )
+        context_text = rich_content.context_summary if rich_content and rich_content.context_summary else None
+        if not context_text:
+            # Lazy-generate and cache
+            try:
+                context_text = RichSummaryService(db).ensure_context_summary(article)
+            except Exception as e:
+                logger.warning(f"ensure_context_summary failed: {e}")
+        if not context_text:
+            context_text = (
+                (article.raw_text[:3000] if article.raw_text else None)
+                or (expert_note.notes_text if expert_note else 'Content not available')
+            )
         article_context = f"""
 Article Title: {article.title}
 Source: {article.source}
@@ -119,7 +129,9 @@ Content: {context_text}
         if user_profile:
             user_context = f"User's Industry: {user_profile.core_industry}\nUser's Specializations: {', '.join(user_profile.specializations)}"
         
-        system_prompt = f"""You are Guru - a sharp, insightful mentor who makes complex topics click.
+        # System prompt is split into two blocks so the large, stable article context
+        # can be marked with cache_control (90% discount on cache hits across multi-turn chat).
+        system_instructions = """You are Guru - a sharp, insightful mentor who makes complex topics click.
 
 Your goal: Keep the reader hooked and learning. Make them WANT to go deeper.
 
@@ -127,7 +139,7 @@ How to respond:
 1. Jump straight into the insight - no labels, no headers, no "here's what I think"
 2. Be conversational, like a brilliant colleague at coffee who gets excited about ideas
 3. Connect the article to their world with specific, actionable angles
-4. If it feels natural, end with ONE curious question that pulls them deeper (but don't force it - sometimes the insight speaks for itself)
+4. If it feels natural, end with ONE curious question that pulls them deeper (but don't force it)
 
 Voice:
 - Confident but not preachy
@@ -139,19 +151,25 @@ NEVER DO THIS:
 - Don't use headers like "Key insight:" or "Question:" - just write naturally
 - Don't announce what you're doing ("Let me explain..." "Here's a question...")
 - Don't lecture - this is a dialogue, not a TED talk
-- Don't ask multiple questions - one max, and only if it genuinely sparks curiosity
+- Don't ask multiple questions in your response - one max, and only if it sparks curiosity
 
-Context from article:
+OUTPUT FORMAT (STRICT):
+Return ONLY a valid JSON object with exactly these two keys:
+{
+  "response": "<your Socratic answer here, natural prose, no headers>",
+  "followups": ["<q1>", "<q2>", "<q3>"]
+}
+followups must contain exactly 3 short (<60 char) follow-up questions that deepen understanding, connect to the user's work, or challenge assumptions. Start each with action words like "How might...", "What if...", "Why does...". Return NOTHING outside the JSON."""
+
+        article_block = f"""Context from article:
 {article_context}
 {related_articles_context}
 
-{user_context}
-
-Remember: You're helping them think, not telling them what to think. Keep them curious."""
+{user_context}"""
 
         # Build conversation for Claude
         claude_client = get_claude_client()
-        
+
         # Format conversation history
         messages = []
         for msg in request.conversation_history:
@@ -159,22 +177,45 @@ Remember: You're helping them think, not telling them what to think. Keep them c
                 "role": msg.role,
                 "content": msg.content
             })
-        
+
         # Add current user question
         messages.append({
             "role": "user",
             "content": request.question
         })
-        
-        # Get response from Claude
+
+        # Single merged call: returns both the response and follow-up prompts as JSON.
+        # Cache the large article context block — stable across turns in the same chat.
         response = claude_client.client.messages.create(
             model=settings.CLAUDE_SONNET_MODEL,
-            max_tokens=500,  # Keep responses concise
-            system=system_prompt,
+            max_tokens=700,  # 500 response + ~150 followups + JSON scaffolding
+            system=[
+                {"type": "text", "text": system_instructions},
+                {"type": "text", "text": article_block, "cache_control": {"type": "ephemeral"}},
+            ],
             messages=messages
         )
-        
-        assistant_response = response.content[0].text
+
+        raw_text = response.content[0].text.strip()
+
+        # Parse JSON; fall back gracefully if the model returns plain text.
+        import json as _json
+        import re as _re
+        assistant_response = raw_text
+        parsed_followups: List[str] = []
+        try:
+            # Strip markdown fences if present
+            jtext = raw_text
+            if jtext.startswith("```"):
+                jtext = _re.sub(r"^```(?:json)?\s*|\s*```$", "", jtext.strip(), flags=_re.MULTILINE)
+            parsed = _json.loads(jtext)
+            if isinstance(parsed, dict):
+                assistant_response = str(parsed.get("response", raw_text)).strip()
+                fu = parsed.get("followups") or []
+                if isinstance(fu, list):
+                    parsed_followups = [str(q).strip() for q in fu if str(q).strip()][:3]
+        except Exception as parse_err:
+            logger.warning(f"Socratic JSON parse failed, using raw text: {parse_err}")
         
         # Extract any related article citations from response
         related_citations = []
@@ -189,51 +230,10 @@ Remember: You're helping them think, not telling them what to think. Keep them c
                         if line.strip().startswith(f"{idx}."):
                             related_citations.append(line.strip())
         
-        # Generate dynamic, contextual follow-up prompts using Claude
-        follow_up_prompts = []
-        try:
-            # Build context for follow-up generation
-            conversation_summary = "\n".join([
-                f"{msg.role}: {msg.content[:200]}" 
-                for msg in request.conversation_history[-3:]  # Last 3 messages
-            ])
-            
-            followup_prompt = f"""Based on this Socratic dialogue about the article, generate exactly 3 thought-provoking follow-up questions.
-
-Article: {article.title}
-User's Industry: {user_profile.core_industry if user_profile else 'General professional'}
-User's Specializations: {', '.join(user_profile.specializations) if user_profile and user_profile.specializations else 'Not specified'}
-
-Recent conversation:
-{conversation_summary}
-User asked: {request.question}
-Guru responded: {assistant_response[:500]}
-
-Generate 3 follow-up questions that:
-1. **Deepen understanding** - Push the user to think critically about implications
-2. **Connect to their work** - Make it relevant to their industry/role
-3. **Challenge assumptions** - Encourage exploring different perspectives
-
-Format: Return ONLY the 3 questions, one per line, no numbering or bullets. Keep each under 60 characters.
-Make questions punchy and direct - start with action words like "How might...", "What if...", "Why does..."."""
-
-            followup_response = claude_client.client.messages.create(
-                model=settings.CLAUDE_HAIKU_MODEL,  # Use Haiku for speed/cost
-                max_tokens=150,
-                messages=[{"role": "user", "content": followup_prompt}]
-            )
-            
-            # Parse the response into individual questions
-            raw_prompts = followup_response.content[0].text.strip().split('\n')
-            follow_up_prompts = [
-                q.strip().lstrip('0123456789.-) ') 
-                for q in raw_prompts 
-                if q.strip() and len(q.strip()) > 10
-            ][:3]  # Take max 3
-            
-        except Exception as e:
-            logger.warning(f"Failed to generate dynamic follow-ups: {e}")
-            # Fallback to contextual but simpler prompts
+        # Follow-ups come from the same merged Claude call (no second API call).
+        # Fall back to deterministic prompts if parsing gave us nothing.
+        follow_up_prompts = parsed_followups
+        if not follow_up_prompts:
             if user_profile and user_profile.core_industry:
                 follow_up_prompts = [
                     f"How might this impact {user_profile.core_industry}?",

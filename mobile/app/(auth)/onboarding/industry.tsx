@@ -18,6 +18,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Circle, Rect, G } from 'react-native-svg';
 import { router } from 'expo-router';
@@ -279,6 +280,11 @@ export default function IndustryScreen() {
                   style={[
                     styles.gridCard,
                     isSelected && styles.gridCardSelected,
+                    isSelected && Platform.OS === 'web' ? {
+                      boxShadow: `0 0 16px ${industry.color_primary || '#38BDF8'}40`,
+                      borderColor: industry.color_primary || '#38BDF8',
+                      backgroundColor: `${industry.color_primary || '#38BDF8'}2E`,
+                    } as any : {},
                   ]}
                   onPress={() => handleIndustrySelect(industry.id)}
                   activeOpacity={0.7}
@@ -321,6 +327,7 @@ export default function IndustryScreen() {
           disabled={!canProceed()}
           variant="primary"
           size="lg"
+          accentColor="#38BDF8"
           fullWidth
         />
       </View>
@@ -402,7 +409,12 @@ const styles = StyleSheet.create({
   gridCardSelected: {
     borderColor: '#38BDF8',
     borderWidth: 2,
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    shadowColor: '#38BDF8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
   iconBackground: {
     width: 72,

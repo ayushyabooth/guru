@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from '../ui/Icon';
+import GlassButton from '../ui/GlassButton';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import { GuidedQuestion } from '../../services/recap-service';
@@ -318,16 +319,24 @@ export default function QuestionsStage({
             </TouchableOpacity>
           )}
           {hasAnsweredAny && onSkipToSocratic && (
-            <TouchableOpacity style={styles.socraticButton} onPress={onSkipToSocratic}>
-              <Text style={styles.socraticButtonText}>Continue to Socratic</Text>
-              <Icon name="chevron-right" size={16} color="#fff" />
-            </TouchableOpacity>
+            <GlassButton
+              title="Continue to Socratic"
+              onPress={onSkipToSocratic}
+              accentColor="#FB923C"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.lg }}
+            />
           )}
           {currentIndex === questions.length - 1 && currentThread.answered && !onSkipToSocratic && (
-            <TouchableOpacity style={styles.socraticButton} onPress={onComplete}>
-              <Text style={styles.socraticButtonText}>Continue</Text>
-              <Icon name="chevron-right" size={16} color="#fff" />
-            </TouchableOpacity>
+            <GlassButton
+              title="Continue"
+              onPress={onComplete}
+              accentColor="#FB923C"
+              fullWidth={false}
+              size="md"
+              style={{ paddingHorizontal: Spacing.lg }}
+            />
           )}
         </View>
       </View>
@@ -377,6 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.pill,
     borderWidth: 1,
+    ...getBackdropBlur(12),
   },
   typeBadgeText: {
     ...Typography.labelSmall,
@@ -399,15 +409,17 @@ const styles = StyleSheet.create({
   },
   systemBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: DarkGlassMaterials.cardHeavy.backgroundColor,
-    borderWidth: 1,
+    ...DarkGlassMaterials.card,
+    borderRadius: BorderRadius.lg,
     borderColor: 'rgba(251, 146, 60, 0.2)',
+    ...getBackdropBlur(16),
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    ...getBackdropBlur(12),
   },
   bubbleText: {
     ...Typography.bodyMedium,
@@ -447,10 +459,11 @@ const styles = StyleSheet.create({
   },
   inputArea: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingBottom: 100,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    ...getBackdropBlur(16),
   },
   inputRow: {
     flexDirection: 'row',
@@ -464,7 +477,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     maxHeight: 100,
     fontSize: 16,
-    borderColor: 'rgba(251, 146, 60, 0.2)',
+    borderColor: 'rgba(251, 146, 60, 0.25)',
+    borderRadius: BorderRadius.lg,
+    ...getBackdropBlur(12),
   },
   sendButton: {
     width: 40,

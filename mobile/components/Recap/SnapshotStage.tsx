@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
+import GlassButton from '../ui/GlassButton';
 import { SnapshotData } from '../../services/recap-service';
 import { formatMinutes } from '../../services/metric-service';
 
@@ -159,9 +160,14 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
       </ScrollView>
 
       {/* Continue button */}
-      <TouchableOpacity style={styles.continueButton} onPress={onContinue}>
-        <Text style={styles.continueText}>Continue to Questions →</Text>
-      </TouchableOpacity>
+      <View style={styles.continueWrapper}>
+        <GlassButton
+          title="Continue to Questions →"
+          onPress={onContinue}
+          accentColor="#FB923C"
+          size="lg"
+        />
+      </View>
     </View>
   );
 }
@@ -196,12 +202,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   clusterPill: {
-    backgroundColor: 'rgba(251, 146, 60, 0.1)',
+    backgroundColor: 'rgba(15, 20, 35, 0.42)',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(251, 146, 60, 0.2)',
+    borderColor: 'rgba(251, 146, 60, 0.25)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' } as any,
+      default: {},
+    }),
   },
   clusterText: {
     ...Typography.labelSmall,
@@ -213,7 +223,11 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderLeftWidth: 4,
-    ...getBackdropBlur(12),
+    ...getBackdropBlur(16),
+    ...Platform.select({
+      web: { backdropFilter: 'blur(16px) saturate(180%)', WebkitBackdropFilter: 'blur(16px) saturate(180%)' } as any,
+      default: {},
+    }),
   },
   articleHeader: {
     flexDirection: 'row',
@@ -226,10 +240,12 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   engagementBadge: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(251, 146, 60, 0.1)',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 146, 60, 0.2)',
   },
   engagementText: {
     ...Typography.labelSmall,
@@ -268,25 +284,11 @@ const styles = StyleSheet.create({
     ...Typography.labelSmall,
     marginTop: 4,
   },
-  continueButton: {
+  continueWrapper: {
     position: 'absolute',
     bottom: 20,
     left: Spacing.lg,
     right: Spacing.lg,
-    backgroundColor: RingColors.recap.primary,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.pill,
-    alignItems: 'center',
-    shadowColor: RingColors.recap.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  continueText: {
-    ...Typography.labelLarge,
-    color: '#fff',
-    fontWeight: '700',
   },
   emptyState: {
     flex: 1,
