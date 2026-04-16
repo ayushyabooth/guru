@@ -103,6 +103,8 @@ class Settings(BaseSettings):
         "http://localhost:8000", "http://localhost:19006",
         "https://dist-guru8.vercel.app",
         "https://dist-69e8jssok-guru8.vercel.app",
+        "https://mobile-guru8.vercel.app",
+        "https://dist-ayushyabooth-guru8.vercel.app",
     ]
     
     class Config:

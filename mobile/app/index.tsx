@@ -1,12 +1,21 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
+import { useRootNavigationState } from '@react-navigation/native';
 import { View, Text, StyleSheet } from 'react-native';
 import { getAuthToken } from '../utils/auth';
 
 export default function IndexScreen() {
+  // Wait for the navigation container to finish mounting before calling
+  // router.replace(). Without this check, the replace() fires before the
+  // Stack navigator is ready and gets silently dropped, leaving authed users
+  // stuck on the loading screen — or bounced to /signup by a subsequent
+  // re-render. (GUR-91)
+  const rootNavState = useRootNavigationState();
+
   useEffect(() => {
+    if (!rootNavState?.isReady) return;
     checkAuthStatus();
-  }, []);
+  }, [rootNavState?.isReady]);
 
   const checkAuthStatus = async () => {
     try {
