@@ -196,7 +196,7 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
   // Theme tokens for Guru Chat
   // Light: indigo (#6366F1) accent; Dark: sky blue (#38BDF8) accent
   const CHAT_ACCENT = isDark ? '#38BDF8' : '#6366F1';
-  const containerBg = isDark ? 'rgba(10, 14, 23, 0.92)' : 'transparent';
+  const containerBg = isDark ? 'rgba(10, 14, 23, 0.92)' : themeColors.background;
   const headerBg = isDark ? 'rgba(15, 20, 35, 0.65)' : 'rgba(255,255,255,0.80)';
   const headerBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
   const backBtnColor = isDark ? '#38BDF8' : '#6366F1';

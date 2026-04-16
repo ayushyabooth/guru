@@ -132,6 +132,9 @@ export default function DiveinScreen() {
     });
   })();
 
+  // Label of the selected tab — used for client-side filtering in DiveinFeed
+  const selectedLabel = tabs.find(t => t.context === selectedContext)?.label;
+
   // In light mode, let AppBackground show through instead of a solid fill
   const containerBg = isDark ? colors.background : 'transparent';
 
@@ -204,6 +207,7 @@ export default function DiveinScreen() {
         hasMore={false}
         isLoading={isLoading}
         filterContext={selectedContext}
+        filterLabel={selectedLabel}
       />
     </SafeAreaView>
   );
