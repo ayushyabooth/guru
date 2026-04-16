@@ -157,11 +157,11 @@ export default function GlassInput({
           styles.inputWrapper,
           inputMaterial,
           isFocused && styles.inputWrapperFocused,
-          isFocused && { borderColor: palette.primary },
-          isDark && isFocused && {
-            shadowColor: palette.primary,
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
+          isFocused && { borderColor: '#6366F1' },
+          isFocused && {
+            shadowColor: '#6366F1',
+            shadowOpacity: isDark ? 0.2 : 0.4,
+            shadowRadius: isDark ? 12 : 10,
           },
           error && { borderColor: colors.error, borderWidth: 1.5 },
         ]}
@@ -175,6 +175,16 @@ export default function GlassInput({
           style={[
             styles.input,
             { color: colors.textPrimary },
+            // Web: ensure typed text is readable and autofill doesn't repaint the bg to dark.
+            Platform.OS === 'web'
+              ? ({
+                  // @ts-ignore — web-specific
+                  WebkitTextFillColor: colors.textPrimary,
+                  WebkitBoxShadow: `0 0 0px 1000px ${isDark ? '#1F2937' : '#F1F5F9'} inset`,
+                  caretColor: colors.textPrimary,
+                  transition: 'background-color 5000s ease-in-out 0s',
+                } as any)
+              : null,
             !iconElement && styles.inputNoIcon,
             style,
           ]}
@@ -227,12 +237,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingRight: Spacing.md,
     ...Typography.bodyLarge,
-    // For web, override autofill background to stay dark-themed
-    ...(Platform.OS === 'web' ? {
-      WebkitTextFillColor: '#F1F5F9',
-      WebkitBoxShadow: '0 0 0px 1000px #1F2937 inset',
-      transition: 'background-color 5000s ease-in-out 0s',
-    } : {}),
   },
   inputNoIcon: {
     paddingLeft: Spacing.md,

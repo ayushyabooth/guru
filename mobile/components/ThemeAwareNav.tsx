@@ -4,6 +4,7 @@ import { DarkTheme as NavDarkTheme, DefaultTheme, ThemeProvider as NavThemeProvi
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../contexts/ThemeContext';
+import AppBackground from './ui/AppBackground';
 
 const webShell: any = Platform.OS === 'web'
   ? { flex: 1, maxWidth: 480, width: '100%', alignSelf: 'center' as const }
@@ -23,6 +24,7 @@ export default function ThemeAwareNav() {
 
   return (
     <NavThemeProvider value={isDark ? NavDarkTheme : DefaultTheme}>
+      <AppBackground />
       <View style={webShell}>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />

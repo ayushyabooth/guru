@@ -33,6 +33,7 @@ import {
   BorderRadius,
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 // Constrain to max 480px (matches the webShell max-width) for proper grid sizing
@@ -191,6 +192,12 @@ export default function IndustryScreen() {
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isDark, colors } = useTheme();
+
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.07)';
+  const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
+  const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
   useEffect(() => {
     fetchIndustries();
@@ -232,7 +239,7 @@ export default function IndustryScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Organic blob backgrounds */}
       <OrganicBackground variant="onboarding" />
 
@@ -245,8 +252,8 @@ export default function IndustryScreen() {
           <Text style={styles.progressText}>Step 1 of 5</Text>
         </View>
 
-        <Text style={styles.title}>Choose Your Industry</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Choose Your Industry</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Select the industry that best fits your role
         </Text>
       </View>
@@ -254,12 +261,12 @@ export default function IndustryScreen() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={styles.loadingText}>Loading industries...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading industries...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchIndustries}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
@@ -279,6 +286,7 @@ export default function IndustryScreen() {
                   key={industry.id}
                   style={[
                     styles.gridCard,
+                    { backgroundColor: cardBg, borderColor: cardBorder },
                     isSelected && styles.gridCardSelected,
                     isSelected && Platform.OS === 'web' ? {
                       boxShadow: `0 0 16px ${industry.color_primary || '#38BDF8'}40`,
@@ -298,6 +306,7 @@ export default function IndustryScreen() {
                   </View>
                   <Text style={[
                     styles.cardLabel,
+                    { color: colors.textPrimary },
                     isSelected && styles.cardLabelSelected
                   ]}>
                     {industry.name}
@@ -320,7 +329,7 @@ export default function IndustryScreen() {
       )}
 
       {/* Fixed Continue Button */}
-      <View style={styles.footerContainer}>
+      <View style={[styles.footerContainer, { backgroundColor: footerBg, borderTopColor: footerBorder }]}>
         <GlassButton
           title="Continue"
           onPress={handleContinue}

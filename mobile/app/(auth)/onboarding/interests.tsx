@@ -29,6 +29,7 @@ import {
   BorderRadius,
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface Industry {
   id: string;
@@ -45,6 +46,12 @@ export default function InterestsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isDark, colors } = useTheme();
+
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.07)';
+  const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
+  const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
   useEffect(() => {
     fetchIndustries();
@@ -108,7 +115,7 @@ export default function InterestsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <OrganicBackground variant="onboarding" />
 
       {/* Header */}
@@ -120,8 +127,8 @@ export default function InterestsScreen() {
           <Text style={styles.progressText}>Step 3 of 5</Text>
         </View>
 
-        <Text style={styles.title}>Any additional interests?</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Any additional interests?</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Beyond {getCoreIndustryName()}, select up to 2 other industries you'd like to explore.
         </Text>
         <View style={styles.badgeContainer}>
@@ -137,12 +144,12 @@ export default function InterestsScreen() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={styles.loadingText}>Loading industries...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading industries...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
           <GlassButton title="Try Again" onPress={fetchIndustries} variant="primary" size="md" fullWidth={false} />
         </View>
       ) : (
@@ -161,6 +168,7 @@ export default function InterestsScreen() {
                   key={interest.id}
                   style={[
                     styles.optionCard,
+                    { backgroundColor: cardBg, borderColor: cardBorder },
                     isSelected && styles.optionCardSelected,
                     !canSelect && styles.optionCardDisabled,
                   ]}
@@ -182,13 +190,14 @@ export default function InterestsScreen() {
                         <Text
                           style={[
                             styles.optionText,
+                            { color: colors.textPrimary },
                             isSelected && styles.optionTextSelected,
                             !canSelect && styles.optionTextDisabled,
                           ]}
                         >
                           {interest.name}
                         </Text>
-                        <Text style={styles.optionDescription}>{interest.description}</Text>
+                        <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>{interest.description}</Text>
                       </View>
                     </View>
                     {isSelected && (
@@ -216,7 +225,7 @@ export default function InterestsScreen() {
       )}
 
       {/* Footer */}
-      <View style={styles.footerContainer}>
+      <View style={[styles.footerContainer, { backgroundColor: footerBg, borderTopColor: footerBorder }]}>
         <View style={styles.footerButtons}>
           <GlassButton
             title="Back"

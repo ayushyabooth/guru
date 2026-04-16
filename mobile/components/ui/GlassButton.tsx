@@ -101,7 +101,9 @@ export default function GlassButton({
     const webGlassStyle = Platform.OS === 'web' ? {
       backdropFilter: 'blur(16px) saturate(180%)',
       WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-      boxShadow: `0 0 24px ${hexToRgba(accent, 0.25)}, inset 0 1px 0 rgba(255,255,255,0.12)`,
+      boxShadow: isDark
+        ? `0 0 24px ${hexToRgba(accent, 0.25)}, inset 0 1px 0 rgba(255,255,255,0.12)`
+        : `0 4px 18px ${hexToRgba(accent, 0.30)}, inset 0 1px 0 rgba(255,255,255,0.22)`,
     } : {};
 
     return (
@@ -115,8 +117,8 @@ export default function GlassButton({
             height,
             borderRadius: BorderRadius.lg,
             width: fullWidth ? '100%' : undefined,
-            backgroundColor: hexToRgba(accent, 0.35),
-            borderColor: hexToRgba(lightenedAccent, 0.45),
+            backgroundColor: hexToRgba(accent, isDark ? 0.35 : 0.90),
+            borderColor: isDark ? hexToRgba(lightenedAccent, 0.45) : 'rgba(255,255,255,0.22)',
             shadowColor: accent,
           },
           webGlassStyle as any,

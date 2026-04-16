@@ -29,6 +29,7 @@ import {
   BorderRadius,
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface Specialization {
   id: string;
@@ -43,6 +44,12 @@ export default function SpecializationsScreen() {
   const [specializations, setSpecializationsList] = useState<Specialization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isDark, colors } = useTheme();
+
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.07)';
+  const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
+  const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
   useEffect(() => {
     if (state.coreIndustry) {
@@ -119,7 +126,7 @@ export default function SpecializationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <OrganicBackground variant="onboarding" />
 
       {/* Header */}
@@ -131,8 +138,8 @@ export default function SpecializationsScreen() {
           <Text style={styles.progressText}>Step 2 of 5</Text>
         </View>
 
-        <Text style={styles.title}>Choose your specializations</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Choose your specializations</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Select 1-2 areas within {getIndustryName()} that you focus on most.
         </Text>
         <View style={styles.selectionBadge}>
@@ -145,12 +152,12 @@ export default function SpecializationsScreen() {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={styles.loadingText}>Loading specializations...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading specializations...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
           <GlassButton title="Try Again" onPress={fetchSpecializations} variant="primary" size="md" fullWidth={false} />
         </View>
       ) : (
@@ -170,6 +177,7 @@ export default function SpecializationsScreen() {
                   key={specialization.id}
                   style={[
                     styles.optionCard,
+                    { backgroundColor: cardBg, borderColor: cardBorder },
                     isSelected && styles.optionCardSelected,
                     !canSelect && styles.optionCardDisabled,
                   ]}
@@ -182,13 +190,14 @@ export default function SpecializationsScreen() {
                       <Icon
                         name="tag-outline"
                         size={22}
-                        color={isSelected ? '#0D9488' : (!canSelect ? DarkThemeColors.textTertiary : DarkThemeColors.textSecondary)}
+                        color={isSelected ? '#0D9488' : (!canSelect ? colors.textTertiary : colors.textSecondary)}
                       />
                     </View>
                     <View style={styles.optionLeft}>
                       <Text
                         style={[
                           styles.optionText,
+                          { color: colors.textPrimary },
                           isSelected && styles.optionTextSelected,
                           !canSelect && styles.optionTextDisabled,
                         ]}
@@ -198,6 +207,7 @@ export default function SpecializationsScreen() {
                       <Text
                         style={[
                           styles.optionDescription,
+                          { color: colors.textSecondary },
                           isSelected && styles.optionDescriptionSelected,
                         ]}
                       >
@@ -229,7 +239,7 @@ export default function SpecializationsScreen() {
       )}
 
       {/* Footer */}
-      <View style={styles.footerContainer}>
+      <View style={[styles.footerContainer, { backgroundColor: footerBg, borderTopColor: footerBorder }]}>
         <View style={styles.footerButtons}>
           <GlassButton
             title="Back"

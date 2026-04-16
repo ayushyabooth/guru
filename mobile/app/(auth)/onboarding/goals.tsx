@@ -37,6 +37,7 @@ import {
   BorderRadius,
 } from '../../../constants/liquidGlass';
 import DarkThemeColors from '../../../constants/darkTheme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +50,7 @@ interface LiquidSliderProps {
   color: string;
   gradientStart: string;
   onChange: (value: number) => void;
+  isDark?: boolean;
 }
 
 function LiquidSlider({
@@ -59,7 +61,10 @@ function LiquidSlider({
   color,
   gradientStart,
   onChange,
+  isDark = true,
 }: LiquidSliderProps) {
+  const trackOuterBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.05)';
+  const trackBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.07)';
   const sliderWidth = width - 80;
   const percentage = (value - min) / (max - min);
   const thumbPosition = percentage * sliderWidth;
@@ -82,8 +87,8 @@ function LiquidSlider({
   return (
     <View style={styles.sliderContainer} {...panResponder.panHandlers}>
       {/* Track with glass effect */}
-      <View style={styles.sliderTrackOuter}>
-        <View style={styles.sliderTrack}>
+      <View style={[styles.sliderTrackOuter, { backgroundColor: trackOuterBg }]}>
+        <View style={[styles.sliderTrack, { backgroundColor: trackBg }]}>
           {/* Filled portion */}
           <View
             style={[
@@ -131,6 +136,14 @@ export default function GoalsScreen() {
     completeOnboarding,
     getProfileData,
   } = useOnboarding();
+  const { isDark, colors } = useTheme();
+
+  const cardBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.80)';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.07)';
+  const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
+  const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
+  const weeklyBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
+  const quickButtonBg = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.05)';
 
   // Map capacity to suggested defaults
   const CAPACITY_DEFAULTS: Record<string, { catchup: number; divein: number }> = {
@@ -251,7 +264,7 @@ export default function GoalsScreen() {
   const encouragement = getTotalEncouragement();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 3D Glass Blob Background */}
       <OrganicBackground variant="onboarding" />
 
@@ -261,7 +274,7 @@ export default function GoalsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header with glass effect */}
-        <View style={styles.headerGlass}>
+        <View style={[styles.headerGlass, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: '100%', backgroundColor: '#10B981' }]} />
@@ -269,24 +282,24 @@ export default function GoalsScreen() {
             <Text style={styles.progressText}>Final Step</Text>
           </View>
 
-          <Text style={styles.title}>Set your daily investment</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>Set your daily investment</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Customize your reading goals based on your{' '}
             <Text style={styles.capacityHighlight}>{state.weeklyCapacity || 'Medium'}</Text> schedule.
           </Text>
         </View>
 
         {/* Catch-up Goal Card */}
-        <View style={styles.goalCard}>
+        <View style={[styles.goalCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <View style={styles.goalHeader}>
             <View style={[styles.goalIndicator, { backgroundColor: '#38BDF8' }]} />
             <View style={styles.goalInfo}>
-              <Text style={styles.goalTitle}>Daily Catch-up</Text>
-              <Text style={styles.goalDescription}>Quick insights to stay informed</Text>
+              <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>Daily Catch-up</Text>
+              <Text style={[styles.goalDescription, { color: colors.textSecondary }]}>Quick insights to stay informed</Text>
             </View>
             <View style={styles.goalValueBox}>
               <Text style={[styles.goalValue, { color: '#38BDF8' }]}>{catchupDaily}</Text>
-              <Text style={styles.goalUnit}>min/day</Text>
+              <Text style={[styles.goalUnit, { color: colors.textTertiary }]}>min/day</Text>
             </View>
           </View>
 
@@ -298,6 +311,7 @@ export default function GoalsScreen() {
             color="#38BDF8"
             gradientStart="#0EA5E9"
             onChange={handleCatchupChange}
+            isDark={isDark}
           />
 
           {/* Quick select buttons */}
@@ -307,6 +321,7 @@ export default function GoalsScreen() {
                 key={val}
                 style={[
                   styles.quickButton,
+                  { backgroundColor: quickButtonBg },
                   catchupDaily === val && { backgroundColor: 'rgba(56, 189, 248, 0.15)' },
                 ]}
                 onPress={() => handleCatchupChange(val)}
@@ -314,6 +329,7 @@ export default function GoalsScreen() {
                 <Text
                   style={[
                     styles.quickButtonText,
+                    { color: colors.textSecondary },
                     catchupDaily === val && { color: '#38BDF8', fontWeight: '700' },
                   ]}
                 >
@@ -325,16 +341,16 @@ export default function GoalsScreen() {
         </View>
 
         {/* Dive-in Goal Card */}
-        <View style={styles.goalCard}>
+        <View style={[styles.goalCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <View style={styles.goalHeader}>
             <View style={[styles.goalIndicator, { backgroundColor: '#EC4899' }]} />
             <View style={styles.goalInfo}>
-              <Text style={styles.goalTitle}>Weekly Dive-in</Text>
-              <Text style={styles.goalDescription}>Deep reading for real expertise</Text>
+              <Text style={[styles.goalTitle, { color: colors.textPrimary }]}>Weekly Dive-in</Text>
+              <Text style={[styles.goalDescription, { color: colors.textSecondary }]}>Deep reading for real expertise</Text>
             </View>
             <View style={styles.goalValueBox}>
               <Text style={[styles.goalValue, { color: '#EC4899' }]}>{diveinDaily}</Text>
-              <Text style={styles.goalUnit}>min/week</Text>
+              <Text style={[styles.goalUnit, { color: colors.textTertiary }]}>min/week</Text>
             </View>
           </View>
 
@@ -346,6 +362,7 @@ export default function GoalsScreen() {
             color="#EC4899"
             gradientStart="#22D3EE"
             onChange={handleDiveinChange}
+            isDark={isDark}
           />
 
           {/* Quick select buttons */}
@@ -355,6 +372,7 @@ export default function GoalsScreen() {
                 key={val}
                 style={[
                   styles.quickButton,
+                  { backgroundColor: quickButtonBg },
                   diveinDaily === val && { backgroundColor: 'rgba(8, 145, 178, 0.15)' },
                 ]}
                 onPress={() => handleDiveinChange(val)}
@@ -362,6 +380,7 @@ export default function GoalsScreen() {
                 <Text
                   style={[
                     styles.quickButtonText,
+                    { color: colors.textSecondary },
                     diveinDaily === val && { color: '#EC4899', fontWeight: '700' },
                   ]}
                 >
@@ -383,38 +402,38 @@ export default function GoalsScreen() {
         </View>
 
         {/* Summary Card */}
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
           <Icon name={encouragement.icon} size={36} color="#38BDF8" library={'iconLibrary' in encouragement ? encouragement.iconLibrary : 'mci'} style={styles.summaryEmoji} />
-          <Text style={styles.summaryTotal}>{catchupDaily + diveinDaily} min/day</Text>
-          <Text style={styles.summaryBreakdown}>
+          <Text style={[styles.summaryTotal, { color: colors.textPrimary }]}>{catchupDaily + diveinDaily} min/day</Text>
+          <Text style={[styles.summaryBreakdown, { color: colors.textSecondary }]}>
             {catchupDaily}m catch-up + {diveinDaily}m dive-in
           </Text>
           <Text style={styles.summaryMessage}>{encouragement.text}</Text>
 
           {/* Weekly equivalent */}
-          <View style={styles.weeklyPreview}>
-            <Text style={styles.weeklyLabel}>That's about</Text>
-            <Text style={styles.weeklyValue}>
+          <View style={[styles.weeklyPreview, { borderTopColor: weeklyBorder }]}>
+            <Text style={[styles.weeklyLabel, { color: colors.textTertiary }]}>That's about</Text>
+            <Text style={[styles.weeklyValue, { color: colors.textPrimary }]}>
               {Math.round((catchupDaily + diveinDaily) * 7 / 60)}h/week
             </Text>
           </View>
         </View>
 
         {/* Setup summary */}
-        <View style={styles.setupSummary}>
-          <Text style={styles.setupTitle}>Your Guru Setup</Text>
+        <View style={[styles.setupSummary, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <Text style={[styles.setupTitle, { color: colors.textPrimary }]}>Your Guru Setup</Text>
           <View style={styles.setupRow}>
-            <Text style={styles.setupLabel}>Industry</Text>
-            <Text style={styles.setupValue}>{state.coreIndustry}</Text>
+            <Text style={[styles.setupLabel, { color: colors.textSecondary }]}>Industry</Text>
+            <Text style={[styles.setupValue, { color: colors.textPrimary }]}>{state.coreIndustry}</Text>
           </View>
           <View style={styles.setupRow}>
-            <Text style={styles.setupLabel}>Focus</Text>
-            <Text style={styles.setupValue}>{state.specializations.join(', ')}</Text>
+            <Text style={[styles.setupLabel, { color: colors.textSecondary }]}>Focus</Text>
+            <Text style={[styles.setupValue, { color: colors.textPrimary }]}>{state.specializations.join(', ')}</Text>
           </View>
           {state.additionalInterests.length > 0 && (
             <View style={styles.setupRow}>
-              <Text style={styles.setupLabel}>Also interested in</Text>
-              <Text style={styles.setupValue}>{state.additionalInterests.join(', ')}</Text>
+              <Text style={[styles.setupLabel, { color: colors.textSecondary }]}>Also interested in</Text>
+              <Text style={[styles.setupValue, { color: colors.textPrimary }]}>{state.additionalInterests.join(', ')}</Text>
             </View>
           )}
         </View>
@@ -429,7 +448,7 @@ export default function GoalsScreen() {
       )}
 
       {/* Floating Footer with glass effect */}
-      <View style={styles.footerContainer}>
+      <View style={[styles.footerContainer, { backgroundColor: footerBg, borderTopColor: footerBorder }]}>
         <View style={styles.footerButtons}>
           <GlassButton
             title="Back"

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { View, Text, StyleSheet } from 'react-native';
+import { getAuthToken } from '../utils/auth';
 
 export default function IndexScreen() {
   useEffect(() => {
@@ -10,17 +10,17 @@ export default function IndexScreen() {
 
   const checkAuthStatus = async () => {
     try {
-      const token = await SecureStore.getItemAsync('access_token');
-      
+      // Use getAuthToken() wrapper so web reads from localStorage and
+      // native reads from SecureStore. Calling SecureStore directly on web
+      // always returns null and wrongly redirects authed users to /signup.
+      const token = await getAuthToken();
+
       if (token) {
-        // User is authenticated, redirect to main app
         router.replace('/(tabs)');
       } else {
-        // User is not authenticated, redirect to signup
         router.replace('/(auth)/signup');
       }
     } catch (error) {
-      // Default to signup if there's an error
       router.replace('/(auth)/signup');
     }
   };

@@ -27,7 +27,6 @@ import {
   Spacing,
   Typography,
   BorderRadius,
-  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -133,7 +132,7 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }, getDarkBackdropBlur(40)]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Background */}
       <OrganicBackground variant="login" />
 

@@ -123,86 +123,119 @@ export const BorderRadius = {
 // TYPOGRAPHY
 // ============================================================================
 
+// Manrope — peppy + sleek primary font for all reading + UI.
+// Orbitron reserved for the GURU wordmark logo only (loaded in _layout.tsx).
+// Font-family strings match @expo-google-fonts/manrope's exports.
+const FAM = {
+  bold: 'Manrope_800ExtraBold',
+  semibold: 'Manrope_700Bold',
+  medium: 'Manrope_600SemiBold',
+  regular: 'Manrope_500Medium',
+  body: 'Manrope_400Regular',
+};
+
 export const Typography = {
   // Display
   displayLarge: {
+    fontFamily: FAM.bold,
     fontSize: 40,
-    fontWeight: '700' as const,
+    fontWeight: '800' as const,
     lineHeight: 48,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   displayMedium: {
+    fontFamily: FAM.bold,
     fontSize: 32,
-    fontWeight: '700' as const,
+    fontWeight: '800' as const,
     lineHeight: 40,
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
   displaySmall: {
+    fontFamily: FAM.semibold,
     fontSize: 28,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
     lineHeight: 36,
-    letterSpacing: -0.25,
+    letterSpacing: -0.4,
   },
 
   // Headlines
   headlineLarge: {
+    fontFamily: FAM.semibold,
     fontSize: 24,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
     lineHeight: 32,
-    letterSpacing: -0.25,
+    letterSpacing: -0.3,
   },
   headlineMedium: {
+    fontFamily: FAM.semibold,
     fontSize: 20,
-    fontWeight: '600' as const,
+    fontWeight: '700' as const,
     lineHeight: 28,
-    letterSpacing: 0,
+    letterSpacing: -0.2,
   },
   headlineSmall: {
+    fontFamily: FAM.medium,
     fontSize: 18,
     fontWeight: '600' as const,
     lineHeight: 24,
-    letterSpacing: 0,
+    letterSpacing: -0.1,
   },
 
   // Body
   bodyLarge: {
+    fontFamily: FAM.body,
     fontSize: 16,
     fontWeight: '400' as const,
-    lineHeight: 24,
-    letterSpacing: 0.15,
+    lineHeight: 25,
+    letterSpacing: 0,
   },
   bodyMedium: {
+    fontFamily: FAM.body,
     fontSize: 14,
     fontWeight: '400' as const,
-    lineHeight: 20,
-    letterSpacing: 0.15,
+    lineHeight: 22,
+    letterSpacing: 0,
   },
   bodySmall: {
+    fontFamily: FAM.body,
     fontSize: 12,
     fontWeight: '400' as const,
-    lineHeight: 16,
-    letterSpacing: 0.2,
+    lineHeight: 18,
+    letterSpacing: 0.1,
   },
 
   // Labels
   labelLarge: {
+    fontFamily: FAM.medium,
     fontSize: 14,
     fontWeight: '600' as const,
     lineHeight: 20,
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
   },
   labelMedium: {
+    fontFamily: FAM.medium,
     fontSize: 12,
     fontWeight: '600' as const,
     lineHeight: 16,
-    letterSpacing: 0.25,
+    letterSpacing: 0.4,
   },
   labelSmall: {
+    fontFamily: FAM.medium,
     fontSize: 11,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
     lineHeight: 14,
-    letterSpacing: 0.25,
+    letterSpacing: 0.5,
   },
+};
+
+/**
+ * Primary font stack string for `fontFamily` when you need a stringy value.
+ * Falls back to system sans-serif if Manrope fails to load.
+ */
+export const FontStack = {
+  primary: 'Manrope_400Regular, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  primaryBold: 'Manrope_700Bold, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  display: 'Orbitron_700Bold, "Manrope_800ExtraBold", -apple-system, sans-serif',
 };
 
 // ============================================================================
@@ -211,83 +244,107 @@ export const Typography = {
 // ============================================================================
 
 export const GlassMaterials = {
-  // Standard glass card - more translucent
+  // Standard glass card
   card: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: 'rgba(15,23,42,0.07)',
     borderRadius: BorderRadius.xl,
-    // Shadow layers (glow + depth + inner highlight)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 6,
   } as ViewStyle,
 
   // Heavy frosted glass (for prominent cards like login form)
   cardHeavy: {
-    backgroundColor: 'rgba(255,255,255,0.65)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: 'rgba(15,23,42,0.08)',
     borderRadius: BorderRadius.xl,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.08,
-    shadowRadius: 32,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
     elevation: 8,
   } as ViewStyle,
 
-  // Light glass (very subtle, for overlays)
+  // Light glass (very subtle, for nested surfaces within cards)
   cardLight: {
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
+    borderColor: 'rgba(15,23,42,0.05)',
     borderRadius: BorderRadius.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     elevation: 3,
   } as ViewStyle,
 
   // Glass button
   button: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(15,23,42,0.07)',
     borderRadius: BorderRadius.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
   } as ViewStyle,
 
-  // Glass input field - more translucent
+  // Glass input field
   input: {
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    borderRadius: BorderRadius.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
+    borderColor: 'rgba(15,23,42,0.08)',
+    borderRadius: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   } as ViewStyle,
 
   // Glass pill (for tags, chips)
   pill: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(15,23,42,0.06)',
     borderRadius: BorderRadius.pill,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
+  } as ViewStyle,
+
+  // Navigation / breadcrumb bar
+  navBar: {
+    backgroundColor: 'rgba(248,250,252,0.88)',
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(15,23,42,0.06)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+  } as ViewStyle,
+
+  // Tab bar glass
+  tabBar: {
+    backgroundColor: 'rgba(248,250,252,0.90)',
+    borderTopWidth: 1,
+    borderColor: 'rgba(15,23,42,0.06)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 8,
   } as ViewStyle,
 };
 
@@ -431,6 +488,124 @@ export const getDarkGlassCardStyle = (glowColor?: string, intensity: 'none' | 's
   }
 
   return baseStyle;
+};
+
+// ============================================================================
+// MATERIALS HIERARCHY (EDL v2 — 5 tiers)
+// Source of truth: Figma `Glass / Materials Hierarchy` (77:3)
+// Each tier provides blur, opacity, border, shadow recipe for dark + light.
+// ============================================================================
+
+export type GlassTier = 'ultraThin' | 'thin' | 'regular' | 'thick' | 'chrome';
+
+export interface GlassTierSpec {
+  blur: number;
+  opacityDark: number;   // fill opacity on dark bg (white at this opacity)
+  opacityLight: number;  // fill opacity on light bg (white at this opacity)
+  borderOpacityDark: number;
+  borderOpacityLight: number;
+  innerHighlightDark: number;
+  innerHighlightLight: number;
+  shadowY: number;
+  shadowBlur: number;
+  shadowOpacityDark: number;
+  shadowOpacityLight: number;
+}
+
+export const GlassMaterialsV2: Record<GlassTier, GlassTierSpec> = {
+  ultraThin: {
+    blur: 12,
+    opacityDark: 0.14,
+    opacityLight: 0.55,
+    borderOpacityDark: 0.12,
+    borderOpacityLight: 0.45,
+    innerHighlightDark: 0.20,
+    innerHighlightLight: 0.30,
+    shadowY: 4,
+    shadowBlur: 16,
+    shadowOpacityDark: 0.20,
+    shadowOpacityLight: 0.05,
+  },
+  thin: {
+    blur: 16,
+    opacityDark: 0.18,
+    opacityLight: 0.70,
+    borderOpacityDark: 0.15,
+    borderOpacityLight: 0.50,
+    innerHighlightDark: 0.25,
+    innerHighlightLight: 0.35,
+    shadowY: 6,
+    shadowBlur: 24,
+    shadowOpacityDark: 0.30,
+    shadowOpacityLight: 0.08,
+  },
+  regular: {
+    blur: 24,
+    opacityDark: 0.22,
+    opacityLight: 0.82,
+    borderOpacityDark: 0.18,
+    borderOpacityLight: 0.55,
+    innerHighlightDark: 0.30,
+    innerHighlightLight: 0.40,
+    shadowY: 12,
+    shadowBlur: 32,
+    shadowOpacityDark: 0.40,
+    shadowOpacityLight: 0.10,
+  },
+  thick: {
+    blur: 40,
+    opacityDark: 0.32,
+    opacityLight: 0.90,
+    borderOpacityDark: 0.22,
+    borderOpacityLight: 0.65,
+    innerHighlightDark: 0.35,
+    innerHighlightLight: 0.45,
+    shadowY: 16,
+    shadowBlur: 48,
+    shadowOpacityDark: 0.50,
+    shadowOpacityLight: 0.14,
+  },
+  chrome: {
+    blur: 56,
+    opacityDark: 0.40,
+    opacityLight: 0.94,
+    borderOpacityDark: 0.28,
+    borderOpacityLight: 0.70,
+    innerHighlightDark: 0.40,
+    innerHighlightLight: 0.50,
+    shadowY: 20,
+    shadowBlur: 56,
+    shadowOpacityDark: 0.55,
+    shadowOpacityLight: 0.18,
+  },
+};
+
+/**
+ * Produce a ViewStyle block for a given tier + mode.
+ * Pass tint color hex to add a subtle colored glow shadow (filter context).
+ */
+export const getGlassStyle = (
+  tier: GlassTier,
+  mode: 'dark' | 'light',
+  tint?: string
+): ViewStyle => {
+  const t = GlassMaterialsV2[tier];
+  const fill = mode === 'dark' ? t.opacityDark : t.opacityLight;
+  const border = mode === 'dark' ? t.borderOpacityDark : t.borderOpacityLight;
+  const shadowOp = mode === 'dark' ? t.shadowOpacityDark : t.shadowOpacityLight;
+  // In dark mode the glass panel is white-translucent; in light it's still white-translucent but denser.
+  const base: ViewStyle = {
+    backgroundColor: `rgba(255,255,255,${fill})`,
+    borderWidth: 1.5,
+    borderColor: `rgba(255,255,255,${border})`,
+    borderRadius: BorderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: t.shadowY },
+    shadowOpacity: shadowOp,
+    shadowRadius: t.shadowBlur,
+    elevation: Math.ceil(t.shadowBlur / 4),
+  };
+  return base;
 };
 
 // ============================================================================
