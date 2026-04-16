@@ -43,10 +43,8 @@ app.add_middleware(
     expose_headers=["X-Response-Time-Ms"],
 )
 
-# HTTPS redirect in production
-if settings.APP_ENV == "production":
-    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
-    app.add_middleware(HTTPSRedirectMiddleware)
+# HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
+# Adding HTTPSRedirectMiddleware causes redirect loops behind reverse proxies.
 
 # API timing middleware - logs response time and records to PerfStore
 @app.middleware("http")
