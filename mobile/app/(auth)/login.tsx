@@ -74,7 +74,8 @@ export default function LoginScreen() {
       const fullUrl = `${apiUrl}/auth/login`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      // 45s timeout to handle Railway cold starts (backend can take 20-40s to wake up)
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
 
       let response: Response;
       try {
@@ -87,7 +88,7 @@ export default function LoginScreen() {
       } catch (fetchErr: any) {
         clearTimeout(timeoutId);
         if (fetchErr.name === 'AbortError') {
-          setError('Server is taking too long. Please try again.');
+          setError('Server is waking up — please try again in a moment.');
         } else {
           setError('Unable to connect. Check your internet connection.');
         }
