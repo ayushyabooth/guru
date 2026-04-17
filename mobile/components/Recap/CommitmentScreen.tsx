@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CommitmentScreenProps {
   onSave: (commitmentText: string) => void;
@@ -11,6 +11,8 @@ interface CommitmentScreenProps {
 }
 
 export default function CommitmentScreen({ onSave, tier }: CommitmentScreenProps) {
+  const { isDark, colors } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [text, setText] = useState('');
   const canSave = text.trim().length > 5;
 
@@ -23,11 +25,11 @@ export default function CommitmentScreen({ onSave, tier }: CommitmentScreenProps
       <View style={styles.darkOverlay} />
 
       <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.heading}>What's one thing you'll do differently next week?</Text>
+        <View style={[GM.cardHeavy, styles.card]}>
+          <Text style={[styles.heading, { color: colors.textPrimary }]}>What's one thing you'll do differently next week?</Text>
 
           <TextInput
-            style={styles.input}
+            style={[GM.input, styles.input, { color: colors.textPrimary }]}
             value={text}
             onChangeText={setText}
             placeholder="I will..."
@@ -63,7 +65,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   card: {
-    ...DarkGlassMaterials.cardHeavy,
     padding: Spacing.xl,
     borderWidth: 2,
     borderColor: 'rgba(251, 146, 60, 0.35)',
@@ -80,18 +81,15 @@ const styles = StyleSheet.create({
   },
   heading: {
     ...Typography.headlineMedium,
-    color: DarkThemeColors.textPrimary,
     textAlign: 'center',
     marginBottom: Spacing.xl,
     lineHeight: 28,
   },
   input: {
-    ...DarkGlassMaterials.input,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     minHeight: 100,
     ...Typography.bodyMedium,
-    color: 'rgba(255, 255, 255, 0.9)',
     borderColor: 'rgba(251, 146, 60, 0.3)',
     marginBottom: Spacing.lg,
     ...getBackdropBlur(12),

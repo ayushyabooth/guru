@@ -11,7 +11,6 @@ import {
   Spacing,
   Typography,
   RingColors,
-  DarkGlassMaterials,
   BorderRadius,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';

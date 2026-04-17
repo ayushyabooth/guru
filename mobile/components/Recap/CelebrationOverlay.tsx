@@ -8,9 +8,10 @@ import {
   BorderRadius,
   RingColors,
   DarkGlassMaterials,
+  GlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,8 @@ export default function CelebrationOverlay({
   onViewConstellation,
   onBackToHome,
 }: CelebrationOverlayProps) {
+  const { isDark, colors } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -102,6 +105,7 @@ export default function CelebrationOverlay({
 
       <Animated.View
         style={[
+          GM.cardHeavy,
           styles.card,
           {
             opacity: fadeAnim,
@@ -115,15 +119,15 @@ export default function CelebrationOverlay({
         <View style={styles.statsGrid}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{insightCount}</Text>
-            <Text style={styles.statLabel}>insights captured</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>insights captured</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{questionCount}</Text>
-            <Text style={styles.statLabel}>questions reflected on</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>questions reflected on</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>1</Text>
-            <Text style={styles.statLabel}>commitment made</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>commitment made</Text>
           </View>
         </View>
 
@@ -166,7 +170,7 @@ export default function CelebrationOverlay({
           {audioStatus === 'generating' && (
             <View style={styles.audioGenerating}>
               <ActivityIndicator size="small" color={RingColors.recap.primary} />
-              <Text style={styles.audioGeneratingText}>Creating your recap...</Text>
+              <Text style={[styles.audioGeneratingText, { color: colors.textSecondary }]}>Creating your recap...</Text>
             </View>
           )}
           {audioStatus === 'ready' && onListenAudio && (
@@ -242,7 +246,6 @@ const styles = StyleSheet.create({
     shadowRadius: 60,
   },
   card: {
-    ...DarkGlassMaterials.cardHeavy,
     padding: Spacing.xl,
     marginHorizontal: Spacing.lg,
     borderWidth: 2,
@@ -287,7 +290,6 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
   },
   streakBadge: {
@@ -386,7 +388,6 @@ const styles = StyleSheet.create({
   },
   audioGeneratingText: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textSecondary,
   },
   audioRetryButton: {
     paddingHorizontal: Spacing.xl,

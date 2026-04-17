@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
-import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
@@ -48,7 +48,8 @@ function getFilterBorder(filterContext: string): string {
 }
 
 export default function SnapshotStage({ snapshot, onContinue }: SnapshotStageProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const { articles_engaged, qa_highlights, reading_pattern, topic_clusters } = snapshot;
   const hasActivity = articles_engaged.length > 0;
   const isWidened = (snapshot as any).widened_window === true;
@@ -56,7 +57,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
   return (
     <View style={styles.container}>
       {/* Reading pattern header */}
-      <View style={styles.patternHeader}>
+      <View style={[styles.patternHeader, { backgroundColor: GM.cardLight.backgroundColor, borderBottomColor: GM.cardLight.borderColor }]}>
         {hasActivity ? (
           <Text style={[styles.patternText, { color: colors.textSecondary }]}>
             {isWidened && <Text style={{ color: colors.textTertiary }}>Recent activity{'\u00A0\u00B7\u00A0'}</Text>}
@@ -105,6 +106,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
           <View
             key={article.id || idx}
             style={[
+              GM.card,
               styles.articleCard,
               { backgroundColor: getFilterTint(article.filter_context),
                 borderColor: getFilterBorder(article.filter_context) }
@@ -147,7 +149,7 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
           <View style={styles.qaSection}>
             <Text style={[styles.qaSectionTitle, { color: colors.textPrimary }]}>Questions You Asked</Text>
             {qa_highlights.map((qa, idx) => (
-              <View key={idx} style={styles.qaCard}>
+              <View key={idx} style={[GM.cardLight, styles.qaCard]}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
                   <Icon name="help-circle-outline" size={14} color={colors.textPrimary} style={{ marginTop: 2 }} />
                   <Text style={[styles.qaQuestion, { flex: 1, color: colors.textPrimary }]}>{qa.question}</Text>
@@ -177,9 +179,7 @@ const styles = StyleSheet.create({
   patternHeader: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    backgroundColor: DarkGlassMaterials.cardLight.backgroundColor,
     borderBottomWidth: 1,
-    borderBottomColor: DarkGlassMaterials.cardLight.borderColor,
     ...getBackdropBlur(16),
   },
   patternText: {
@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
     color: RingColors.recap.primary,
   },
   articleCard: {
-    ...DarkGlassMaterials.card,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.md,
@@ -272,7 +271,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   qaCard: {
-    ...DarkGlassMaterials.cardLight,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },

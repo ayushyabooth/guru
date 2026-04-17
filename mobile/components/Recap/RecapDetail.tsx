@@ -15,6 +15,7 @@ import {
   BorderRadius,
   RingColors,
   DarkGlassMaterials,
+  GlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -53,7 +54,8 @@ interface JourneySummary {
 }
 
 export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [summary, setSummary] = useState<JourneySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
+        <View style={[GM.navBar, styles.header]}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
@@ -109,7 +111,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   if (error || !summary) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
+        <View style={[GM.navBar, styles.header]}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
@@ -151,7 +153,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
         </Text>
 
         {/* Activity Stats */}
-        <View style={styles.statsRow}>
+        <View style={[GM.card, styles.statsRow]}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{activity.articles_read}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>articles</Text>
@@ -175,7 +177,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
 
         {/* Commitment */}
         {commitment && (
-          <View style={styles.commitmentCard}>
+          <View style={[GM.cardLight, styles.commitmentCard]}>
             <View style={styles.sectionHeader}>
               <Icon name="flag-outline" size={16} color={RingColors.recap.primary} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Commitment</Text>
@@ -245,7 +247,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     paddingTop: Spacing.md,
-    ...DarkGlassMaterials.navBar,
     ...getBackdropBlur(24),
   },
   backButton: {
@@ -295,7 +296,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    ...DarkGlassMaterials.card,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
     ...getBackdropBlur(16),
@@ -317,7 +317,6 @@ const styles = StyleSheet.create({
     height: 28,
   },
   commitmentCard: {
-    ...DarkGlassMaterials.cardLight,
     backgroundColor: 'rgba(251, 146, 60, 0.06)',
     borderColor: 'rgba(251, 146, 60, 0.15)',
     padding: Spacing.md,

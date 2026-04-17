@@ -25,6 +25,7 @@ import React, {
   useState,
 } from 'react';
 import { Appearance, Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { DarkTheme } from '../constants/darkTheme';
 import { LightTheme } from '../constants/lightTheme';
 
@@ -85,6 +86,8 @@ function writePreference(p: ThemePreference): void {
     } catch {
       /* storage disabled */
     }
+  } else {
+    SecureStore.setItemAsync(STORAGE_KEY, p).catch(() => {});
   }
 }
 
@@ -122,6 +125,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Synchronous first paint: read preference + OS scheme before first render.
   const [preference, setPreferenceState] = useState<ThemePreference>(() => readPreferenceSync());
   const [osScheme, setOsScheme] = useState<ResolvedMode>(() => readOSScheme());
+
+  // On native, rehydrate preference from SecureStore after first paint.
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      SecureStore.getItemAsync(STORAGE_KEY).then((v) => {
+        if (v === 'dark' || v === 'light' || v === 'system') {
+          setPreferenceState(v);
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   // Subscribe to OS scheme changes.
   useEffect(() => {

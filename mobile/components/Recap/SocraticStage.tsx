@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
@@ -43,7 +43,8 @@ const parseArticleRefs = (text: string): { parts: (string | { title: string; id:
 
 export default function SocraticStage({ onSendMessage, onComplete, initialExchanges }: SocraticStageProps) {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [messages, setMessages] = useState<ChatBubble[]>(
     (initialExchanges || []).map(e => ({ role: e.role as 'assistant' | 'user', content: e.content }))
   );
@@ -150,7 +151,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
           return (
             <View key={idx} style={[
               styles.bubble,
-              msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble,
+              msg.role === 'assistant' ? [GM.card, styles.assistantBubble] : styles.userBubble,
             ]}>
               <Text style={[
                 styles.bubbleText,
@@ -200,7 +201,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
         })}
 
         {isLoading && (
-          <View style={[styles.bubble, styles.assistantBubble]}>
+          <View style={[styles.bubble, GM.card, styles.assistantBubble]}>
             <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Thinking...</Text>
           </View>
         )}
@@ -208,7 +209,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
 
       {/* Input area or completion */}
       {isConcluded ? (
-        <View style={styles.concludedArea}>
+        <View style={[styles.concludedArea, { backgroundColor: GM.card.backgroundColor }]}>
           <Text style={[styles.concludedText, { color: colors.textSecondary }]}>
             {insightCount > 0 ? `${insightCount} insight${insightCount > 1 ? 's' : ''} captured during this dialogue` : 'Dialogue complete'}
           </Text>
@@ -220,9 +221,9 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
           />
         </View>
       ) : (
-        <View style={styles.inputArea}>
+        <View style={[styles.inputArea, { backgroundColor: GM.card.backgroundColor }]}>
           <TextInput
-            style={[styles.chatInput, { color: colors.textPrimary }]}
+            style={[GM.input, styles.chatInput, { color: colors.textPrimary }]}
             value={inputText}
             onChangeText={setInputText}
             placeholder="Share your thoughts..."
@@ -275,7 +276,6 @@ const styles = StyleSheet.create({
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    ...DarkGlassMaterials.card,
     borderRadius: BorderRadius.lg,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     borderLeftWidth: 3,
@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     paddingBottom: 100,
-    backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     ...getBackdropBlur(20),
@@ -326,7 +325,6 @@ const styles = StyleSheet.create({
   },
   chatInput: {
     flex: 1,
-    ...DarkGlassMaterials.input,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     ...Typography.bodyMedium,
@@ -353,7 +351,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     paddingBottom: 100,
-    backgroundColor: DarkGlassMaterials.card.backgroundColor,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     ...getBackdropBlur(20),

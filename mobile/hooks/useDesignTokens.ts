@@ -8,15 +8,15 @@
  *   const { colors, spacing, radius, type, glass } = useDesignTokens();
  */
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LightTheme, Spacing, BorderRadius, Typography, GlassMaterials, DarkGlassMaterials } from '@/constants/liquidGlass';
 import { DarkTheme } from '@/constants/darkTheme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function useDesignTokens() {
-  const scheme = useColorScheme() ?? 'dark'; // dark-first app
+  const { isDark } = useTheme();
 
-  const colors = scheme === 'dark' ? DarkTheme : LightTheme;
-  const glass = scheme === 'dark' ? DarkGlassMaterials : GlassMaterials;
+  const colors = isDark ? DarkTheme : LightTheme;
+  const glass = isDark ? DarkGlassMaterials : GlassMaterials;
 
   return {
     colors,
@@ -24,6 +24,6 @@ export function useDesignTokens() {
     radius: BorderRadius,
     type: Typography,
     glass,
-    isDark: scheme === 'dark',
+    isDark,
   } as const;
 }

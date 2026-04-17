@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
-import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
+import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import { GuidedQuestion } from '../../services/recap-service';
 
@@ -83,7 +83,8 @@ export default function QuestionsStage({
   onSkipToSocratic,
 }: QuestionsStageProps) {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const scrollRef = useRef<ScrollView>(null);
 
   // Initialize threads from questions
@@ -176,7 +177,7 @@ export default function QuestionsStage({
     const { parts } = !isUser ? parseArticleRefs(msg.text) : { parts: [msg.text] };
 
     return (
-      <View key={idx} style={[styles.bubble, isUser ? styles.userBubble : styles.systemBubble]}>
+      <View key={idx} style={[styles.bubble, isUser ? styles.userBubble : [GM.card, styles.systemBubble]]}>
         <Text style={[styles.bubbleText, { color: colors.textPrimary }]}>
           {parts.map((part, pIdx) =>
             typeof part === 'string' ? (
@@ -259,7 +260,7 @@ export default function QuestionsStage({
         {currentThread.messages.map((msg, idx) => renderMessage(msg, idx))}
 
         {isLoading && (
-          <View style={[styles.bubble, styles.systemBubble]}>
+          <View style={[styles.bubble, GM.card, styles.systemBubble]}>
             <ActivityIndicator size="small" color={RingColors.recap.primary} />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Reflecting...</Text>
           </View>
@@ -273,7 +274,7 @@ export default function QuestionsStage({
             {currentQuestion.chips.map((chip, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[styles.chip, selectedChip === chip && styles.chipSelected]}
+                style={[{ backgroundColor: GM.button.backgroundColor, borderColor: GM.button.borderColor }, styles.chip, selectedChip === chip && styles.chipSelected]}
                 onPress={() => setSelectedChip(chip)}
               >
                 <Text style={[styles.chipText, { color: colors.textPrimary }, selectedChip === chip && styles.chipTextSelected]}>
@@ -285,7 +286,7 @@ export default function QuestionsStage({
         ) : (
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.textInput, { color: colors.textPrimary }]}
+              style={[GM.input, styles.textInput, { color: colors.textPrimary }]}
               value={inputText}
               onChangeText={setInputText}
               placeholder={currentThread.answered ? 'Reply to follow-up...' : 'Share your thoughts...'}
@@ -409,7 +410,6 @@ const styles = StyleSheet.create({
   },
   systemBubble: {
     alignSelf: 'flex-start',
-    ...DarkGlassMaterials.card,
     borderRadius: BorderRadius.lg,
     borderColor: 'rgba(251, 146, 60, 0.2)',
     ...getBackdropBlur(16),
@@ -472,7 +472,6 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    ...DarkGlassMaterials.input,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     maxHeight: 100,
@@ -500,12 +499,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   chip: {
-    backgroundColor: DarkGlassMaterials.button.backgroundColor,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: DarkGlassMaterials.button.borderColor,
   },
   chipSelected: {
     backgroundColor: 'rgba(251, 146, 60, 0.15)',

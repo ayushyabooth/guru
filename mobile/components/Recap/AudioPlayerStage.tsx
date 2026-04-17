@@ -16,6 +16,7 @@ import {
   BorderRadius,
   RingColors,
   DarkGlassMaterials,
+  GlassMaterials,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -40,7 +41,8 @@ export default function AudioPlayerStage({
   textOnly = false,
   onDismiss,
 }: AudioPlayerStageProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
@@ -306,7 +308,7 @@ export default function AudioPlayerStage({
       </View>
 
       {/* Controls */}
-      <View style={styles.controlsRow}>
+      <View style={[GM.card, styles.controlsRow]}>
         <TouchableOpacity style={styles.skipButton} onPress={() => handleSkip(-15)}>
           <Text style={styles.skipText}>-15s</Text>
         </TouchableOpacity>
@@ -505,7 +507,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xl,
     marginBottom: Spacing.lg,
-    ...DarkGlassMaterials.card,
     padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
     ...getBackdropBlur(20),
