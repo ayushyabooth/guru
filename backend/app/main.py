@@ -156,13 +156,20 @@ def _cleanup_stale_content(max_age_days: int = 30):
             Article.created_at < cutoff
         ).delete(synchronize_session=False)
 
+        # 7. Expired revoked tokens (safe to delete once the JWT itself has expired)
+        from app.models.user import RevokedToken
+        jtis_deleted = db.query(RevokedToken).filter(
+            RevokedToken.expires_at < datetime.utcnow()
+        ).delete(synchronize_session=False)
+
         db.commit()
 
         total_sb = sb_headline_deleted + sb_deleted
         logger.info(
             f"Stale content cleanup (>{max_age_days} days): "
             f"{articles_deleted} articles, {total_sb} storyboards, "
-            f"{cache_deleted} cache entries, {runs_deleted} ingestion runs removed"
+            f"{cache_deleted} cache entries, {runs_deleted} ingestion runs, "
+            f"{jtis_deleted} expired revoked tokens removed"
         )
     except Exception as e:
         db.rollback()

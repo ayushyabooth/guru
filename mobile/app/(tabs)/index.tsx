@@ -18,7 +18,8 @@ import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
 import FeedTabBar from '../../components/Home/FeedTabBar';
-import { removeAuthToken } from '../../utils/auth';
+import { removeAuthToken, getAuthToken } from '../../utils/auth';
+import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
 const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
@@ -401,6 +402,18 @@ function HomeContent() {
     }
 
     try {
+      // Best-effort server-side token revocation
+      const token = await getAuthToken();
+      if (token) {
+        try {
+          await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {
+          // Network error — proceed with local logout anyway
+        }
+      }
       await removeAuthToken();
       router.replace('/(auth)/login');
     } catch (error) {

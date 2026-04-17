@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from jose import JWTError
+from datetime import datetime
 from app.db.database import get_db
-from app.models.user import User, UserProfile
+from app.models.user import User, UserProfile, RevokedToken
 from app.schemas.user_schema import UserSignupRequest, UserSignupResponse, UserLoginRequest, UserLoginResponse
 from app.services.auth_service import hash_password, verify_password, generate_jwt, verify_jwt, create_refresh_token
 from app.services.industries_config import IndustriesConfig
+from app.utils.jwt_utils import decode_token
+from app.deps import get_current_user
 from app.config import settings
 import uuid
 import logging
@@ -135,11 +139,11 @@ async def login(request: Request, user_data: UserLoginRequest, db: Session = Dep
 @router.post("/refresh")
 async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     """Refresh access token using refresh token"""
-    
+
     try:
         # Verify refresh token and get user ID
         user_id = verify_jwt(refresh_token)
-        
+
         # Verify user still exists and is active
         user = db.query(User).filter(User.id == user_id).first()
         if not user or not user.is_active:
@@ -147,14 +151,43 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid user"
             )
-        
+
         # Generate new access token
         new_access_token = generate_jwt(user.id, token_type='access')
-        
+
         return {"access_token": new_access_token}
-        
+
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token"
         )
+
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+@router.post("/logout")
+async def logout(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Revoke the current access token by adding its jti to the blocklist."""
+    if not credentials:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    try:
+        payload = decode_token(credentials.credentials, settings.JWT_SECRET_KEY, settings.JWT_ALGORITHM)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+
+    if jti:
+        expires_at = datetime.utcfromtimestamp(exp) if exp else datetime.utcnow()
+        db.merge(RevokedToken(jti=jti, expires_at=expires_at))
+        db.commit()
+
+    return {"message": "Logged out successfully"}

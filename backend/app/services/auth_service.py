@@ -53,7 +53,8 @@ def generate_jwt(user_id: Union[str, uuid.UUID], token_type: str = 'access') -> 
     payload = {
         "sub": user_id_str,
         "type": token_type,
-        "iat": datetime.utcnow()
+        "iat": datetime.utcnow(),
+        "jti": str(uuid.uuid4()),
     }
     
     # Set expiration based on token type

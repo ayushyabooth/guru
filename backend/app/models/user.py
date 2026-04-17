@@ -32,7 +32,7 @@ class User(Base):
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
-    
+
     user_id = Column(UUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     core_industry = Column(String(50), nullable=False)
     specializations = Column(JSON, nullable=False)
@@ -44,6 +44,15 @@ class UserProfile(Base):
     recap_weekly_goal_minutes = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     user = relationship("User", back_populates="profile")
+
+
+class RevokedToken(Base):
+    """Blocklist for revoked JWT tokens, keyed by jti claim."""
+    __tablename__ = "revoked_tokens"
+
+    jti = Column(String(36), primary_key=True)
+    expires_at = Column(DateTime(timezone=False), nullable=False)
+    revoked_at = Column(DateTime(timezone=False), server_default=func.now())

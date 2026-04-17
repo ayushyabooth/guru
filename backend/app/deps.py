@@ -9,8 +9,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.models.user import User
-from app.services.auth_service import verify_jwt
+from app.models.user import User, RevokedToken
+from app.utils.jwt_utils import decode_token
+from app.config import settings
 
 
 _security = HTTPBearer(auto_error=False)
@@ -26,10 +27,18 @@ async def get_current_user(
 
     try:
         token = credentials.credentials
-        user_id_str = verify_jwt(token)
+        payload = decode_token(token, settings.JWT_SECRET_KEY, settings.JWT_ALGORITHM)
+        user_id_str = payload.get("sub")
+        jti = payload.get("jti")
+        if not user_id_str:
+            raise ValueError("Missing sub claim")
         user_id = uuid.UUID(user_id_str)
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
+
+    # Check revocation blocklist
+    if jti and db.query(RevokedToken).filter(RevokedToken.jti == jti).first():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user or not user.is_active:
