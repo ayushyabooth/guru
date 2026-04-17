@@ -24,8 +24,17 @@ export default function CatchupScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [todayLabel, setTodayLabel] = useState('');
   const router = useRouter();
   const { isDark, colors } = useTheme();
+
+  useEffect(() => {
+    setTodayLabel(new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    }));
+  }, []);
 
   // Staggered header entrance
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -121,13 +130,6 @@ export default function CatchupScreen() {
   const handleCardInteraction = () => {
     recordInteraction(); // Record any card interaction
   };
-
-  // Format today's date for subtitle
-  const todayLabel = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
 
   // In light mode, let AppBackground show through instead of a solid fill
   const containerBg = isDark ? colors.background : 'transparent';

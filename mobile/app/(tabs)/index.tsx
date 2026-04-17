@@ -360,11 +360,17 @@ function HomeContent() {
   const queryClient = useQueryClient();
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
+  const [nowMs, setNowMs] = useState<number | null>(null);
   const COLORS = useHomeColors();
   const { toggleTheme, isDark } = useTheme();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
   const blurStyle16 = COLORS.isDark ? getDarkBackdropBlur(16) : getBackdropBlur(16);
   const containerBg = COLORS.isDark ? COLORS.background : 'transparent';
+
+  // Capture current time after mount so it matches between server and client.
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
 
   // Prefetch catchup feed in the background so it's ready when user clicks the tab.
   // This fires once on mount — by the time the user navigates to Catch-up, data is cached.
@@ -637,7 +643,7 @@ function HomeContent() {
         {displayMetrics.lastUpdated && (
           <View style={styles.footer}>
             <Text style={[styles.lastUpdated, { color: COLORS.textTertiary }]}>
-              Updated {(() => { const d = Math.round((Date.now() - new Date(displayMetrics.lastUpdated).getTime()) / 60000); return d < 1 ? 'just now' : d < 60 ? `${d}m ago` : `${Math.floor(d/60)}h ago`; })()}
+              Updated {nowMs == null ? '' : (() => { const d = Math.round((nowMs - new Date(displayMetrics.lastUpdated).getTime()) / 60000); return d < 1 ? 'just now' : d < 60 ? `${d}m ago` : `${Math.floor(d/60)}h ago`; })()}
             </Text>
           </View>
         )}

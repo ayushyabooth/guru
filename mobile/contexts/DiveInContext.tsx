@@ -90,43 +90,50 @@ export const DiveInProvider: React.FC<{ children: ReactNode; userId?: string }> 
   children,
   userId = 'default',
 }) => {
-  // Initialize state from localStorage
-  const [currentArticle, setCurrentArticleState] = useState<Article | null>(
-    loadFromStorage(getStorageKey('currentArticle', userId), null)
-  );
-  const [currentContext, setCurrentContextState] = useState<string>(
-    loadFromStorage(getStorageKey('currentContext', userId), 'finance')
-  );
-  const [articles, setArticlesState] = useState<Article[]>(
-    loadFromStorage(getStorageKey('articles', userId), [])
-  );
-  const [readingHistory, setReadingHistoryState] = useState<string[]>(
-    loadFromStorage(getStorageKey('readingHistory', userId), [])
-  );
-  const [sessionNotes, setSessionNotesState] = useState<Record<string, ArticleNote>>(
-    loadFromStorage(getStorageKey('sessionNotes', userId), {})
-  );
+  // Always start with server-safe defaults; load from localStorage after mount
+  // so SSR HTML matches client hydration (avoids React Error #418).
+  const [currentArticle, setCurrentArticleState] = useState<Article | null>(null);
+  const [currentContext, setCurrentContextState] = useState<string>('finance');
+  const [articles, setArticlesState] = useState<Article[]>([]);
+  const [readingHistory, setReadingHistoryState] = useState<string[]>([]);
+  const [sessionNotes, setSessionNotesState] = useState<Record<string, ArticleNote>>({});
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Auto-save to localStorage on state changes
+  // Load persisted state after mount (client-only, deferred past hydration).
   useEffect(() => {
+    setCurrentArticleState(loadFromStorage(getStorageKey('currentArticle', userId), null));
+    setCurrentContextState(loadFromStorage(getStorageKey('currentContext', userId), 'finance'));
+    setArticlesState(loadFromStorage(getStorageKey('articles', userId), []));
+    setReadingHistoryState(loadFromStorage(getStorageKey('readingHistory', userId), []));
+    setSessionNotesState(loadFromStorage(getStorageKey('sessionNotes', userId), {}));
+    setIsHydrated(true);
+  }, [userId]);
+
+  // Auto-save to localStorage on state changes (skip until hydration is done).
+  useEffect(() => {
+    if (!isHydrated) return;
     saveToStorage(getStorageKey('currentArticle', userId), currentArticle);
-  }, [currentArticle, userId]);
+  }, [currentArticle, userId, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     saveToStorage(getStorageKey('currentContext', userId), currentContext);
-  }, [currentContext, userId]);
+  }, [currentContext, userId, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     saveToStorage(getStorageKey('articles', userId), articles);
-  }, [articles, userId]);
+  }, [articles, userId, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     saveToStorage(getStorageKey('readingHistory', userId), readingHistory);
-  }, [readingHistory, userId]);
+  }, [readingHistory, userId, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) return;
     saveToStorage(getStorageKey('sessionNotes', userId), sessionNotes);
-  }, [sessionNotes, userId]);
+  }, [sessionNotes, userId, isHydrated]);
 
   // State setters with auto-save
   const setCurrentArticle = (article: Article | null) => {

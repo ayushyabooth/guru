@@ -50,8 +50,13 @@ export default function DiveinScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [dateHeader, setDateHeader] = useState<string>('');
   const { isDark, colors } = useTheme();
   const router = useRouter();
+
+  useEffect(() => {
+    setDateHeader(formatDateHeader());
+  }, []);
 
   const { savedArticles: savedRaw, essentialArticles, discoveryArticles, isLoading, error, refresh, removeArticle } = useDiveinFeed(selectedContext);
 
@@ -188,7 +193,7 @@ export default function DiveinScreen() {
         <View style={styles.headerMeta}>
           {isDark ? (
             <>
-              <Text style={[styles.headerDate, { color: colors.textSecondary }]}>{formatDateHeader()}</Text>
+              <Text style={[styles.headerDate, { color: colors.textSecondary }]}>{dateHeader}</Text>
               {articles.length > 0 && (
                 <>
                   <View style={styles.headerDot} />

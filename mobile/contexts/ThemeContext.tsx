@@ -122,13 +122,18 @@ function applyHtmlDataTheme(mode: ResolvedMode): void {
 // --- Provider --------------------------------------------------------------
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Synchronous first paint: read preference + OS scheme before first render.
-  const [preference, setPreferenceState] = useState<ThemePreference>(() => readPreferenceSync());
-  const [osScheme, setOsScheme] = useState<ResolvedMode>(() => readOSScheme());
+  // Always start with server-safe defaults so SSR HTML matches client hydration.
+  // Client-specific values (localStorage, OS scheme) are loaded in useEffect.
+  const [preference, setPreferenceState] = useState<ThemePreference>('system');
+  const [osScheme, setOsScheme] = useState<ResolvedMode>('dark');
 
-  // On native, rehydrate preference from SecureStore after first paint.
+  // After mount: read client-only values (localStorage / SecureStore / OS scheme).
   useEffect(() => {
-    if (Platform.OS !== 'web') {
+    setOsScheme(readOSScheme());
+    if (Platform.OS === 'web') {
+      const stored = readPreferenceSync();
+      if (stored !== 'system') setPreferenceState(stored);
+    } else {
       SecureStore.getItemAsync(STORAGE_KEY).then((v) => {
         if (v === 'dark' || v === 'light' || v === 'system') {
           setPreferenceState(v);
