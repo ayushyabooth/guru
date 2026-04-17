@@ -1,3 +1,4 @@
+import '../utils/polyfills';
 import { Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
