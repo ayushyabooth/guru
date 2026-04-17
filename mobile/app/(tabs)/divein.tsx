@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Alert, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { DiveinFeed, DiveinArticle } from '../../components/Divein/DiveinFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { userService, UserProfile } from '../../services/user-service';
@@ -49,7 +50,9 @@ export default function DiveinScreen() {
   const [selectedContext, setSelectedContext] = useState('core');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [isAuthError, setIsAuthError] = useState(false);
   const { isDark, colors } = useTheme();
+  const router = useRouter();
 
   const { savedArticles: savedRaw, essentialArticles, discoveryArticles, isLoading, error, refresh, removeArticle } = useDiveinFeed(selectedContext);
 
@@ -93,7 +96,11 @@ export default function DiveinScreen() {
       const profile = await userService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load your profile. Please try again.');
+      if (error instanceof Error && error.message.includes('Not authenticated')) {
+        setIsAuthError(true);
+      } else {
+        Alert.alert('Error', 'Failed to load your profile. Please try again.');
+      }
     } finally {
       setProfileLoading(false);
     }
@@ -156,7 +163,17 @@ export default function DiveinScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="divein" />
         <View style={[styles.container, styles.centerContent]}>
-          <Text style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>Failed to load profile</Text>
+          {isAuthError ? (
+            <View style={styles.authPrompt}>
+              <Text style={[styles.authTitle, { color: colors.textPrimary }]}>Sign in to continue</Text>
+              <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>Your personalized feed is ready when you log in.</Text>
+              <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={[styles.authButton, { backgroundColor: colors.accent }]}>
+                <Text style={styles.authButtonText}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>Failed to load profile</Text>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -270,5 +287,29 @@ const styles = StyleSheet.create({
   },
   filterWrapper: {
     paddingTop: Spacing.xs,
+  },
+  authPrompt: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  authTitle: {
+    ...Typography.headlineMedium,
+    textAlign: 'center',
+  },
+  authSubtitle: {
+    ...Typography.bodyMedium,
+    textAlign: 'center',
+  },
+  authButton: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  authButtonText: {
+    ...Typography.labelLarge,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

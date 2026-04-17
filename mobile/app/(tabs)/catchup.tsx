@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Alert, Platform, Animated, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { CatchupFeed } from '../../components/Catch-up/CatchupFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { useScreenTimeTracking, useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
@@ -22,6 +23,8 @@ export default function CatchupScreen() {
   const [selectedContext, setSelectedContext] = useState('core');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthError, setIsAuthError] = useState(false);
+  const router = useRouter();
   const { isDark, colors } = useTheme();
 
   // Staggered header entrance
@@ -55,7 +58,11 @@ export default function CatchupScreen() {
       const profile = await userService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load your profile. Please try again.');
+      if (error instanceof Error && error.message.includes('Not authenticated')) {
+        setIsAuthError(true);
+      } else {
+        Alert.alert('Error', 'Failed to load your profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -143,7 +150,17 @@ export default function CatchupScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="catchup" />
         <View style={[styles.container, styles.centerContent]}>
-          <Text style={[styles.errorText, { color: colors.error }]}>Failed to load profile</Text>
+          {isAuthError ? (
+            <View style={styles.authPrompt}>
+              <Text style={[styles.authTitle, { color: colors.textPrimary }]}>Sign in to continue</Text>
+              <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>Your personalized feed is ready when you log in.</Text>
+              <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={[styles.authButton, { backgroundColor: colors.accent }]}>
+                <Text style={styles.authButtonText}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={[styles.errorText, { color: colors.error }]}>Failed to load profile</Text>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -232,5 +249,29 @@ const styles = StyleSheet.create({
   },
   filterWrapper: {
     paddingTop: Spacing.sm,
+  },
+  authPrompt: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  authTitle: {
+    ...Typography.headlineMedium,
+    textAlign: 'center',
+  },
+  authSubtitle: {
+    ...Typography.bodyMedium,
+    textAlign: 'center',
+  },
+  authButton: {
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  authButtonText: {
+    ...Typography.labelLarge,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
