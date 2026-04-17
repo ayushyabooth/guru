@@ -9,7 +9,13 @@
  * - Optional tint based on filter context
  * - Dark/light theme support via ThemeContext
  *
- * Note: On web, uses CSS backdrop-filter. On native, uses semi-transparent background.
+ * Platform behaviour:
+ * - Web: CSS backdrop-filter (existing approach)
+ * - Native: expo-blur BlurView with an rgba overlay on top
+ *
+ * Accessibility:
+ * - Respects "Reduce Transparency" system setting:
+ *   raises opacity to 0.92 and disables blur
  */
 
 import React from 'react';
@@ -19,6 +25,7 @@ import {
   ViewStyle,
   Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import {
   GlassMaterials,
   DarkGlassMaterials,
@@ -26,6 +33,7 @@ import {
   Spacing,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useReduceTransparency } from '../../hooks/useReduceTransparency';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -38,16 +46,26 @@ interface GlassCardProps {
   glowIntensity?: 'none' | 'subtle' | 'medium' | 'strong';
 }
 
+// Blur intensity per variant (maps to expo-blur 0–100 scale)
+const VARIANT_BLUR: Record<string, number> = {
+  light: 20,
+  pill: 35,
+  standard: 50,
+  heavy: 65,
+};
+
 export default function GlassCard({
   children,
   style,
   variant = 'standard',
   filterContext,
   padding = 'lg',
+  blurIntensity: blurIntensityProp,
   glowColor,
   glowIntensity = 'none',
 }: GlassCardProps) {
   const { isDark } = useTheme();
+  const reduceTransparency = useReduceTransparency();
   const palette = getPalette(filterContext);
   const materials = isDark ? DarkGlassMaterials : GlassMaterials;
 
@@ -86,6 +104,17 @@ export default function GlassCard({
   const materialStyle = getMaterialStyle();
   const paddingValue = getPadding();
 
+  // reduceTransparency overrides: more opaque, no blur
+  const solidBackground = reduceTransparency
+    ? isDark
+      ? 'rgba(15,20,35,0.92)'
+      : 'rgba(255,255,255,0.92)'
+    : undefined;
+
+  // Effective blur intensity: 0 when reduceTransparency is on
+  const defaultBlur = blurIntensityProp ?? VARIANT_BLUR[variant] ?? 50;
+  const effectiveBlur = reduceTransparency ? 0 : defaultBlur;
+
   // Add filter tint to shadow if filter context is provided
   const shadowStyle: ViewStyle = filterContext
     ? {
@@ -101,39 +130,76 @@ export default function GlassCard({
     const glowOpacities = { subtle: 0.1, medium: 0.2, strong: 0.3 };
     const glowRadii = { subtle: 40, medium: 60, strong: 80 };
     // @ts-ignore
-    glowStyle.boxShadow = `0 0 ${glowRadii[glowIntensity]}px ${ambientGlow}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`;
+    glowStyle.boxShadow = `0 0 ${glowRadii[glowIntensity]}px ${ambientGlow}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)`;
   }
 
-  // Web-specific styles with backdrop-filter
-  const blurRadius = isDark ? 40 : 24;
-  const saturation = isDark ? 200 : 180;
-  const webStyles = Platform.OS === 'web'
-    ? {
-        // @ts-ignore - web-specific property
-        backdropFilter: `blur(${blurRadius}px) saturate(${saturation}%)`,
-        WebkitBackdropFilter: `blur(${blurRadius}px) saturate(${saturation}%)`,
-      }
-    : {};
+  // Web: keep existing CSS backdrop-filter approach
+  if (Platform.OS === 'web') {
+    const blurRadius = isDark ? 40 : 24;
+    const saturation = isDark ? 200 : 180;
+    const webStyles = {
+      // @ts-ignore - web-specific property
+      backdropFilter: `blur(${blurRadius}px) saturate(${saturation}%)`,
+      WebkitBackdropFilter: `blur(${blurRadius}px) saturate(${saturation}%)`,
+    };
+
+    return (
+      <View
+        style={[
+          styles.cardContainer,
+          materialStyle,
+          shadowStyle,
+          glowStyle,
+          webStyles,
+          solidBackground ? { backgroundColor: solidBackground } : undefined,
+          { padding: paddingValue },
+          style,
+        ]}
+      >
+        {/* Inner highlight for glass effect */}
+        <View style={[
+          styles.innerHighlight,
+          isDark && styles.innerHighlightDark,
+        ]} />
+        {children}
+      </View>
+    );
+  }
+
+  // Native: BlurView provides the OS-level blur; an rgba overlay sits on top
+  // to keep the tinted glass colour. The border/shadow come from materialStyle
+  // but backgroundColor is stripped off (BlurView handles the background).
+  const { backgroundColor: _bg, ...borderAndShadowStyle } = materialStyle as ViewStyle & { backgroundColor?: string };
 
   return (
-    <View
+    <BlurView
+      intensity={effectiveBlur}
+      tint={isDark ? 'dark' : 'light'}
       style={[
         styles.cardContainer,
-        materialStyle,
+        borderAndShadowStyle,
         shadowStyle,
-        glowStyle,
-        webStyles,
         { padding: paddingValue },
         style,
       ]}
     >
-      {/* Inner highlight for glass effect */}
+      {/* rgba glass overlay — sits below content, on top of blur */}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: solidBackground ?? materialStyle.backgroundColor,
+            borderRadius: (materialStyle as ViewStyle).borderRadius as number,
+          },
+        ]}
+      />
+      {/* Inner specular highlight */}
       <View style={[
         styles.innerHighlight,
         isDark && styles.innerHighlightDark,
       ]} />
       {children}
-    </View>
+    </BlurView>
   );
 }
 
@@ -151,6 +217,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.8)',
   },
   innerHighlightDark: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
 });

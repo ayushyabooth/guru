@@ -246,9 +246,9 @@ export const FontStack = {
 export const GlassMaterials = {
   // Standard glass card
   card: {
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: 'rgba(255,255,255,0.50)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.07)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: BorderRadius.xl,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
@@ -259,9 +259,9 @@ export const GlassMaterials = {
 
   // Heavy frosted glass (for prominent cards like login form)
   cardHeavy: {
-    backgroundColor: 'rgba(255,255,255,0.88)',
+    backgroundColor: 'rgba(255,255,255,0.60)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: BorderRadius.xl,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 8 },
@@ -272,9 +272,9 @@ export const GlassMaterials = {
 
   // Light glass (very subtle, for nested surfaces within cards)
   cardLight: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.05)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: BorderRadius.lg,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
@@ -285,9 +285,9 @@ export const GlassMaterials = {
 
   // Glass button
   button: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.50)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.07)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: BorderRadius.lg,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
@@ -300,7 +300,7 @@ export const GlassMaterials = {
   input: {
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.08)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: 14,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
@@ -311,9 +311,9 @@ export const GlassMaterials = {
 
   // Glass pill (for tags, chips)
   pill: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(15,23,42,0.06)',
+    borderColor: 'rgba(255,255,255,0.6)',
     borderRadius: BorderRadius.pill,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
@@ -324,10 +324,10 @@ export const GlassMaterials = {
 
   // Navigation / breadcrumb bar
   navBar: {
-    backgroundColor: 'rgba(248,250,252,0.88)',
+    backgroundColor: 'rgba(248,250,252,0.60)',
     borderWidth: 0,
     borderBottomWidth: 1,
-    borderColor: 'rgba(15,23,42,0.06)',
+    borderColor: 'rgba(255,255,255,0.6)',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -337,9 +337,9 @@ export const GlassMaterials = {
 
   // Tab bar glass
   tabBar: {
-    backgroundColor: 'rgba(248,250,252,0.90)',
+    backgroundColor: 'rgba(248,250,252,0.55)',
     borderTopWidth: 1,
-    borderColor: 'rgba(15,23,42,0.06)',
+    borderColor: 'rgba(255,255,255,0.6)',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.06,
@@ -483,7 +483,7 @@ export const getDarkGlassCardStyle = (glowColor?: string, intensity: 'none' | 's
     return {
       ...baseStyle,
       // @ts-ignore
-      boxShadow: `0 0 ${glowRadii[intensity]}px ${glowColor.replace(/[\d.]+\)$/, `${glowOpacities[intensity]})`).replace('rgb', 'rgba')}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+      boxShadow: `0 0 ${glowRadii[intensity]}px ${glowColor.replace(/[\d.]+\)$/, `${glowOpacities[intensity]})`).replace('rgb', 'rgba')}, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25)`,
     };
   }
 
