@@ -448,34 +448,43 @@ def parse_expert_links_md_with_state(filepath: str, ingestion_state_id: str, db:
     
     # Log parsing start
     IngestionStateService.log_ingestion_action(
-        ingestion_state_id, 
-        'parsing_started', 
-        details=f"Starting to parse {filepath}",
+        ingestion_state_id,
+        'parsing_started',
+        details=f"Starting to parse expert links (DB-first, file fallback)",
         db=db
     )
-    
-    # Parse the markdown file (use CSV parser since we're using CSV format)
-    from app.services.csv_ingestion_service import parse_expert_links_csv
-    try:
-        articles = parse_expert_links_csv(filepath)
-        
+
+    # Load article list: prefer DB so Railway redeploys don't lose the seed data
+    from app.services.csv_ingestion_service import parse_expert_links_csv, get_expert_links_from_db
+    articles = get_expert_links_from_db(db)
+
+    if articles:
         IngestionStateService.log_ingestion_action(
             ingestion_state_id,
             'parsed',
-            details=f"Parsed {len(articles)} articles from {filepath}",
+            details=f"Loaded {len(articles)} expert links from database",
             db=db
         )
-        
-    except Exception as e:
-        logger.error(f"Error parsing {filepath}: {e}")
-        IngestionStateService.log_ingestion_action(
-            ingestion_state_id,
-            'parse_error',
-            details=f"Error parsing file: {str(e)}",
-            db=db
-        )
-        result['errors'] += 1
-        return result
+    else:
+        # Fall back to file if DB is empty (e.g. very first run before seeding completes)
+        try:
+            articles = parse_expert_links_csv(filepath)
+            IngestionStateService.log_ingestion_action(
+                ingestion_state_id,
+                'parsed',
+                details=f"Loaded {len(articles)} expert links from file {filepath} (DB was empty)",
+                db=db
+            )
+        except Exception as e:
+            logger.error(f"Error parsing {filepath}: {e}")
+            IngestionStateService.log_ingestion_action(
+                ingestion_state_id,
+                'parse_error',
+                details=f"Error parsing file: {str(e)}",
+                db=db
+            )
+            result['errors'] += 1
+            return result
     
     # Import quality and dedup services
     from app.services.content_quality_service import ContentQualityService
