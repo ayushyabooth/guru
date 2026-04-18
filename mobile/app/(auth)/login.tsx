@@ -165,8 +165,8 @@ export default function LoginScreen() {
           {/* Logo + Brand Name - Horizontal Row */}
           <View style={styles.logoSection}>
             <View style={styles.brandRow}>
-              <GuruRings size="logo" dimensions={88} />
-              <Text style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
+              <GuruRings size="logo" dimensions={88} accessibilityLabel="Guru logo" />
+              <Text accessibilityRole="header" style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
             </View>
           </View>
 
@@ -175,7 +175,7 @@ export default function LoginScreen() {
             {/* Error Message */}
             {error ? (
               <View style={[styles.alertBox, { flexDirection: 'row', alignItems: 'center' }]}>
-                <Text style={[styles.alertText, { color: colors.error, flex: 1 }]}>{error}</Text>
+                <Text role="alert" accessibilityLiveRegion="assertive" style={[styles.alertText, { color: colors.error, flex: 1 }]}>{error}</Text>
                 <TouchableOpacity onPress={() => setError('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={{ color: colors.error, fontSize: 18, fontWeight: '700', marginLeft: 8 }}>{'\u00D7'}</Text>
                 </TouchableOpacity>
@@ -216,12 +216,14 @@ export default function LoginScreen() {
             />
 
             {/* Forgot Password Link */}
-            <Text
-              style={styles.forgotPasswordText}
+            <TouchableOpacity
               onPress={() => {}}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
             >
-              Forgot Password?
-            </Text>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
             {/* Login Button */}
             <GlassButton
@@ -235,12 +237,16 @@ export default function LoginScreen() {
             />
 
             {/* Create Account Link */}
-            <Text
-              style={[styles.createAccountText, { color: colors.textSecondary }, ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as any] : [])]}
+            <TouchableOpacity
               onPress={() => router.push('/(auth)/signup')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Don't have an account? Sign up"
             >
-              Don't have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign up</Text>
-            </Text>
+              <Text style={[styles.createAccountText, { color: colors.textSecondary }]}>
+                Don't have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign up</Text>
+              </Text>
+            </TouchableOpacity>
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>

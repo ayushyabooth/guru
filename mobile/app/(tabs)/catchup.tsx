@@ -159,7 +159,7 @@ export default function CatchupScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <Text style={[styles.errorText, { color: colors.error }]}>Failed to load profile</Text>
+            <Text role="alert" style={[styles.errorText, { color: colors.error }]}>Failed to load profile</Text>
           )}
         </View>
       </SafeAreaView>
@@ -178,7 +178,7 @@ export default function CatchupScreen() {
           { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Catch-up</Text>
+        <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Catch-up</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>{todayLabel}</Text>
       </Animated.View>
 

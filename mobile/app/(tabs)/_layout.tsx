@@ -119,6 +119,7 @@ function TabsWithMetrics() {
       screenOptions={{
         tabBarActiveTintColor: isDark ? '#F1F5F9' : '#6366F1',
         tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
+        tabBarAccessibilityLabel: 'Main navigation',
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',

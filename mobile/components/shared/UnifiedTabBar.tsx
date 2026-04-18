@@ -83,7 +83,7 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} accessibilityRole="tablist" accessibilityLabel="Content filters">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -141,6 +141,9 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
               onPress={() => onTabPress(tab.id || tab.context || '', tab.context || tab.value)}
               style={pillStyle}
               activeOpacity={0.7}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={tab.label}
             >
               {/* Inner specular highlight - 1px white line at top for active pill */}
               {isActive && (

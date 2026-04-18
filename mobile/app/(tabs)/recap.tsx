@@ -709,7 +709,7 @@ export default function RecapScreen() {
           borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)',
         }]}>
           <View style={styles.headerRow}>
-            <Text style={[styles.title, { color: colors.recap }]}>Recap</Text>
+            <Text accessibilityRole="header" style={[styles.title, { color: colors.recap }]}>Recap</Text>
             <TouchableOpacity style={styles.archiveButton} onPress={() => setViewState('archive')}>
               <Text style={styles.archiveButtonText}>Journal</Text>
             </TouchableOpacity>

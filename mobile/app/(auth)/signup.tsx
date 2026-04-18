@@ -148,8 +148,8 @@ export default function SignupScreen() {
           {/* Logo + Brand Name - Horizontal Row */}
           <View style={styles.logoSection}>
             <View style={styles.brandRow}>
-              <GuruRings size="logo" dimensions={88} />
-              <Text style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
+              <GuruRings size="logo" dimensions={88} accessibilityLabel="Guru logo" />
+              <Text accessibilityRole="header" style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
             </View>
           </View>
 
@@ -161,10 +161,14 @@ export default function SignupScreen() {
                 styles.alertBox,
                 status === 'error' ? styles.alertError : styles.alertSuccess
               ]}>
-                <Text style={[
-                  styles.alertText,
-                  { color: status === 'error' ? colors.error : colors.success }
-                ]}>
+                <Text
+                  role="alert"
+                  accessibilityLiveRegion="assertive"
+                  style={[
+                    styles.alertText,
+                    { color: status === 'error' ? colors.error : colors.success }
+                  ]}
+                >
                   {status === 'success' ? 'Account created!' : errorMessage}
                 </Text>
               </View>

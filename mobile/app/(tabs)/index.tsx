@@ -480,7 +480,7 @@ function HomeContent() {
           <View style={[styles.headerGlass, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle]}>
             <View style={styles.headerTop}>
               <View style={styles.headerBrandRow}>
-                <GuruRings size="logo" dimensions={36} />
+                <GuruRings size="logo" dimensions={36} accessibilityLabel="Guru logo" />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -493,8 +493,8 @@ function HomeContent() {
               </View>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
-            <Text style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
-            {state.error && <Text style={styles.errorText}>{state.error}</Text>}
+            <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
+            {state.error && <Text role="alert" style={styles.errorText}>{state.error}</Text>}
           </View>
         </View>
 

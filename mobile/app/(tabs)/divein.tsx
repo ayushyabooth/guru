@@ -171,7 +171,7 @@ export default function DiveinScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <Text style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>Failed to load profile</Text>
+            <Text role="alert" style={[styles.emptyStateTitle, { color: colors.textPrimary }]}>Failed to load profile</Text>
           )}
         </View>
       </SafeAreaView>
@@ -184,7 +184,7 @@ export default function DiveinScreen() {
 
       {/* Header */}
       <View style={styles.headerContainer}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Dive-in</Text>
+        <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Dive-in</Text>
         <View style={styles.headerMeta}>
           {isDark ? (
             <>
