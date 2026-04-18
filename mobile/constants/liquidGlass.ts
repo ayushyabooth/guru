@@ -609,6 +609,38 @@ export const getGlassStyle = (
 };
 
 // ============================================================================
+// FILTER PILL GLASS TOKENS (GUR-132)
+// Source of truth: Figma "Glass Pills v3 — True Translucency" (node 95:2)
+// ============================================================================
+
+export const FilterPillTokens = {
+  // Glass blob (active indicator)
+  blobFillOpacity: 0.18,       // L1: glass surface fill opacity
+  blobBlurRadius: 28,          // backdrop-blur radius (px)
+  blobTintOpacity: 0.10,       // L2: accent color tint opacity
+  blobCombinedOpacity: 0.28,   // effective combined opacity through glass
+  blobBorderOpacityDark: 0.28, // L5: bright border (dark mode)
+  blobBorderOpacityLight: 0.40,// L5: accent border (light mode)
+  blobStretchFactor: 1.15,     // width multiplier mid-flight
+
+  // Spring spec
+  springMass: 1,
+  springStiffness: 280,
+  springDamping: 24,
+
+  // Timing
+  transitionDuration: 350,     // total morph duration (ms)
+  textFadeOutDuration: 60,     // active text out (ms)
+  textFadeInDelay: 200,        // active text in delay (ms)
+  textFadeInDuration: 90,      // active text in duration (ms)
+
+  // Proximity glow ripple
+  glowTriggerDistance: 40,     // px — when blob center is within this of a pill center
+  glowBorderOpacity: 0.15,     // pulse border glow intensity
+  glowDecayDuration: 150,      // ease-out after blob passes (ms)
+};
+
+// ============================================================================
 // ANIMATION TIMING
 // Consistent animation curves and durations
 // ============================================================================
@@ -755,6 +787,7 @@ export default {
   BorderRadius,
   Typography,
   GlassMaterials,
+  FilterPillTokens,
   Animation,
   BlobPositions,
   getGlassCardStyle,

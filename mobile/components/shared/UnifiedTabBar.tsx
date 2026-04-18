@@ -180,29 +180,8 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
   );
 };
 
-// Backward compatible exports
-export const FilterTabBar: React.FC<{
-  tabs: Array<{ label: string; context: string }>;
-  selectedContext: string;
-  onContextChange: (context: string) => void;
-  accentColor?: string; // Ring color for per-page theming
-}> = ({ tabs, selectedContext, onContextChange, accentColor }) => {
-  const mappedTabs: TabItem[] = tabs.map((t) => ({
-    id: t.context,
-    label: t.label,
-    context: t.context,
-  }));
-
-  return (
-    <UnifiedTabBar
-      tabs={mappedTabs}
-      activeTabId={selectedContext}
-      onTabPress={(_, context) => context && onContextChange(context)}
-      variant="minimal"
-      accentColor={accentColor}
-    />
-  );
-};
+// Backward compatible exports — FilterTabBar delegates to FilterPills (GUR-132)
+export { FilterTabBar } from '../ui/FilterPills';
 
 export default UnifiedTabBar;
 

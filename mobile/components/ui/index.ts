@@ -2,6 +2,8 @@
  * UI Components - Liquid Glass Design System
  */
 
+export { default as FilterPills, FilterTabBar } from './FilterPills';
+export type { FilterPillItem, FilterPillsProps } from './FilterPills';
 export { default as GlassCard } from './GlassCard';
 export { default as GlassInput } from './GlassInput';
 export { default as GlassButton } from './GlassButton';
