@@ -1,45 +1,22 @@
-import { useEffect } from 'react';
-import { router } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import { Redirect } from 'expo-router';
 import { getAuthToken } from '../utils/auth';
 
-export default function IndexScreen() {
+export default function Index() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   useEffect(() => {
-    // expo-router's router.replace() queues navigation actions internally
-    // until the navigator is ready, so no manual "isReady" guard is needed.
-    // Previously we imported useRootNavigationState from @react-navigation/native
-    // which was removed in v7 — calling undefined() crashed every render. (GUR-91)
     getAuthToken()
       .then((token) => {
-        if (token) {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/(auth)/signup');
-        }
+        setIsAuthenticated(!!token);
+        setIsLoading(false);
       })
       .catch(() => {
-        router.replace('/(auth)/signup');
+        setIsLoading(false);
       });
   }, []);
 
-  // Show loading screen while checking auth
-  return (
-    <View style={styles.container}>
-      <Text style={styles.loadingText}>Loading Guru...</Text>
-    </View>
-  );
+  if (isLoading) return null;
+  return <Redirect href={isAuthenticated ? '/(tabs)' : '/(auth)/login'} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0A0E17',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-});
