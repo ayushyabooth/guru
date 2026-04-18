@@ -55,10 +55,10 @@ class MetricService {
     };
   }
 
-  async getMetrics(): Promise<MetricsResponse> {
+  async getMetrics(retries = 1): Promise<MetricsResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
       // Fetch metrics and profile in parallel
       const [metricsResponse, profileResponse] = await Promise.all([
         fetch(`${this.baseUrl}/me/metrics`, {
@@ -70,6 +70,13 @@ class MetricService {
           headers,
         })
       ]);
+
+      // Retry once on 502/503 (Railway cold-start) before giving up
+      const coldStart = (r: Response) => r.status === 502 || r.status === 503;
+      if ((coldStart(metricsResponse) || coldStart(profileResponse)) && retries > 0) {
+        await new Promise(r => setTimeout(r, 1000));
+        return this.getMetrics(retries - 1);
+      }
 
       if (!metricsResponse.ok) {
         if (metricsResponse.status === 401) {
@@ -178,16 +185,22 @@ class MetricService {
     try {
       return await this.getMetrics();
     } catch (error) {
-      // Propagate auth errors so the UI can redirect to login
-      if (error instanceof Error && error.message.includes('Authentication failed')) {
-        throw error;
-      }
+      const isAuthError = error instanceof Error && error.message.includes('Authentication failed');
 
       console.warn('[MetricService] API failed, using fallback:', error instanceof Error ? error.message : error);
 
-      // Return last known good data if available
+      // If we have cached data, return it even for auth errors — a 401 during
+      // polling could be a transient cold-start artifact, not a real session
+      // expiry. Let the UI show stale data rather than force-logging the user out.
       if (this.lastKnownGoodResponse) {
         return this.lastKnownGoodResponse;
+      }
+
+      // Only propagate auth errors when there's NO cached data at all (first load).
+      // This gives the MetricProvider a chance to show an auth error banner, but
+      // the tab screens won't auto-redirect — they just display the error state.
+      if (isAuthError) {
+        throw error;
       }
 
       // Final fallback: static defaults (all zeros)

@@ -21,7 +21,8 @@ function decodeJWT(token: string): { exp?: number } | null {
 // Check if token is expired or will expire soon (within 15 minutes)
 function isTokenExpiringSoon(token: string): boolean {
   const decoded = decodeJWT(token);
-  if (!decoded || !decoded.exp) return true;
+  // No exp claim → assume token is valid indefinitely, skip refresh
+  if (!decoded || !decoded.exp) return false;
 
   const expiryTime = decoded.exp * 1000; // Convert to milliseconds
   const now = Date.now();
@@ -30,8 +31,12 @@ function isTokenExpiringSoon(token: string): boolean {
   return expiryTime - now < fifteenMinutes;
 }
 
-// Refresh token by getting a new one from the backend
-async function refreshAuthToken(): Promise<string | null> {
+// Singleton refresh lock — prevents concurrent tab mounts from racing to
+// refresh the same refresh token simultaneously (which rotates it and makes
+// the second caller's attempt fail, eventually breaking auth).
+let refreshInProgress: Promise<string | null> | null = null;
+
+async function doTokenRefresh(): Promise<string | null> {
   try {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) return null;
@@ -45,6 +50,11 @@ async function refreshAuthToken(): Promise<string | null> {
       const data = await response.json();
       if (data.access_token) {
         await setAuthToken(data.access_token);
+        // CRITICAL FIX: persist the rotated refresh token so the next refresh
+        // doesn't fail with an already-invalidated token.
+        if (data.refresh_token) {
+          await setRefreshToken(data.refresh_token);
+        }
         return data.access_token;
       }
     }
@@ -52,6 +62,18 @@ async function refreshAuthToken(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+// Refresh token by getting a new one from the backend.
+// Uses a singleton promise so concurrent callers share one network request.
+function refreshAuthToken(): Promise<string | null> {
+  if (refreshInProgress) {
+    return refreshInProgress;
+  }
+  refreshInProgress = doTokenRefresh().finally(() => {
+    refreshInProgress = null;
+  });
+  return refreshInProgress;
 }
 
 export async function getAuthToken(): Promise<string | null> {
@@ -76,7 +98,7 @@ export async function getAuthToken(): Promise<string | null> {
   // Check if token is expiring soon and refresh if needed
   if (isTokenExpiringSoon(token)) {
     const newToken = await refreshAuthToken();
-    return newToken || token; // Return new token or fall back to old one
+    return newToken || token; // Return new token or fall back to current one
   }
 
   return token;

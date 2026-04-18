@@ -19,9 +19,9 @@ export interface UserProfile {
 }
 
 class UserService {
-  async getUserProfile(): Promise<UserProfile> {
+  async getUserProfile(retries = 2): Promise<UserProfile> {
     const token = await getAuthToken();
-    
+
     if (!token) {
       throw new Error('Not authenticated. Please log in.');
     }
@@ -35,6 +35,11 @@ class UserService {
     });
 
     if (!response.ok) {
+      // Retry on 502/503 — Railway cold starts return these before the app is ready
+      if ((response.status === 502 || response.status === 503) && retries > 0) {
+        await new Promise(r => setTimeout(r, 1000));
+        return this.getUserProfile(retries - 1);
+      }
       if (response.status === 401) {
         throw new Error('Session expired. Please log in again.');
       }

@@ -21,7 +21,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
+import { setAuthToken, setRefreshToken } from '../../utils/auth';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard, GlassInput, GlassButton, OrganicBackground } from '../../components/ui';
 import GuruRings from '../../components/ui/GuruRings';
@@ -59,17 +59,9 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Clear old tokens first
-      try {
-        await SecureStore.deleteItemAsync('access_token');
-        await SecureStore.deleteItemAsync('refresh_token');
-      } catch {
-        // Fallback for web
-      }
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-      }
+      // Clear old tokens first (removeAuthToken handles both web and native)
+      const { removeAuthToken } = await import('../../utils/auth');
+      await removeAuthToken();
 
       const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const fullUrl = `${apiUrl}/auth/login`;
@@ -101,19 +93,11 @@ export default function LoginScreen() {
       if (response.ok) {
         const data = await response.json();
 
-        // Store tokens
-        let tokenStored = false;
-        try {
-          await SecureStore.setItemAsync('access_token', data.access_token);
-          await SecureStore.setItemAsync('refresh_token', data.refresh_token);
-          tokenStored = true;
-        } catch {
-          // SecureStore failed
-        }
-
-        if (!tokenStored && typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem('access_token', data.access_token);
-          localStorage.setItem('refresh_token', data.refresh_token);
+        // Store tokens using the shared auth utilities so web (localStorage)
+        // and native (SecureStore) use the same key path that getAuthToken() reads.
+        await setAuthToken(data.access_token);
+        if (data.refresh_token) {
+          await setRefreshToken(data.refresh_token);
         }
 
         // Navigate to main app
