@@ -21,7 +21,7 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { BookOpenText, Compass, NotePencil } from 'phosphor-react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext';
 import Svg, {
@@ -68,11 +68,11 @@ const RING_RGB = {
   recap: [251, 146, 60] as const,
 };
 
-// Tab icon names for distinguishability (MaterialIcons)
-const TAB_INNER_ICON: Record<string, React.ComponentProps<typeof MaterialIcons>['name']> = {
-  catchup: 'auto-stories',   // book/newspaper feel
-  divein: 'explore',          // compass/explore feel
-  recap: 'event-note',        // journal/recap feel
+// Tab icon components for distinguishability (Phosphor)
+const TAB_INNER_ICON: Record<string, React.ComponentType<{ size: number; color: string; weight?: string }>> = {
+  catchup: BookOpenText,
+  divein: Compass,
+  recap: NotePencil,
 };
 
 // ─── Types ───────────────────────────────────────────────────────
@@ -638,11 +638,11 @@ function TabRing({ ring, progress = 0, focused = false, color = '#64748B', dimen
 
       {/* Inner icon for distinguishability */}
       <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', width: containerSize, height: containerSize }}>
-        <MaterialIcons
-          name={TAB_INNER_ICON[ring]}
-          size={Math.round(dimensions * 0.38)}
-          color={focused ? ringColor : color}
-        />
+        {React.createElement(TAB_INNER_ICON[ring], {
+          size: Math.round(dimensions * 0.38),
+          color: focused ? ringColor : color,
+          weight: focused ? 'fill' : 'regular',
+        })}
       </View>
     </View>
   );

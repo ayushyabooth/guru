@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Sun, Moon } from 'phosphor-react-native';
 import { GlassCard, GlassInput, GlassButton, OrganicBackground } from '../../components/ui';
 import GuruRings from '../../components/ui/GuruRings';
 import {
@@ -162,11 +162,10 @@ export default function LoginScreen() {
         accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons
-          name={isDark ? 'sunny' : 'moon'}
-          size={22}
-          color={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}
-        />
+        {isDark
+          ? <Sun size={22} color="rgba(255,255,255,0.7)" weight="regular" />
+          : <Moon size={22} color="rgba(0,0,0,0.6)" weight="regular" />
+        }
       </TouchableOpacity>
 
       <KeyboardAvoidingView

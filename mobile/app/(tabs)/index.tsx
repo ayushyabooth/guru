@@ -33,6 +33,7 @@ import {
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Sun, Moon } from 'phosphor-react-native';
 
 const { width } = Dimensions.get('window');
 // Theme-aware color palette
@@ -485,7 +486,10 @@ function HomeContent() {
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
-                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+                  {isDark
+                    ? <Sun size={18} color="rgba(255,255,255,0.75)" weight="regular" />
+                    : <Moon size={18} color="rgba(15,23,42,0.6)" weight="regular" />
+                  }
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
                   <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
@@ -755,9 +759,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  themeToggleText: {
-    fontSize: 16,
   },
   logoutButton: {
     paddingHorizontal: Spacing.md,

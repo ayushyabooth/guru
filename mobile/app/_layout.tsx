@@ -52,10 +52,6 @@ export default function RootLayout() {
     Manrope_600SemiBold,
     Manrope_700Bold,
     Manrope_800ExtraBold,
-    // Load icon fonts explicitly from assets/fonts/ so they don't reference
-    // node_modules/ paths which Vercel strips from deployments.
-    'material-community': require('../assets/fonts/MaterialCommunityIcons.ttf'),
-    'material': require('../assets/fonts/MaterialIcons.ttf'),
   });
 
   useEffect(() => {
