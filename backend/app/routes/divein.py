@@ -154,6 +154,8 @@ async def get_divein_feed(
             saved_articles = db.query(Article).filter(
                 Article.id.in_(user_saved_ids),
                 Article.created_at >= cutoff_date,
+                Article.title.isnot(None),
+                Article.title != 'Untitled',
             ).order_by(desc(Article.created_at)).all()
 
         # ── Section 2: Expert Picks (filter-specific, exclude saved) ──
@@ -163,6 +165,8 @@ async def get_divein_feed(
             expert_query = db.query(Article).join(ExpertNote).filter(
                 Article.id.in_(essential_only_ids),
                 Article.created_at >= cutoff_date,
+                Article.title.isnot(None),
+                Article.title != 'Untitled',
             )
             if filter_conditions:
                 expert_query = expert_query.filter(or_(*filter_conditions))
@@ -176,6 +180,8 @@ async def get_divein_feed(
         pool3_query = db.query(Article).join(ExpertNote).filter(
             ~Article.id.in_(excluded_ids) if excluded_ids else True,
             Article.created_at >= cutoff_date,
+            Article.title.isnot(None),
+            Article.title != 'Untitled',
         )
         if filter_conditions:
             pool3_query = pool3_query.filter(or_(*filter_conditions))
