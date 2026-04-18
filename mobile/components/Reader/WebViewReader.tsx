@@ -11,6 +11,7 @@ import AnnotationRail from './AnnotationRail';
 import PeekCard from './PeekCard';
 import { SocraticChat } from './SocraticChat';
 import { getFilterColors, AnnotationColors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,6 +87,7 @@ export default function WebViewReader({
   isSaved,
 }: WebViewReaderProps) {
   const webViewRef = useRef<WebView>(null);
+  const { colors } = useTheme();
 
   // -- State ----------------------------------------------------------------
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -257,7 +259,7 @@ export default function WebViewReader({
 
   // -- Render ---------------------------------------------------------------
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* WebView takes full screen */}
       <ArticleWebView
         url={article.url}
@@ -353,6 +355,5 @@ export default function WebViewReader({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
 });

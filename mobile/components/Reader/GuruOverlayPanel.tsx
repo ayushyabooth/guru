@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import Icon from '../ui/Icon';
 import { AnnotationColors } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -286,6 +287,7 @@ export default function GuruOverlayPanel(props: GuruOverlayPanelProps) {
     onAnnotationPositionTap, onRelatedArticleClick, initialTab = 0, scrollToAnnotationId,
   } = props;
 
+  const { isDark, colors } = useTheme();
   const [activeTab, setActiveTab] = useState(initialTab);
   const sheetH = useRef(new Animated.Value(visible ? DEFAULT_H : 0)).current;
   const currentH = useRef(DEFAULT_H);
@@ -322,8 +324,11 @@ export default function GuruOverlayPanel(props: GuruOverlayPanelProps) {
 
   if (!visible) return null;
 
+  const sheetBg = isDark ? 'rgba(15, 20, 35, 0.95)' : 'rgba(255,255,255,0.92)';
+  const sheetBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.3)';
+
   return (
-    <Animated.View style={[s.sheet, { height: sheetH }]}>
+    <Animated.View style={[s.sheet, { height: sheetH, backgroundColor: sheetBg, borderTopColor: sheetBorderColor }]}>
       {/* Drag handle */}
       <View {...panResponder.panHandlers} style={s.handleArea}>
         <View style={s.handle} />

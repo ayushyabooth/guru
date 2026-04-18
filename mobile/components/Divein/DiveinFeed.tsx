@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { DiveinArticleCard, DiveinArticleData } from './DiveinArticleCard';
 import { DiveinArticleSkeleton } from './DiveinArticleSkeleton';
 import Icon from '../ui/Icon';
@@ -51,9 +51,6 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
   isLoading,
   filterContext = 'core',
 }) => {
-  const { width } = useWindowDimensions();
-  const numColumns = width >= 768 ? 2 : width >= 600 ? 2 : 1;
-
   const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
@@ -90,44 +87,17 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
     isEssential: article.isEssential,
   });
 
-  // Render a grid of cards
+  // Render a single-column list of cards
   const renderGrid = (articleList: DiveinArticle[]) => {
-    if (numColumns === 1) {
-      return articleList.map((article) => (
-        <DiveinArticleCard
-          key={article.id}
-          article={toCardData(article)}
-          onDiveIn={handleDiveIn}
-          onNotRelevant={onNotRelevant}
-          filterContext={filterContext}
-        />
-      ));
-    }
-
-    // Two-column grid
-    const rows = [];
-    for (let i = 0; i < articleList.length; i += numColumns) {
-      const rowItems = articleList.slice(i, i + numColumns);
-      rows.push(
-        <View key={`row-${i}`} style={styles.gridRow}>
-          {rowItems.map((article) => (
-            <View key={article.id} style={styles.gridItem}>
-              <DiveinArticleCard
-                article={toCardData(article)}
-                onDiveIn={handleDiveIn}
-                onNotRelevant={onNotRelevant}
-                compact
-                filterContext={filterContext}
-              />
-            </View>
-          ))}
-          {rowItems.length < numColumns && (
-            <View style={styles.gridItem} />
-          )}
-        </View>
-      );
-    }
-    return rows;
+    return articleList.map((article) => (
+      <DiveinArticleCard
+        key={article.id}
+        article={toCardData(article)}
+        onDiveIn={handleDiveIn}
+        onNotRelevant={onNotRelevant}
+        filterContext={filterContext}
+      />
+    ));
   };
 
   return (
@@ -221,15 +191,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
-  },
-  gridRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.sm,
-    gap: 0,
-  },
-  gridItem: {
-    flex: 1,
-    maxWidth: '50%',
   },
   sectionHeader: {
     flexDirection: 'row',
