@@ -483,14 +483,9 @@ function HomeContent() {
                 <GuruRings size="logo" dimensions={36} accessibilityLabel="Guru logo" />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
-                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
-                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
+                <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+              </TouchableOpacity>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
             <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
@@ -641,6 +636,16 @@ function HomeContent() {
             </Text>
           </View>
         )}
+
+        {/* Sign out — subtle, secondary action at bottom of screen */}
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+        >
+          <Text style={[styles.signOutText, { color: COLORS.textTertiary }]}>Sign out</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Goal Editor Modal */}
@@ -759,18 +764,17 @@ const styles = StyleSheet.create({
   themeToggleText: {
     fontSize: 16,
   },
-  logoutButton: {
-    paddingHorizontal: Spacing.md,
+  signOutButton: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: Spacing.lg,
   },
-  logoutText: {
-    color: '#94A3B8',
+  signOutText: {
     ...Typography.labelSmall,
-    fontWeight: '600',
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'solid',
   },
   errorText: {
     ...Typography.bodySmall,
