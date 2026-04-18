@@ -185,6 +185,21 @@ async def startup_event():
         logger.error(f"Failed to load industries configuration: {e}")
         raise
 
+    # Run alembic migrations before serving requests
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True, text=True, check=True
+        )
+        logger.info(f"Alembic migration complete: {result.stdout.strip() or 'up to date'}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Alembic migration failed: {e.stderr}")
+        raise
+    except Exception as e:
+        logger.error(f"Alembic migration error: {e}")
+        raise
+
     # Ensure tables exist before serving requests (fast)
     try:
         create_tables()
