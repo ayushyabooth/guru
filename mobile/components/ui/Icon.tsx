@@ -55,6 +55,8 @@ import { Car } from 'phosphor-react-native';
 import { Star } from 'phosphor-react-native';
 import { StarFour } from 'phosphor-react-native';
 import { ArrowLeft } from 'phosphor-react-native';
+import { ArrowUp } from 'phosphor-react-native';
+import { ArrowRight } from 'phosphor-react-native';
 import { Circle } from 'phosphor-react-native';
 import { ChatCircleDots } from 'phosphor-react-native';
 import { ChatTeardropDots } from 'phosphor-react-native';
@@ -109,6 +111,11 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
 
   // Navigation
   'arrow-left': ArrowLeft,
+  'arrow-up': ArrowUp,
+  'arrow-right': ArrowRight,
+  'open-in-new': ArrowSquareOut,
+  'arrow-square-out': ArrowSquareOut,
+  'paper-plane-right': PaperPlaneRight,
   'chevron-right': CaretRight,
   'chevron-left': CaretLeft,
   'chevron-up': CaretRight,    // rotated via style
@@ -153,6 +160,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'sneaker': Sneaker,
   'shoe-sneaker': Sneaker,
   'home-outline': House,
+  'house': House,
   'briefcase-outline': Briefcase,
   'cellphone': DeviceMobile,
   'chip': Cpu,

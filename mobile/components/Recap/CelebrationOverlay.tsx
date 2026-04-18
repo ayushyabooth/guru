@@ -162,6 +162,7 @@ export default function CelebrationOverlay({
               title="Generate Your Recap"
               onPress={onGenerateAudio}
               accentColor="#6366F1"
+              icon="headphones"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -178,6 +179,7 @@ export default function CelebrationOverlay({
               title="Listen to Audio Recap"
               onPress={onListenAudio}
               accentColor="#6366F1"
+              icon="headphones"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -188,6 +190,7 @@ export default function CelebrationOverlay({
               title="Read Your Recap"
               onPress={onReadRecap}
               accentColor="#6366F1"
+              icon="star"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -204,9 +207,10 @@ export default function CelebrationOverlay({
         <View style={styles.actionsRow}>
           {onViewConstellation && (
             <GlassButton
-              title="View Constellation"
+              title="View Insights"
               onPress={onViewConstellation}
-              variant="secondary"
+              accentColor="#F59E0B"
+              icon="star"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.lg }}
@@ -215,7 +219,8 @@ export default function CelebrationOverlay({
           <GlassButton
             title="Back to Home"
             onPress={onBackToHome}
-            accentColor="#FB923C"
+            variant="secondary"
+            icon="house"
             fullWidth={false}
             size="md"
             style={{ paddingHorizontal: Spacing.lg }}

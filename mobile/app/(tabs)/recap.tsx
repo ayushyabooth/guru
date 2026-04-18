@@ -777,6 +777,7 @@ export default function RecapScreen() {
                 title="Begin Journey"
                 onPress={() => {}}
                 accentColor="#FB923C"
+                icon="play"
                 disabled
                 fullWidth={false}
                 size="lg"
@@ -795,6 +796,7 @@ export default function RecapScreen() {
                 title={isInProgress ? 'Continue Journey' : 'Begin Journey'}
                 onPress={handleBeginJourney}
                 accentColor="#FB923C"
+                icon="play"
                 fullWidth={false}
                 size="lg"
                 style={{ paddingHorizontal: 32 }}

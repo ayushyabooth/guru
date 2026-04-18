@@ -26,6 +26,8 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
 }) => {
   // Derive button color from accent or fall back to indigo
   const primaryBg = accentColor || '#6366F1';
+  // Semi-transparent glass: 80% opacity on mobile, full glass on web
+  const primaryBgGlass = `${primaryBg}CC`;
   const primaryBorder = accentColor ? `${accentColor}CC` : '#4F46E5';
 
   // Web glass shadow using accent color
@@ -42,7 +44,7 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
         style={[
           styles.primaryButton,
           {
-            backgroundColor: primaryBg,
+            backgroundColor: primaryBgGlass,
             borderWidth: 1,
             borderColor: primaryBorder,
           },

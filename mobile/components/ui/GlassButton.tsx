@@ -18,6 +18,7 @@ import {
   TextStyle,
   Platform,
 } from 'react-native';
+import Icon from './Icon';
 import {
   GlassMaterials,
   DarkGlassMaterials,
@@ -62,6 +63,10 @@ interface GlassButtonProps {
   variant?: 'primary' | 'secondary' | 'tertiary';
   filterContext?: string;
   accentColor?: string;
+  /** Phosphor icon name to render to the left of the label */
+  icon?: string;
+  /** Icon size in px (default 18) */
+  iconSize?: number;
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -76,6 +81,8 @@ export default function GlassButton({
   variant = 'primary',
   filterContext,
   accentColor,
+  icon,
+  iconSize = 18,
   loading = false,
   disabled = false,
   fullWidth = true,
@@ -126,20 +133,23 @@ export default function GlassButton({
           style,
         ]}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, icon ? styles.contentRow : undefined]}>
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text
-              style={[
-                styles.primaryText,
-                size === 'sm' && styles.smallText,
-                size === 'lg' && styles.largeText,
-                textStyle,
-              ]}
-            >
-              {title}
-            </Text>
+            <>
+              {icon && <Icon name={icon} size={iconSize} color="#FFFFFF" weight="bold" />}
+              <Text
+                style={[
+                  styles.primaryText,
+                  size === 'sm' && styles.smallText,
+                  size === 'lg' && styles.largeText,
+                  textStyle,
+                ]}
+              >
+                {title}
+              </Text>
+            </>
           )}
         </View>
       </TouchableOpacity>
@@ -193,7 +203,10 @@ export default function GlassButton({
       {loading ? (
         <ActivityIndicator size="small" color={palette.primary} />
       ) : (
-        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        <>
+          {icon && <Icon name={icon} size={iconSize} color={palette.primary} weight="bold" />}
+          <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        </>
       )}
     </TouchableOpacity>
   );
@@ -214,6 +227,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  contentRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   primaryText: {
     ...Typography.labelLarge,
