@@ -41,12 +41,15 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   const [error, setError] = useState<string | null>(null);
 
   const fetchJourneys = useCallback(async () => {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Please check your connection.')), 8000)
+    );
     try {
       setError(null);
-      const data = await recapService.listJourneys(50, 0);
+      const data = await Promise.race([recapService.listJourneys(50, 0), timeoutPromise]);
       setJourneys(data.journeys);
     } catch (err: any) {
-      setError(err.message || 'Failed to load journal');
+      setError(err.message || "Couldn't load your journal");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -183,9 +186,9 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>Couldn't load your journal</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchJourneys}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
         </View>
       ) : journeys.length === 0 ? (
@@ -193,7 +196,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
           <Icon name="notebook-outline" size={48} color={DarkThemeColors.textSecondary} style={{ marginBottom: Spacing.md }} />
           <Text style={styles.emptyTitle}>No recaps yet</Text>
           <Text style={styles.emptySubtitle}>
-            Complete your first weekly recap to start building your learning journal.
+            Your journal will appear here once you start reading.
           </Text>
         </View>
       ) : (

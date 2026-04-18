@@ -228,6 +228,8 @@ export default function ArticleDetailScreen() {
   }, [id]);
 
   const fetchOverlayArticle = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       const token = await getAuthToken();
       if (!token) {
@@ -238,7 +240,10 @@ export default function ArticleDetailScreen() {
 
       const response = await fetch(`${API_BASE_URL}/reader/articles/${id}/overlay`, {
         headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -264,11 +269,22 @@ export default function ArticleDetailScreen() {
       } else {
         setError(`Failed to load article: ${response.status}`);
       }
-    } catch (err) {
-      setError('Failed to load article');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Please check your connection.');
+      } else {
+        setError('Failed to load article');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
+  };
+
+  const retry = () => {
+    setError(null);
+    setLoading(true);
+    fetchOverlayArticle();
   };
 
   const handleSave = async (artId: string) => {
@@ -326,7 +342,10 @@ export default function ArticleDetailScreen() {
   if (error || !overlayArticle) {
     return (
       <View style={[styles.errorContainer, { backgroundColor: TC.background }]}>
-        <Text style={[styles.errorText, { color: TC.error }]}>{error || 'Article not found'}</Text>
+        <Text style={[styles.errorText, { color: TC.textPrimary }]}>Couldn't load this article</Text>
+        <TouchableOpacity onPress={retry} style={styles.retryButton}>
+          <Text style={{ color: TC.textSecondary }}>Try again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -754,10 +773,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: Spacing.xl,
+    gap: Spacing.md,
   },
   errorText: {
     ...Typography.bodyLarge,
     textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
+    borderColor: ACCENT,
   },
 
   // ── Web reading state layout ─────────────────────────────────────────────
