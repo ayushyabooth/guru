@@ -83,6 +83,13 @@ import { CalendarBlank } from 'phosphor-react-native';
 import { Feather } from 'phosphor-react-native';
 import { Scales } from 'phosphor-react-native';
 import { Fire } from 'phosphor-react-native';
+import { Flag } from 'phosphor-react-native';
+import { Microphone } from 'phosphor-react-native';
+import { Trophy } from 'phosphor-react-native';
+import { Medal } from 'phosphor-react-native';
+import { Question } from 'phosphor-react-native';
+import { Notebook } from 'phosphor-react-native';
+import { BookOpen } from 'phosphor-react-native';
 
 // Weight type from Phosphor
 type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
@@ -181,6 +188,16 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'feather': Feather,
   'scales': Scales,
   'fire': Fire,
+
+  // Recap CTA / engagement icons (GUR-147)
+  'flag-outline': Flag,
+  'microphone-outline': Microphone,
+  'trophy-outline': Trophy,
+  'medal-outline': Medal,
+  'help-circle-outline': Question,
+  'notebook-outline': Notebook,
+  'book-open-page-variant': BookOpen,
+  'book-open': BookOpen,
 };
 
 // Names that should default to 'fill' weight
