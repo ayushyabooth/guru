@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert, Platform, Animated, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CatchupFeed } from '../../components/Catch-up/CatchupFeed';
+import { isNetworkOrTimeoutError } from '../../utils/fetchWithTimeout';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { useScreenTimeTracking, useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
 import { userService, UserProfile } from '../../services/user-service';
@@ -24,6 +25,7 @@ export default function CatchupScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthError, setIsAuthError] = useState(false);
+  const [isNetworkError, setIsNetworkError] = useState(false);
   const router = useRouter();
   const { isDark, colors } = useTheme();
 
@@ -54,12 +56,15 @@ export default function CatchupScreen() {
   }, []);
 
   const loadUserProfile = async () => {
+    setIsNetworkError(false);
     try {
       const profile = await userService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
       if (error instanceof Error && error.message.includes('Not authenticated')) {
         setIsAuthError(true);
+      } else if (isNetworkOrTimeoutError(error)) {
+        setIsNetworkError(true);
       } else {
         Alert.alert('Error', 'Failed to load your profile. Please try again.');
       }
@@ -141,6 +146,28 @@ export default function CatchupScreen() {
           onArticleSave={() => {}}
           onNotRelevant={() => {}}
         />
+      </SafeAreaView>
+    );
+  }
+
+  if (isNetworkError) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
+        <OrganicBackground variant="catchup" />
+        <View style={[styles.container, styles.centerContent]}>
+          <View style={styles.authPrompt}>
+            <Text style={[styles.authTitle, { color: colors.textPrimary }]}>Server is warming up\u2026</Text>
+            <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
+              Railway spins down when idle. This takes about 30 seconds.
+            </Text>
+            <TouchableOpacity
+              onPress={() => { setLoading(true); loadUserProfile(); }}
+              style={[styles.authButton, { backgroundColor: colors.accent }]}
+            >
+              <Text style={styles.authButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }

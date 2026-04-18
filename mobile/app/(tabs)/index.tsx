@@ -19,6 +19,7 @@ import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken } from '../../utils/auth';
+import { isNetworkOrTimeoutError } from '../../utils/fetchWithTimeout';
 import GoalEditor from '../../components/Home/GoalEditor';
 const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
@@ -434,6 +435,22 @@ function HomeContent() {
 
   const filterTabs = getFilterTabs();
 
+  if (state.error && isNetworkOrTimeoutError(new Error(state.error)) && !displayMetrics.lastUpdated) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: containerBg }]}>
+        <OrganicBackground variant="home" />
+        <View style={styles.loadingPulse}>
+          <Text style={styles.loadingEmoji}>...</Text>
+        </View>
+        <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Server is warming up…</Text>
+        <Text style={[styles.loadingSubtext, { color: COLORS.textTertiary }]}>This takes about 30 seconds on a cold start.</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   if (state.loading && !displayMetrics.lastUpdated) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: containerBg }]}>
@@ -702,6 +719,27 @@ const styles = StyleSheet.create({
     ...Typography.bodyMedium,
     color: DarkThemeColors.textSecondary,
     fontWeight: '500',
+  },
+  loadingSubtext: {
+    ...Typography.bodySmall,
+    color: DarkThemeColors.textTertiary,
+    marginTop: 4,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  retryButton: {
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.35)',
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+  },
+  retryButtonText: {
+    ...Typography.labelLarge,
+    color: RingColors.catchup.primary,
+    fontWeight: '600',
   },
   header: {
     paddingHorizontal: Spacing.lg,

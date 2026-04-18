@@ -1,5 +1,6 @@
 import { getAuthToken } from '../utils/auth';
 import { API_BASE_URL } from '../constants/config';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 export interface UserProfile {
   user_id: string;
@@ -26,7 +27,7 @@ class UserService {
       throw new Error('Not authenticated. Please log in.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/me`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

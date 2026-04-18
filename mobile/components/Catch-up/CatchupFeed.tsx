@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet, RefreshControl, Platform, Animated } from 'react-native';
 import Icon from '../ui/Icon';
 import { useCatchupFeed } from '../../hooks/useCatchupFeed';
+import { isNetworkOrTimeoutError } from '../../utils/fetchWithTimeout';
 import { CatchupService } from '../../services/article-service';
 import { InFocusStoryboardCard } from './InFocusStoryboardCard';
 import { StoryboardSkeleton } from './StoryboardSkeleton';
@@ -76,11 +77,18 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   };
 
   if (error && storyboards.length === 0) {
+    const isColdStart = isNetworkOrTimeoutError(new Error(error)) || error.toLowerCase().includes('timeout');
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load stories</Text>
-        <Text style={styles.errorSubtext}>{error}</Text>
-        {error.includes('Unauthorized') && (
+        <Text style={styles.errorText}>
+          {isColdStart ? 'Server is warming up\u2026' : 'Failed to load stories'}
+        </Text>
+        <Text style={styles.errorSubtext}>
+          {isColdStart
+            ? 'This takes about 30 seconds on a cold start. Tap \u201CTry again\u201D in a moment.'
+            : error}
+        </Text>
+        {!isColdStart && error.includes('Unauthorized') && (
           <Text style={styles.authHint}>
             Please sign up or log in to access your personalized feed
           </Text>

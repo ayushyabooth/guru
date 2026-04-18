@@ -1,7 +1,9 @@
 import '../utils/polyfills';
-import { Platform } from 'react-native';
+import { Platform, View, Text, StyleSheet, Animated } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '../constants/config';
 
 // Suppress noisy "Unexpected text node" warnings from React Native Web
 if (Platform.OS === 'web') {
@@ -19,7 +21,6 @@ import {
   Manrope_700Bold,
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
-import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { DiveInProvider } from '../contexts/DiveInContext';
@@ -41,6 +42,76 @@ const queryClient = new QueryClient({
 
 // Prevent splash screen from auto-hiding while fonts load
 SplashScreen.preventAutoHideAsync();
+
+// ─── Warm-up Banner ──────────────────────────────────────────────────
+// Pings the server once on mount. If it times out, shows a brief
+// "Connecting…" banner that auto-dismisses when the server responds.
+
+function WarmUpBanner() {
+  const [visible, setVisible] = useState(false);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const ping = useRef(async () => {
+    try {
+      const controller = new AbortController();
+      const timerId = setTimeout(() => controller.abort(), 5_000);
+      await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+      clearTimeout(timerId);
+      // Server responded — dismiss if banner was showing
+      setVisible(false);
+    } catch {
+      // Server not yet up — show banner and retry
+      setVisible(true);
+      retryRef.current = setTimeout(() => ping.current(), 5_000);
+    }
+  }).current;
+
+  useEffect(() => {
+    ping();
+    return () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: visible ? 1 : 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Animated.View style={[bannerStyles.banner, { opacity }]} pointerEvents="none">
+      <Text style={bannerStyles.text}>Connecting to server\u2026</Text>
+    </Animated.View>
+  );
+}
+
+const bannerStyles = StyleSheet.create({
+  banner: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(15, 20, 35, 0.92)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(56, 189, 248, 0.25)',
+    zIndex: 9999,
+  },
+  text: {
+    color: 'rgba(56, 189, 248, 0.9)',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -158,7 +229,10 @@ export default function RootLayout() {
       <ThemeProvider>
         <TimeTrackingProvider>
           <DiveInProvider userId="default">
-            <ThemeAwareNav />
+            <View style={{ flex: 1 }}>
+              <ThemeAwareNav />
+              <WarmUpBanner />
+            </View>
           </DiveInProvider>
         </TimeTrackingProvider>
       </ThemeProvider>

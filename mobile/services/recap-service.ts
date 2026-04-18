@@ -3,6 +3,7 @@
  */
 import { getAuthToken } from '../utils/auth';
 import { API_BASE_URL } from '../constants/config';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ class RecapServiceClient {
 
   private async request<T>(method: string, path: string, body?: any): Promise<T> {
     const headers = await this.getAuthHeaders();
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await fetchWithTimeout(`${this.baseUrl}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,

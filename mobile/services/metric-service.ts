@@ -1,5 +1,6 @@
 import { getAuthToken } from '../utils/auth';
 import { API_BASE_URL } from '../constants/config';
+import { fetchWithTimeout, NetworkTimeoutError } from '../utils/fetchWithTimeout';
 
 /** Format a minute value as "Xh Ym" when >= 60, or "Xm" when < 60 */
 export function formatMinutes(m: number): string {
@@ -61,14 +62,14 @@ class MetricService {
       
       // Fetch metrics and profile in parallel
       const [metricsResponse, profileResponse] = await Promise.all([
-        fetch(`${this.baseUrl}/me/metrics`, {
+        fetchWithTimeout(`${this.baseUrl}/me/metrics`, {
           method: 'GET',
           headers,
         }),
-        fetch(`${this.baseUrl}/me`, {
+        fetchWithTimeout(`${this.baseUrl}/me`, {
           method: 'GET',
           headers,
-        })
+        }),
       ]);
 
       if (!metricsResponse.ok) {
@@ -134,7 +135,7 @@ class MetricService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${this.baseUrl}/me/metrics/progress`, {
+      const response = await fetchWithTimeout(`${this.baseUrl}/me/metrics/progress`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -180,6 +181,10 @@ class MetricService {
     } catch (error) {
       // Propagate auth errors so the UI can redirect to login
       if (error instanceof Error && error.message.includes('Authentication failed')) {
+        throw error;
+      }
+      // Propagate cold-start / network errors so the UI can show a warm-up message
+      if (error instanceof NetworkTimeoutError) {
         throw error;
       }
 

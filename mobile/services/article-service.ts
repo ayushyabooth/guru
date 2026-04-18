@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../constants/config';
 import { getAuthToken } from '../utils/auth';
+import { fetchWithTimeout } from '../utils/fetchWithTimeout';
 
 export interface RichSummary {
   whats_in_article?: string;
@@ -76,7 +77,7 @@ export class CatchupService {
     }
     
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${API_BASE_URL}/catchup-feed?filter=${encodeURIComponent(filter)}&limit=${limit}&offset=${offset}`,
       {
         method: 'GET',
@@ -103,7 +104,7 @@ export class CatchupService {
   static async saveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
     const token = await getAuthToken();
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${API_BASE_URL}/articles/${articleId}/save`,
       {
         method: 'POST',
@@ -124,7 +125,7 @@ export class CatchupService {
   static async unsaveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
     const token = await getAuthToken();
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${API_BASE_URL}/articles/${articleId}/save`,
       {
         method: 'DELETE',
@@ -148,7 +149,7 @@ export class CatchupService {
   ): Promise<{ message: string }> {
     const token = await getAuthToken();
     
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${API_BASE_URL}/storyboards/${storyboardId}/not-relevant?filter=${encodeURIComponent(filter)}`,
       {
         method: 'POST',
