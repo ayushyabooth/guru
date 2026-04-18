@@ -10,29 +10,63 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import { Triskelion } from '../../components/Rings/Triskelion';
 
-/** Breathing scale animation wrapper for tab ring icons */
+const TAB_INACTIVE_OPACITY = 0.35;
+const TAB_GLOW_OPACITY = 0.22;
+
+/** Breathing scale + brand-color glow animation wrapper for tab ring icons */
 function TabRingIcon({ color, progress, focused, size = 26 }: {
   color: string; progress: number; focused: boolean; size?: number;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(focused ? 1 : TAB_INACTIVE_OPACITY)).current;
+  const glowAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
+    // Fade icon opacity and glow bloom in/out
+    Animated.parallel([
+      Animated.timing(opacityAnim, { toValue: focused ? 1 : TAB_INACTIVE_OPACITY, duration: 220, useNativeDriver: true }),
+      Animated.timing(glowAnim, { toValue: focused ? 1 : 0, duration: 280, useNativeDriver: true }),
+    ]).start();
+
+    // Breathing scale loop only when focused
     if (focused) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(scaleAnim, { toValue: 1.06, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1.08, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(scaleAnim, { toValue: 1.0, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       ).start();
     } else {
       scaleAnim.stopAnimation();
-      scaleAnim.setValue(1);
+      Animated.timing(scaleAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
     }
   }, [focused]);
 
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, TAB_GLOW_OPACITY] });
+  const glowSize = size + 22;
+
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <PlasmaBlobRing progress={progress} color={color} size={size} stroke={2.5} minimal />
+    <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Brand color bloom disc */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: glowSize,
+          height: glowSize,
+          borderRadius: glowSize / 2,
+          backgroundColor: color,
+          opacity: glowOpacity,
+          shadowColor: color,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
+      />
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <PlasmaBlobRing progress={progress} color={color} size={size} stroke={2.5} minimal />
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -42,24 +76,56 @@ function TabHomeIcon({ focused, size = 28, catchupProgress, diveinProgress, reca
   focused: boolean; size?: number; catchupProgress: number; diveinProgress: number; recapProgress: number;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(focused ? 1 : TAB_INACTIVE_OPACITY)).current;
+  const glowAnim = useRef(new Animated.Value(focused ? 1 : 0)).current;
+
+  // Home tab uses indigo as its brand primary (matches tabBarActiveTintColor)
+  const HOME_COLOR = '#6366F1';
 
   useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, { toValue: focused ? 1 : TAB_INACTIVE_OPACITY, duration: 220, useNativeDriver: true }),
+      Animated.timing(glowAnim, { toValue: focused ? 1 : 0, duration: 280, useNativeDriver: true }),
+    ]).start();
+
     if (focused) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(scaleAnim, { toValue: 1.06, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1.08, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
           Animated.timing(scaleAnim, { toValue: 1.0, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ])
       ).start();
     } else {
       scaleAnim.stopAnimation();
-      scaleAnim.setValue(1);
+      Animated.timing(scaleAnim, { toValue: 1, duration: 220, useNativeDriver: true }).start();
     }
   }, [focused]);
 
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, TAB_GLOW_OPACITY] });
+  const glowSize = size + 22;
+
   return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Triskelion size={size} progress={{ c: catchupProgress, d: diveinProgress, r: recapProgress }} />
+    <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Brand color bloom disc */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: glowSize,
+          height: glowSize,
+          borderRadius: glowSize / 2,
+          backgroundColor: HOME_COLOR,
+          opacity: glowOpacity,
+          shadowColor: HOME_COLOR,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 1,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
+      />
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Triskelion size={size} progress={{ c: catchupProgress, d: diveinProgress, r: recapProgress }} />
+      </Animated.View>
     </Animated.View>
   );
 }
