@@ -18,7 +18,6 @@ import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
 import FeedTabBar from '../../components/Home/FeedTabBar';
-import { removeAuthToken } from '../../utils/auth';
 import GoalEditor from '../../components/Home/GoalEditor';
 const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
@@ -390,26 +389,6 @@ function HomeContent() {
   const handleRingPress = (section: 'catchup' | 'divein' | 'recap') => {
   };
 
-  const handleLogout = async () => {
-    const confirmed =
-      typeof window !== 'undefined'
-        ? window.confirm('Are you sure you want to logout?')
-        : true;
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await removeAuthToken();
-      router.replace('/(auth)/login');
-    } catch (error) {
-      if (typeof window !== 'undefined') {
-        window.alert('Failed to logout. Please try again.');
-      }
-    }
-  };
-
   const handleChangeGoals = () => {
     setShowGoalEditor(true);
   };
@@ -483,14 +462,9 @@ function HomeContent() {
                 <GuruRings size="logo" dimensions={36} accessibilityLabel="Guru logo" />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
-                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
-                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
+                <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+              </TouchableOpacity>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
             <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
@@ -758,19 +732,6 @@ const styles = StyleSheet.create({
   },
   themeToggleText: {
     fontSize: 16,
-  },
-  logoutButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  logoutText: {
-    color: '#94A3B8',
-    ...Typography.labelSmall,
-    fontWeight: '600',
   },
   errorText: {
     ...Typography.bodySmall,
