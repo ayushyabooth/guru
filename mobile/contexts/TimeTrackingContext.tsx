@@ -417,6 +417,7 @@ export function TimeTrackingProvider({ children }: { children: React.ReactNode }
             specialization: session.specialization || null,
             activity_type: session.activityType || null,
             idle_seconds: Math.round(session.totalIdleMs / 1000),
+            user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }),
         });
 

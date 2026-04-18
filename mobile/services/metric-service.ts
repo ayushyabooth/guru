@@ -30,6 +30,10 @@ export interface MetricsResponse {
       weeklyProgress: number;
       weeklyGoal: number;
     };
+    current_streak: number;
+    longest_streak: number;
+    weekly_total_minutes: number;
+    today_total_minutes: number;
     lastUpdated: string;
   };
   profile: {
@@ -60,8 +64,9 @@ class MetricService {
       const headers = await this.getAuthHeaders();
       
       // Fetch metrics and profile in parallel
+      const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone);
       const [metricsResponse, profileResponse] = await Promise.all([
-        fetch(`${this.baseUrl}/me/metrics`, {
+        fetch(`${this.baseUrl}/me/metrics?user_timezone=${tz}`, {
           method: 'GET',
           headers,
         }),
@@ -113,6 +118,11 @@ class MetricService {
             weeklyProgress: metricsData.week?.filter((day: any) => day.recap_completed).length * 60 || 0,
             weeklyGoal: profileData.recap_weekly_goal_minutes || 60,
           },
+          current_streak: metricsData.current_streak ?? 0,
+          longest_streak: metricsData.longest_streak ?? 0,
+          weekly_total_minutes: metricsData.week?.reduce((sum: number, day: any) =>
+            sum + (day.catchup_minutes || 0) + (day.divein_minutes || 0), 0) ?? 0,
+          today_total_minutes: (metricsData.today?.catchup_minutes || 0) + (metricsData.today?.divein_minutes || 0),
           lastUpdated: new Date().toISOString(),
         },
         profile: {
@@ -163,6 +173,10 @@ class MetricService {
         catchup: { dailyProgress: 0, dailyGoal: 30, weeklyTotal: 0 },
         divein: { dailyProgress: 0, dailyGoal: 30, weeklyProgress: 0, weeklyGoal: 120 },
         recap: { status: 'not_started', weeklyProgress: 0, weeklyGoal: 60 },
+        current_streak: 0,
+        longest_streak: 0,
+        weekly_total_minutes: 0,
+        today_total_minutes: 0,
         lastUpdated: new Date().toISOString(),
       },
       profile: {

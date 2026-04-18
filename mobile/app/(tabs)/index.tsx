@@ -631,7 +631,54 @@ function HomeContent() {
           </View>
         </View>
 
-        {/* TODO: Commitment Reminder Card — shows last week's commitment (Step 8) */}
+        {/* Stats Row — streak + weekly reading time */}
+        {(() => {
+          const streak = displayMetrics.current_streak ?? 0;
+          const weeklyMins = displayMetrics.weekly_total_minutes ?? 0;
+          return (
+            <View style={[styles.statsRow, { borderColor: COLORS.glassBorder }, blurStyle16]}>
+              <View style={[styles.statsChip, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }]}>
+                <Text style={[styles.statsChipText, { color: COLORS.textPrimary }]}>
+                  {streak > 0 ? `\uD83D\uDD25 ${streak} day streak` : 'Start your streak'}
+                </Text>
+              </View>
+              <View style={[styles.statsChipDivider, { backgroundColor: COLORS.glassBorder }]} />
+              <View style={[styles.statsChip, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }]}>
+                <Text style={[styles.statsChipText, { color: COLORS.textPrimary }]}>
+                  {weeklyMins > 0 ? `\uD83D\uDCD6 ${weeklyMins} min this week` : 'No reading yet'}
+                </Text>
+              </View>
+            </View>
+          );
+        })()}
+
+        {/* Commitment Card — today's goal progress */}
+        {(() => {
+          const todayMins = displayMetrics.today_total_minutes ?? 0;
+          const goalMins = 20;
+          const pct = Math.min(todayMins / goalMins, 1);
+          const goalMet = todayMins >= goalMins;
+          const minsToGo = Math.max(goalMins - todayMins, 0);
+          return (
+            <View style={[styles.commitmentCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
+              <View style={styles.commitmentHeader}>
+                <Text style={[styles.commitmentTitle, { color: COLORS.textPrimary }]}>Today's Goal</Text>
+                <Text style={[styles.commitmentProgress, { color: goalMet ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                  {todayMins} / {goalMins} min
+                </Text>
+              </View>
+              <View style={[styles.commitmentBar, { backgroundColor: COLORS.progressBarBg }]}>
+                <View style={[
+                  styles.commitmentBarFill,
+                  { width: `${pct * 100}%`, backgroundColor: goalMet ? DarkThemeColors.success : RingColors.catchup.primary },
+                ]} />
+              </View>
+              <Text style={[styles.commitmentCaption, { color: goalMet ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                {goalMet ? 'Goal met! \uD83C\uDF89' : `${minsToGo} min to go — keep reading`}
+              </Text>
+            </View>
+          );
+        })()}
 
         {/* Last Updated */}
         {displayMetrics.lastUpdated && (
@@ -860,5 +907,64 @@ const styles = StyleSheet.create({
   lastUpdated: {
     ...Typography.labelSmall,
     color: DarkThemeColors.textTertiary,
+  },
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  statsChip: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  statsChipText: {
+    ...Typography.labelMedium,
+    fontWeight: '600',
+  },
+  statsChipDivider: {
+    width: 1,
+    height: 32,
+  },
+  // Commitment Card
+  commitmentCard: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: Spacing.lg,
+  },
+  commitmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  commitmentTitle: {
+    ...Typography.labelLarge,
+    fontWeight: '600',
+  },
+  commitmentProgress: {
+    ...Typography.labelMedium,
+    fontWeight: '500',
+  },
+  commitmentBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: Spacing.sm,
+  },
+  commitmentBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  commitmentCaption: {
+    ...Typography.labelSmall,
   },
 });

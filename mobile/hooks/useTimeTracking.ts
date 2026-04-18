@@ -51,6 +51,7 @@ export function useTimeTracking(
           ended_at: now.toISOString(),
           context_id: contextId || null,
           activity_type: activityType || null,
+          user_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 

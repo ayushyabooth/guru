@@ -20,6 +20,10 @@ export interface MetricsData {
     weeklyProgress: number;
     weeklyGoal: number;
   };
+  current_streak: number;
+  longest_streak: number;
+  weekly_total_minutes: number;
+  today_total_minutes: number;
   lastUpdated: string | null;
 }
 
@@ -64,6 +68,10 @@ const initialState: MetricState = {
       weeklyProgress: 0,
       weeklyGoal: 60,
     },
+    current_streak: 0,
+    longest_streak: 0,
+    weekly_total_minutes: 0,
+    today_total_minutes: 0,
     lastUpdated: null,
   },
   profile: null,
