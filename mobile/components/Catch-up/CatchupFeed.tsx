@@ -115,7 +115,8 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
+      contentContainerStyle={{ paddingTop: Spacing.sm, paddingBottom: 100 }}
+      contentInsetAdjustmentBehavior="never"
       refreshControl={
         <RefreshControl
           refreshing={isLoading && storyboards.length > 0}
@@ -170,7 +171,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
-    paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,
