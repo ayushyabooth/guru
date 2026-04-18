@@ -18,9 +18,11 @@ import {
   Platform,
   Dimensions,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassCard, GlassInput, GlassButton, OrganicBackground } from '../../components/ui';
 import GuruRings from '../../components/ui/GuruRings';
 import {
@@ -41,7 +43,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-  const { colors } = useTheme();
+  const { isDark, colors, toggleTheme } = useTheme();
 
   // Clear form fields on mount to prevent stale data
   useEffect(() => {
@@ -135,6 +137,21 @@ export default function SignupScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Background */}
       <OrganicBackground variant="login" />
+
+      {/* Theme Toggle */}
+      <TouchableOpacity
+        style={styles.themeToggle}
+        onPress={toggleTheme}
+        accessibilityRole="button"
+        accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons
+          name={isDark ? 'sunny' : 'moon'}
+          size={22}
+          color={isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'}
+        />
+      </TouchableOpacity>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -267,6 +284,18 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  themeToggle: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(128,128,128,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   keyboardView: {
     flex: 1,
