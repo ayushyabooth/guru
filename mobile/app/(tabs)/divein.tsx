@@ -56,11 +56,16 @@ export default function DiveinScreen() {
   const { savedArticles: savedRaw, essentialArticles, discoveryArticles, isLoading, error, refresh, removeArticle } = useDiveinFeed(selectedContext);
 
   // Map raw articles to DiveinArticle format, memoized
+  // Filter out articles with missing or broken metadata (e.g. failed scrapes)
   const articles = useMemo(() => {
+    const isValid = (a: DiveinArticleRaw) =>
+      a.title &&
+      a.title.toLowerCase() !== 'untitled';
+
     return [
-      ...savedRaw.map(mapArticle),
-      ...essentialArticles.map(mapArticle),
-      ...discoveryArticles.map(mapArticle),
+      ...savedRaw.filter(isValid).map(mapArticle),
+      ...essentialArticles.filter(isValid).map(mapArticle),
+      ...discoveryArticles.filter(isValid).map(mapArticle),
     ];
   }, [savedRaw, essentialArticles, discoveryArticles]);
 
