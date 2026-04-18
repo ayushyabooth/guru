@@ -483,14 +483,9 @@ function HomeContent() {
                 <GuruRings size="logo" dimensions={36} accessibilityLabel="Guru logo" />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
-                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
-                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
+                <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+              </TouchableOpacity>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
             <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
@@ -641,6 +636,13 @@ function HomeContent() {
             </Text>
           </View>
         )}
+
+        {/* Sign out — subtle text link at bottom of scroll content */}
+        <View style={styles.signOutRow}>
+          <TouchableOpacity onPress={handleLogout} accessibilityRole="button" accessibilityLabel="Sign out">
+            <Text style={[styles.signOutText, { color: COLORS.textTertiary }]}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Goal Editor Modal */}
@@ -860,5 +862,13 @@ const styles = StyleSheet.create({
   lastUpdated: {
     ...Typography.labelSmall,
     color: DarkThemeColors.textTertiary,
+  },
+  signOutRow: {
+    alignItems: 'center',
+    paddingBottom: Spacing.xl,
+  },
+  signOutText: {
+    ...Typography.labelSmall,
+    textDecorationLine: 'underline',
   },
 });

@@ -261,7 +261,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: Spacing.sm,
+    marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     ...DarkGlassMaterials.card,
     borderRadius: 16,
