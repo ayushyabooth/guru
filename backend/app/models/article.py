@@ -63,6 +63,24 @@ class ExpertNote(Base):
     )
 
 
+class ExpertLink(Base):
+    """
+    Stores the curated list of expert (Tier 1) article URLs in the database.
+    Survives Railway redeploys (unlike the filesystem-based expert-links.md).
+    Seeded from expert-links.md on first startup if the table is empty.
+    """
+    __tablename__ = "expert_links"
+
+    id = Column(UUID(), primary_key=True, default=uuid.uuid4)
+    url = Column(String(2048), unique=True, nullable=False, index=True)
+    title = Column(String(500))
+    domain = Column(String(100))       # e.g. "Consumer", "Food & Beverage CPG"
+    article_type = Column(String(100)) # e.g. "Insight/Op-ed", "News/Update"
+    importance = Column(String(50))    # "Essential" or "Normal"
+    tier = Column(String(30), default='tier1_expert')
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class ArticleAnnotation(Base):
     """Inline annotations for Reader Mode - AI-generated or expert-provided"""
     __tablename__ = "article_annotations"

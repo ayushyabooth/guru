@@ -426,6 +426,98 @@ def parse_expert_links_csv(filepath: str) -> List[Dict]:
     return articles
 
 
+def get_expert_links_from_db(db) -> List[Dict]:
+    """
+    Return expert links from the database as article dicts (same format as
+    parse_expert_links_csv), so that ingestion can run without the filesystem file.
+
+    Args:
+        db: SQLAlchemy session
+
+    Returns:
+        List of article dicts ready for ingestion pipeline.
+    """
+    try:
+        from app.models.article import ExpertLink
+        rows = db.query(ExpertLink).all()
+        if not rows:
+            return []
+
+        industry_lookup, specialization_lookup = _build_config_lookup()
+
+        articles = []
+        for row in rows:
+            domain = row.domain or ''
+            article_type = row.article_type or ''
+            importance = row.importance or 'Normal'
+
+            # Derive industry + specialization from domain using the same logic as
+            # parse_expert_links_csv
+            industry = None
+            specialization_id = None
+
+            if domain:
+                source_upper = domain.upper()
+                source_normalized = _normalize_for_matching(domain)
+                if source_upper in industry_lookup:
+                    industry = industry_lookup[source_upper]
+                elif source_normalized in industry_lookup:
+                    industry = industry_lookup[source_normalized]
+                else:
+                    source_words = set(source_normalized.split())
+                    for ind_name, ind_id in industry_lookup.items():
+                        ind_normalized = _normalize_for_matching(ind_name)
+                        ind_words = set(ind_normalized.split())
+                        common = source_words & ind_words
+                        if common:
+                            if len(common) / max(len(source_words), len(ind_words)) > 0:
+                                industry = ind_id
+                        if source_normalized in ind_normalized or ind_normalized in source_normalized:
+                            industry = ind_id
+                            break
+
+                matched_spec, matched_ind = _fuzzy_match_specialization(domain, specialization_lookup)
+                if matched_spec:
+                    specialization_id = matched_spec
+                    if matched_ind:
+                        industry = matched_ind
+
+            # Fall back to first specialization of matched industry
+            if not specialization_id and industry:
+                try:
+                    from app.services.industries_config import IndustriesConfig
+                    config = IndustriesConfig.get_instance()
+                    ind_data = config.get_industry(industry)
+                    if ind_data:
+                        specs = ind_data.get('specializations', [])
+                        if specs:
+                            specialization_id = specs[0].get('id')
+                except Exception:
+                    pass
+
+            notes = f"{article_type} article from {domain}. Priority: {importance}"
+
+            articles.append({
+                'url': row.url,
+                'title': row.title or '',
+                'notes': notes,
+                'priority': importance,
+                'date_added': row.created_at.date() if row.created_at else None,
+                'category': industry,
+                'domain': domain,
+                'type': article_type,
+                'industry': industry,
+                'specializations': [specialization_id] if specialization_id else [],
+            })
+
+        logger.info(f"Loaded {len(articles)} expert links from database")
+        return articles
+
+    except Exception as e:
+        logger.error(f"Error loading expert links from DB: {e}")
+        return []
+
+
 def validate_csv_format(filepath: str) -> Dict[str, any]:
     """
     Validate the format of expert-links.md CSV file

@@ -10,7 +10,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from time import mktime
 
-import feedparser
+try:
+    import feedparser
+    _FEEDPARSER_AVAILABLE = True
+except ImportError:
+    feedparser = None  # type: ignore
+    _FEEDPARSER_AVAILABLE = False
 
 from app.services.industries_config import IndustriesConfig
 from app.services.luminaries_config import LuminariesConfig
@@ -97,7 +102,21 @@ class Tier1LuminaryService:
 
         logger.debug(f"Fetching RSS feed: {luminary_name} ({feed_url})")
 
-        feed = feedparser.parse(feed_url, request_headers={"User-Agent": "Guru-MVP/1.0"})
+        if not _FEEDPARSER_AVAILABLE:
+            logger.error("feedparser is not installed — cannot fetch RSS feeds. "
+                         "Ensure feedparser is in requirements.txt and the container was rebuilt.")
+            return []
+
+        import socket
+        old_timeout = socket.getdefaulttimeout()
+        try:
+            socket.setdefaulttimeout(timeout)
+            feed = feedparser.parse(feed_url, request_headers={"User-Agent": "Guru-MVP/1.0"})
+        except Exception as e:
+            logger.warning(f"feedparser.parse() raised for {luminary_name}: {e}")
+            return []
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
         if feed.bozo and not feed.entries:
             logger.warning(

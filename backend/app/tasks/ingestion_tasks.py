@@ -200,31 +200,41 @@ def cleanup_expired_articles(db, expiration_days: int = None) -> Dict:
 
 def find_new_urls_in_file(filepath: str, db) -> List[str]:
     """
-    Find URLs in the file that don't exist in the database.
+    Find expert-link URLs that have not yet been ingested into the articles table.
+    Prefers the ExpertLink DB table (survives Railway redeploys) and falls back to
+    the filesystem file only when the DB table is empty.
 
     Args:
-        filepath: Path to the expert links file
+        filepath: Path to the expert links file (used as fallback when DB is empty)
         db: Database session
 
     Returns:
-        List of new URLs not yet in database
+        List of new URLs not yet in the articles table
     """
-    from app.services.csv_ingestion_service import parse_expert_links_csv
+    from app.models.article import ExpertLink
+    from app.services.csv_ingestion_service import parse_expert_links_csv, get_expert_links_from_db
 
     try:
-        articles = parse_expert_links_csv(filepath)
-        file_urls = {article['url'] for article in articles}
+        # Prefer DB table so ingestion survives ephemeral-filesystem redeploys
+        db_links = db.query(ExpertLink.url).all()
+        if db_links:
+            curated_urls = {row[0] for row in db_links}
+        else:
+            # DB empty — fall back to file (first-ever run before seeding completes)
+            try:
+                actual_filepath = get_expert_links_filepath(filepath)
+                articles = parse_expert_links_csv(actual_filepath)
+                curated_urls = {art['url'] for art in articles}
+            except FileNotFoundError:
+                logger.warning("No expert links found in DB or filesystem — skipping Tier 1")
+                return []
 
-        # Get all existing URLs from database
         existing_urls = {row[0] for row in db.query(Article.url).all()}
-
-        # Find URLs that are in file but not in database
-        new_urls = file_urls - existing_urls
-
+        new_urls = curated_urls - existing_urls
         return list(new_urls)
 
     except Exception as e:
-        logger.error(f"Error finding new URLs: {e}")
+        logger.error(f"Error finding new expert-link URLs: {e}")
         return []
 
 
