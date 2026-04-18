@@ -4,7 +4,8 @@ Metrics API routes for tracking user activity and rings progress.
 import uuid
 from datetime import datetime, date, timedelta
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from zoneinfo import ZoneInfo
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, Integer
@@ -29,6 +30,7 @@ class LogTimeRequest(BaseModel):
     specialization: str | None = None
     activity_type: str | None = None  # 'storyboard', 'card', 'qa', 'article', 'socratic'
     idle_seconds: int = 0
+    user_timezone: str = "UTC"
 
 
 class TimeLogResponse(BaseModel):
@@ -50,6 +52,7 @@ class DailyMetricResponse(BaseModel):
     catchup_minutes: int
     catchup_goal_met: bool
     divein_minutes: int
+    divein_goal_met: bool
     recap_completed: bool
 
 
@@ -60,6 +63,9 @@ class MetricsSummaryResponse(BaseModel):
     total_divein_minutes: int
     total_recap_sessions: int
     current_streak: int
+    longest_streak: int
+    weekly_total_minutes: int
+    today_total_minutes: int
     recap_journey_status: str | None = None
 
 
@@ -85,6 +91,15 @@ async def log_time(
         if isinstance(specs, list) and len(specs) > 0:
             specialization = specs[0]
 
+    # Resolve goal thresholds from user profile
+    catchup_goal_minutes = 20
+    divein_daily_goal_minutes = 20
+    if current_user.profile:
+        if current_user.profile.catchup_daily_goal_minutes:
+            catchup_goal_minutes = current_user.profile.catchup_daily_goal_minutes
+        if current_user.profile.divein_weekly_goal_minutes:
+            divein_daily_goal_minutes = max(1, current_user.profile.divein_weekly_goal_minutes // 7)
+
     # Create time log with enhanced fields
     time_log = TimeLog(
         user_id=current_user.id,
@@ -99,23 +114,27 @@ async def log_time(
         idle_seconds=request.idle_seconds,
     )
     db.add(time_log)
-    
-    # Update daily metrics
-    metric_date = request.started_at.date()
+
+    # Compute "today" in the user's timezone
+    try:
+        tz = ZoneInfo(request.user_timezone)
+    except Exception:
+        tz = ZoneInfo("UTC")
+    metric_date = datetime.now(tz).date()
+
     daily_metric = db.query(DailyMetric).filter(
         DailyMetric.user_id == current_user.id,
         DailyMetric.metric_date == metric_date
     ).first()
-    
+
     if not daily_metric:
         daily_metric = DailyMetric(
             user_id=current_user.id,
             metric_date=metric_date
         )
         db.add(daily_metric)
-    
+
     # Recompute daily totals from time_logs (avoids integer truncation of short sessions)
-    from sqlalchemy import func
     day_totals = db.query(
         TimeLog.ring_type,
         func.sum(TimeLog.duration_seconds).label("total_secs"),
@@ -131,14 +150,17 @@ async def log_time(
 
     daily_metric.catchup_minutes = extra.get("catchup", 0) // 60
     daily_metric.divein_minutes = extra.get("divein", 0) // 60
-    if daily_metric.catchup_minutes >= 20:
+
+    if daily_metric.catchup_minutes >= catchup_goal_minutes:
         daily_metric.catchup_goal_met = True
+    if daily_metric.divein_minutes >= divein_daily_goal_minutes:
+        daily_metric.divein_goal_met = True
     if request.ring_type == "recap":
         daily_metric.recap_completed = True
-    
+
     db.commit()
     db.refresh(time_log)
-    
+
     return TimeLogResponse(
         id=str(time_log.id),
         ring_type=time_log.ring_type,
@@ -158,20 +180,26 @@ async def log_time(
 async def get_metrics_summary(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+    user_timezone: str = Query(default="UTC"),
 ):
     """
     Get comprehensive metrics summary for the current user.
-    Includes today's metrics, weekly history, and totals.
+    Includes today's metrics, weekly history, totals, and streak data.
     """
-    today = date.today()
+    try:
+        tz = ZoneInfo(user_timezone)
+    except Exception:
+        tz = ZoneInfo("UTC")
+
+    today = datetime.now(tz).date()
     week_ago = today - timedelta(days=6)
-    
+
     # Get or create today's metric
     today_metric = db.query(DailyMetric).filter(
         DailyMetric.user_id == current_user.id,
         DailyMetric.metric_date == today
     ).first()
-    
+
     if not today_metric:
         today_metric = DailyMetric(
             user_id=current_user.id,
@@ -179,19 +207,20 @@ async def get_metrics_summary(
             catchup_minutes=0,
             catchup_goal_met=False,
             divein_minutes=0,
+            divein_goal_met=False,
             recap_completed=False,
         )
         db.add(today_metric)
         db.commit()
         db.refresh(today_metric)
-    
+
     # Get week's metrics
     week_metrics = db.query(DailyMetric).filter(
         DailyMetric.user_id == current_user.id,
         DailyMetric.metric_date >= week_ago,
         DailyMetric.metric_date <= today
     ).order_by(DailyMetric.metric_date).all()
-    
+
     # Calculate totals (all time)
     totals = db.query(
         func.sum(DailyMetric.catchup_minutes).label("total_catchup"),
@@ -200,26 +229,71 @@ async def get_metrics_summary(
     ).filter(
         DailyMetric.user_id == current_user.id
     ).first()
-    
-    # Calculate current streak (consecutive days with catchup goal met)
+
+    # Weekly totals (last 7 days)
+    weekly_totals = db.query(
+        func.sum(DailyMetric.catchup_minutes + DailyMetric.divein_minutes).label("weekly_total")
+    ).filter(
+        DailyMetric.user_id == current_user.id,
+        DailyMetric.metric_date >= week_ago,
+        DailyMetric.metric_date <= today,
+    ).first()
+    weekly_total_minutes = int(weekly_totals.weekly_total or 0) if weekly_totals else 0
+
+    today_total_minutes = (today_metric.catchup_minutes or 0) + (today_metric.divein_minutes or 0)
+
+    # Helper: a day "counts" if any goal was met or recap completed
+    def day_counts(m: DailyMetric) -> bool:
+        return bool(m.catchup_goal_met or m.divein_goal_met or m.recap_completed)
+
+    # Calculate current streak
+    # Grace period: if today hasn't met a goal yet, don't break the streak — skip today and check yesterday
     current_streak = 0
     check_date = today
+    # Skip today for streak purposes (grace period — day may not be done)
+    if not day_counts(today_metric):
+        check_date = today - timedelta(days=1)
+    else:
+        current_streak = 1
+        check_date = today - timedelta(days=1)
+
     while True:
         metric = db.query(DailyMetric).filter(
             DailyMetric.user_id == current_user.id,
             DailyMetric.metric_date == check_date
         ).first()
-        
-        if metric and metric.catchup_goal_met:
+
+        if metric and day_counts(metric):
             current_streak += 1
             check_date -= timedelta(days=1)
         else:
             break
-        
-        # Safety limit
+
         if current_streak > 365:
             break
-    
+
+    # Calculate longest streak (all-time)
+    all_metrics = db.query(DailyMetric).filter(
+        DailyMetric.user_id == current_user.id,
+    ).order_by(DailyMetric.metric_date).all()
+
+    longest_streak = 0
+    run = 0
+    prev_date = None
+    for m in all_metrics:
+        if not day_counts(m):
+            run = 0
+            prev_date = None
+            continue
+        if prev_date is None or (m.metric_date - prev_date).days == 1:
+            run += 1
+        else:
+            run = 1
+        longest_streak = max(longest_streak, run)
+        prev_date = m.metric_date
+
+    longest_streak = max(longest_streak, current_streak)
+
     # Get current week's recap journey status
     from app.models.recap import RecapJourney
     from sqlalchemy import and_
@@ -232,27 +306,25 @@ async def get_metrics_summary(
     ).order_by(RecapJourney.created_at.desc()).first()
     recap_journey_status = recap_journey.status if recap_journey else None
 
+    def _daily_response(m: DailyMetric) -> DailyMetricResponse:
+        return DailyMetricResponse(
+            metric_date=m.metric_date,
+            catchup_minutes=m.catchup_minutes or 0,
+            catchup_goal_met=m.catchup_goal_met or False,
+            divein_minutes=m.divein_minutes or 0,
+            divein_goal_met=m.divein_goal_met or False,
+            recap_completed=m.recap_completed or False,
+        )
+
     return MetricsSummaryResponse(
-        today=DailyMetricResponse(
-            metric_date=today_metric.metric_date,
-            catchup_minutes=today_metric.catchup_minutes or 0,
-            catchup_goal_met=today_metric.catchup_goal_met or False,
-            divein_minutes=today_metric.divein_minutes or 0,
-            recap_completed=today_metric.recap_completed or False,
-        ),
-        week=[
-            DailyMetricResponse(
-                metric_date=m.metric_date,
-                catchup_minutes=m.catchup_minutes or 0,
-                catchup_goal_met=m.catchup_goal_met or False,
-                divein_minutes=m.divein_minutes or 0,
-                recap_completed=m.recap_completed or False,
-            )
-            for m in week_metrics
-        ],
+        today=_daily_response(today_metric),
+        week=[_daily_response(m) for m in week_metrics],
         total_catchup_minutes=int(totals.total_catchup or 0),
         total_divein_minutes=int(totals.total_divein or 0),
         total_recap_sessions=int(totals.total_recaps or 0),
         current_streak=current_streak,
+        longest_streak=longest_streak,
+        weekly_total_minutes=weekly_total_minutes,
+        today_total_minutes=today_total_minutes,
         recap_journey_status=recap_journey_status,
     )

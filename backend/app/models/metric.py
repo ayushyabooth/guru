@@ -48,6 +48,7 @@ class DailyMetric(Base):
     catchup_minutes = Column(Integer, default=0)
     catchup_goal_met = Column(Boolean, default=False)
     divein_minutes = Column(Integer, default=0)
+    divein_goal_met = Column(Boolean, default=False)
     recap_completed = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
