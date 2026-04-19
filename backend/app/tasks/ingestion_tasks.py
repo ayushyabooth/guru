@@ -520,15 +520,11 @@ def ingest_article(url: str, notes: str = None, priority: str = "Normal", catego
             db.add(expert_note)
             db.commit()
         
-        # Queue summary generation for the new article
-        try:
-            from app.tasks.summary_tasks import generate_summaries_batch
-            # In production, this would be: generate_summaries_batch.delay([article_id])
-            generate_summaries_batch([article_id])
-            logger.info(f"Queued summary generation for article {article_id}")
-        except Exception as e:
-            logger.warning(f"Failed to queue summary generation for {article_id}: {e}")
-        
+        # NOTE: Previously called generate_summaries_batch([article_id]) here, but
+        # Article has no `summary` column — the Haiku call's result was discarded.
+        # Rich content (below) is what actually gets persisted and shown to users.
+        # Removing this dead call eliminates one Haiku invocation per ingested article.
+
         # P1: Generate rich content (4-part summary + Socratic prompts)
         try:
             _defaults = IndustriesConfig.get_instance().get_defaults()
