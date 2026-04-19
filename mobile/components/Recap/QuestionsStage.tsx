@@ -104,17 +104,20 @@ export default function QuestionsStage({
   const hasAnsweredAny = threads.some(t => t.answered);
 
   const currentThread = threads[currentIndex];
+
+  // NOTE: this effect must be declared before the early-return below so that
+  // hooks are called in the same order on every render (Rules of Hooks).
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  }, [currentThread?.messages?.length]);
+
   if (!currentThread) return null;
 
   const currentQuestion = currentThread.question;
   const isChipFormat = currentQuestion.response_format === 'tappable_chips';
   const hasInput = isChipFormat ? !!selectedChip : inputText.trim().length > 0;
   const typeColor = TYPE_COLORS[currentQuestion.type] || RingColors.recap.primary;
-
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [currentThread.messages.length]);
 
   const handleSubmit = async () => {
     const answer = isChipFormat ? (selectedChip || '') : inputText.trim();
