@@ -372,7 +372,7 @@ Format your response as a JSON array of strings:
 ["Insight 1", "Insight 2", "Insight 3", ...]"""
 
             response = claude_client.client.messages.create(
-                model=claude_client.model,  # Use regular Sonnet for extraction
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=300,
                 temperature=0.3,
                 messages=[{"role": "user", "content": prompt}]
@@ -1178,7 +1178,7 @@ Return ONLY the JSON array, no other text."""
         try:
             claude_client = get_claude_client()
             response = claude_client.client.messages.create(
-                model=claude_client.model,  # Sonnet for good quality, reasonable cost
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=1500,
                 temperature=0.6,
                 messages=[{"role": "user", "content": prompt}],
@@ -1323,7 +1323,7 @@ Return ONLY the follow-up text, no JSON wrapper."""
 
             claude_client = get_claude_client()
             response = claude_client.client.messages.create(
-                model=claude_client.model,
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=300,
                 temperature=0.7,
                 messages=[{"role": "user", "content": prompt}],
@@ -1425,7 +1425,7 @@ Return ONLY the JSON array."""
         try:
             claude_client = get_claude_client()
             response = claude_client.client.messages.create(
-                model=claude_client.model,
+                model=settings.CLAUDE_HAIKU_MODEL,
                 max_tokens=800,
                 temperature=0.5,
                 messages=[{"role": "user", "content": prompt}],

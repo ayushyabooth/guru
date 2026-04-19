@@ -23,7 +23,7 @@ class ClaudeClient:
         """
         self.api_key = api_key or settings.ANTHROPIC_API_KEY
         self.client = anthropic.Anthropic(api_key=self.api_key)
-        self.model = settings.CLAUDE_SONNET_MODEL
+        self.model = settings.CLAUDE_HAIKU_MODEL
         
     def generate_summary(self, text: str, max_words: int = 50) -> str:
         """

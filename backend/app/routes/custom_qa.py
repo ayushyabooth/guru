@@ -99,7 +99,7 @@ Remember: Only use information from the article. Be direct and concise."""
         claude_client = get_claude_client()
         
         response = claude_client.client.messages.create(
-            model=settings.CLAUDE_SONNET_MODEL,
+            model=settings.CLAUDE_HAIKU_MODEL,
             max_tokens=300,  # Keep answers concise
             system=system_prompt,
             messages=[{

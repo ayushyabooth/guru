@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
     TIER2_AGE_FILTER_DAYS: int = 30  # Only ingest articles from last N days
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization
+    MAX_ARTICLES_PER_INGESTION_RUN: int = 50  # Hard cap on articles processed per ingestion run
 
     # Content Quality Pipeline
     QUALITY_GATE_TIER1: float = 0.35  # Expert links quality threshold

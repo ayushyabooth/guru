@@ -7,6 +7,7 @@ Base storyboard architecture:
 - This reduces LLM calls from N_users * N_filters * 4 to N_unique_filters * 3 + N_users * N_filters * 1
 """
 import time
+from datetime import datetime, timedelta
 from typing import List, Dict, Set
 from sqlalchemy.orm import Session
 import logging
@@ -26,14 +27,16 @@ from app.services.industries_config import IndustriesConfig
 logger = logging.getLogger(__name__)
 
 
-def _warm_rich_content(db: Session, limit: int = 50):
+def _warm_rich_content(db: Session, limit: int = 20):
     """Generate rich content for articles that don't have it yet."""
     try:
         existing_ids = db.query(ArticleRichContent.article_id).all()
         existing_ids = [r[0] for r in existing_ids]
 
+        recency_cutoff = datetime.utcnow() - timedelta(hours=24)
         articles = db.query(Article).filter(
-            ~Article.id.in_(existing_ids) if existing_ids else True
+            Article.created_at >= recency_cutoff,
+            ~Article.id.in_(existing_ids) if existing_ids else True,
         ).limit(limit).all()
 
         if not articles:
