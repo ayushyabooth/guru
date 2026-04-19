@@ -487,9 +487,6 @@ function HomeContent() {
                 <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
                   <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
-                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
-                </TouchableOpacity>
               </View>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>

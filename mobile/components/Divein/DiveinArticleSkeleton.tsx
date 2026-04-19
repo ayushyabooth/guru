@@ -91,7 +91,7 @@ export const DiveinArticleSkeleton: React.FC = () => (
   </View>
 );
 
-const cardWidth = (width - 48) / 2; // 12px margin on each side + 12px gap
+const cardWidth = width - 24; // 12px padding on each side
 
 const styles = StyleSheet.create({
   container: {
@@ -117,8 +117,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     gap: 12,
   },
   card: {

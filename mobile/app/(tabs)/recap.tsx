@@ -144,6 +144,7 @@ export default function RecapScreen() {
   // Derive weekly activity summary from metrics
   const weeklyReadMinutes = displayMetrics.catchup.weeklyTotal + (displayMetrics.divein?.weeklyProgress || 0);
   const hasMinimumActivity = weeklyReadMinutes >= 5; // At least 5 minutes of reading
+  const hasZeroActivity = displayMetrics.catchup.weeklyTotal === 0 && (displayMetrics.divein?.weeklyProgress || 0) === 0;
   const filtersExplored = state.profile?.specializations?.length
     ? 1 + state.profile.specializations.length + (state.profile.additionalInterests?.length || 0)
     : 1;
@@ -741,7 +742,7 @@ export default function RecapScreen() {
             </View>
             <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
             <View style={[styles.pill, glassPill]}>
-              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} filters</Text>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} {filtersExplored === 1 ? 'filter' : 'filters'}</Text>
             </View>
             <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
             <View style={[styles.pill, glassPill]}>
@@ -750,7 +751,22 @@ export default function RecapScreen() {
           </View>
 
           {/* CTA */}
-          {hasCompletedRecap ? (
+          {hasZeroActivity ? (
+            <View style={styles.ctaSection}>
+              <Text style={[styles.ctaText, { fontSize: 14, fontWeight: '500', color: colors.textSecondary }]}>
+                Read some articles in Catch-up or Dive-in first to unlock your weekly recap.
+              </Text>
+              <GlassButton
+                title="Begin Journey"
+                onPress={() => {}}
+                accentColor="#FB923C"
+                disabled
+                fullWidth={false}
+                size="lg"
+                style={{ paddingHorizontal: 32, opacity: 0.5 }}
+              />
+            </View>
+          ) : hasCompletedRecap ? (
             <View style={[styles.completedCard, glassCard, {
               borderColor: isDark ? 'rgba(251,146,60,0.2)' : 'rgba(251,146,60,0.3)',
             }]}>
