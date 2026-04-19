@@ -14,8 +14,6 @@ import { useRouter } from 'expo-router';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
 import GlassButton from '../../components/ui/GlassButton';
-import GuruRings from '../../components/ui/GuruRings';
-import { Triskelion } from '../../components/Rings/Triskelion';
 import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import { useMetrics } from '../../store/metric-context';
 import {
@@ -34,7 +32,6 @@ import {
   SocraticStage,
   CommitmentScreen,
   CelebrationOverlay,
-  InsightConstellation,
   AudioPlayerStage,
   RecapArchive,
   RecapDetail,
@@ -46,7 +43,6 @@ import {
   RingColors,
   DarkGlassMaterials,
   getBackdropBlur,
-  getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -194,36 +190,9 @@ export default function RecapScreen() {
   }, [recapStatus]);
 
   // ── Journey Lifecycle ───────────────────────────────────────────
-
-  const handleBeginJourney = useCallback(async () => {
-    setViewState('loading');
-    setError(null);
-
-    try {
-      const journeyData = await recapService.startJourney();
-      setJourney(journeyData);
-
-      // If resumed and already completed, stay on entry — the completed card UI will show
-      if (journeyData.resumed && journeyData.status === 'completed') {
-        setViewState('entry');
-        return;
-      }
-
-      // Route to the correct stage based on where user left off
-      if (journeyData.resumed) {
-        await resumeJourney(journeyData);
-      } else {
-        // Fresh journey — load snapshot and go to Stage 1
-        const snapshotResp = await recapService.getSnapshot(journeyData.journey_id);
-        setSnapshot(snapshotResp.snapshot);
-        setViewState('snapshot');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start journey');
-      setViewState('entry');
-      Alert.alert('Error', err.message || 'Failed to start your recap journey. Please try again.');
-    }
-  }, []);
+  // NOTE: resumeJourney is declared BEFORE handleBeginJourney (which references
+  // it) to avoid React Compiler TDZ — same pattern that required
+  // startAudioPollingImpl to move to module level.
 
   const resumeJourney = async (j: RecapJourney) => {
     try {
@@ -299,6 +268,36 @@ export default function RecapScreen() {
       setViewState('entry');
     }
   };
+
+  const handleBeginJourney = useCallback(async () => {
+    setViewState('loading');
+    setError(null);
+
+    try {
+      const journeyData = await recapService.startJourney();
+      setJourney(journeyData);
+
+      // If resumed and already completed, stay on entry — the completed card UI will show
+      if (journeyData.resumed && journeyData.status === 'completed') {
+        setViewState('entry');
+        return;
+      }
+
+      // Route to the correct stage based on where user left off
+      if (journeyData.resumed) {
+        await resumeJourney(journeyData);
+      } else {
+        // Fresh journey — load snapshot and go to Stage 1
+        const snapshotResp = await recapService.getSnapshot(journeyData.journey_id);
+        setSnapshot(snapshotResp.snapshot);
+        setViewState('snapshot');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to start journey');
+      setViewState('entry');
+      Alert.alert('Error', err.message || 'Failed to start your recap journey. Please try again.');
+    }
+  }, []);
 
   // ── Stage Transitions ───────────────────────────────────────────
 
