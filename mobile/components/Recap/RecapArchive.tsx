@@ -69,6 +69,13 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
     fetchJourneys();
   }, [fetchJourneys]);
 
+  // Defensive null-guard (GUR-194 — same pattern as GUR-185/GUR-179): if the
+  // Icon barrel export resolves to undefined under React Compiler / barrel-init
+  // edge cases, render nothing rather than throwing React error #130
+  // ("Element type is invalid"). Placed AFTER all hooks to keep the hook call
+  // order stable across renders.
+  if (!Icon) return null;
+
   const getTierBadge = (tier: string) => {
     switch (tier) {
       case 'full': return { label: 'Full', color: '#FB923C' };
