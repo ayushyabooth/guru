@@ -228,16 +228,22 @@ export default function ArticleDetailScreen() {
   }, [id]);
 
   const fetchOverlayArticle = async () => {
+    setLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const token = await getAuthToken();
       if (!token) {
         setError('Please log in to view articles');
-        setLoading(false);
         return;
       }
 
       const response = await fetch(`${API_BASE_URL}/reader/articles/${id}/overlay`, {
         headers: { 'Authorization': `Bearer ${token}` },
+        signal: controller.signal,
       });
 
       if (response.ok) {
@@ -262,11 +268,16 @@ export default function ArticleDetailScreen() {
         });
         setIsSaved(false);
       } else {
-        setError(`Failed to load article: ${response.status}`);
+        setError(`Failed to load article (${response.status})`);
       }
-    } catch (err) {
-      setError('Failed to load article');
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError("Couldn't load — tap to retry");
+      } else {
+        setError('Failed to load article');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -327,6 +338,15 @@ export default function ArticleDetailScreen() {
     return (
       <View style={[styles.errorContainer, { backgroundColor: TC.background }]}>
         <Text style={[styles.errorText, { color: TC.error }]}>{error || 'Article not found'}</Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: ACCENT }]}
+          onPress={fetchOverlayArticle}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.backLink} onPress={handleBack}>
+          <Text style={[styles.backLinkText, { color: TC.textSecondary }]}>← Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -758,6 +778,24 @@ const styles = StyleSheet.create({
   errorText: {
     ...Typography.bodyLarge,
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.pill,
+  },
+  retryButtonText: {
+    ...Typography.labelMedium,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  backLink: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  backLinkText: {
+    ...Typography.labelMedium,
   },
 
   // ── Web reading state layout ─────────────────────────────────────────────

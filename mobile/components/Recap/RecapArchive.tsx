@@ -43,10 +43,17 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   const fetchJourneys = useCallback(async () => {
     try {
       setError(null);
-      const data = await recapService.listJourneys(50, 0);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+      );
+      const data = await Promise.race([recapService.listJourneys(50, 0), timeoutPromise]);
       setJourneys(data.journeys);
     } catch (err: any) {
-      setError(err.message || 'Failed to load journal');
+      setError(
+        err.message === 'TIMEOUT'
+          ? "Couldn't load — tap to retry"
+          : err.message || 'Failed to load journal'
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
