@@ -1,26 +1,29 @@
-import { useEffect } from 'react';
-import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Redirect } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { getAuthToken } from '../utils/auth';
 
 export default function IndexScreen() {
+  const [checked, setChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   useEffect(() => {
-    // expo-router's router.replace() queues navigation actions internally
-    // until the navigator is ready, so no manual "isReady" guard is needed.
-    // Previously we imported useRootNavigationState from @react-navigation/native
-    // which was removed in v7 — calling undefined() crashed every render. (GUR-91)
     getAuthToken()
       .then((token) => {
-        if (token) {
-          router.replace('/(tabs)');
-        } else {
-          router.replace('/(auth)/signup');
-        }
+        setIsAuthenticated(!!token);
+        setChecked(true);
       })
       .catch(() => {
-        router.replace('/(auth)/signup');
+        setChecked(true);
       });
   }, []);
+
+  // Use <Redirect> (rendered synchronously) rather than router.replace() in an
+  // effect — the latter can be dropped on web before the navigator is mounted,
+  // leaving a blank white screen. (GUR-166)
+  if (checked) {
+    return <Redirect href={isAuthenticated ? '/(tabs)' : '/(auth)/login'} />;
+  }
 
   // Show loading screen while checking auth
   return (

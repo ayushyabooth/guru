@@ -56,6 +56,18 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
     removeStoryboard,
   } = useCatchupFeed(context);
 
+  // Scroll to top when the feed first populates so the hero image/headline of
+  // card #1 is never hidden above the fold due to browser scroll restoration
+  // on web. (GUR-168)
+  const scrollViewRef = useRef<ScrollView>(null);
+  const didScrollToTop = useRef(false);
+  useEffect(() => {
+    if (storyboards.length > 0 && !didScrollToTop.current) {
+      didScrollToTop.current = true;
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [storyboards.length]);
+
   const handleSaveArticle = async (articleId: string) => {
     try {
       await CatchupService.saveArticle(articleId);
@@ -114,6 +126,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
       refreshControl={
