@@ -555,6 +555,7 @@ export default function RecapScreen() {
 
   // Archive view
   if (viewState === 'archive') {
+    if (!RecapArchive) return null;
     return (
       <RecapArchive
         onClose={() => setViewState('entry')}
@@ -567,6 +568,7 @@ export default function RecapScreen() {
   }
 
   if (viewState === 'detail' && selectedJourneyId) {
+    if (!RecapDetail) return null;
     return (
       <RecapDetail
         journeyId={selectedJourneyId}
@@ -580,6 +582,7 @@ export default function RecapScreen() {
 
   // Stage 1: Snapshot / Glass Memory Wall
   if (viewState === 'snapshot' && snapshot) {
+    if (!RecapRingProgress || !SnapshotStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
@@ -597,6 +600,7 @@ export default function RecapScreen() {
 
   // Stage 2: Guided Questions
   if (viewState === 'questions' && questions.length > 0) {
+    if (!RecapRingProgress || !QuestionsStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
@@ -619,6 +623,7 @@ export default function RecapScreen() {
 
   // Stage 3: Socratic Dialogue
   if (viewState === 'socratic') {
+    if (!RecapRingProgress || !SocraticStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
@@ -639,6 +644,7 @@ export default function RecapScreen() {
 
   // Commitment Screen
   if (viewState === 'commitment') {
+    if (!RecapRingProgress || !CommitmentScreen) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
@@ -658,6 +664,7 @@ export default function RecapScreen() {
 
   // Celebration Overlay
   if (viewState === 'celebration') {
+    if (!CelebrationOverlay) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         <OrganicBackground variant="recap" />
@@ -680,6 +687,7 @@ export default function RecapScreen() {
 
   // Stage 4: Audio Player / Text Recap (Full tier)
   if (viewState === 'audio' && journey && (audioUrl || audioStatus === 'text_only')) {
+    if (!AudioPlayerStage) return null;
     return (
       <AudioPlayerStage
         journeyId={journey.journey_id}
@@ -777,6 +785,7 @@ export default function RecapScreen() {
                 title="Begin Journey"
                 onPress={() => {}}
                 accentColor="#FB923C"
+                icon="play-circle"
                 disabled
                 fullWidth={false}
                 size="lg"
@@ -795,6 +804,7 @@ export default function RecapScreen() {
                 title={isInProgress ? 'Continue Journey' : 'Begin Journey'}
                 onPress={handleBeginJourney}
                 accentColor="#FB923C"
+                icon="play-circle"
                 fullWidth={false}
                 size="lg"
                 style={{ paddingHorizontal: 32 }}
