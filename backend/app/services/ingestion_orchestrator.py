@@ -12,7 +12,7 @@ Uses APScheduler (AsyncIOScheduler) for scheduling.
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -84,41 +84,53 @@ class IngestionOrchestrator:
             self._scheduler.start()
             logger.info("APScheduler started with tier schedules")
 
-            # Run initial ingestion immediately (with timing)
+            # Run initial ingestion immediately (with timing).
+            # CRITICAL: Skip any tier whose last successful run is still within its
+            # schedule window. Without this guard, every Railway redeploy re-fires
+            # all three tiers (which are weekly), hammering the Anthropic API.
             overall_start = time.time()
 
             # Phase A: Tier 1 (expert links, local file, fast)
             t1_start = time.time()
-            t1_ingested = await self._run_tier1_safe()
-            t1_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 1 ingestion took {(t1_end - t1_start)*1000:.0f}ms ({t1_ingested} new articles)")
+            if self._should_run_tier("tier1_expert", settings.TIER1_SCHEDULE_HOURS):
+                t1_ingested = await self._run_tier1_safe()
+                t1_end = time.time()
+                logger.info(f"⏱️ TIMING: Tier 1 ingestion took {(t1_end - t1_start)*1000:.0f}ms ({t1_ingested} new articles)")
 
-            warm1_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t1_ingested)
-            warm1_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T1) took {(warm1_end - warm1_start)*1000:.0f}ms")
+                warm1_start = time.time()
+                await self._warm_content_safe(new_articles_ingested=t1_ingested)
+                warm1_end = time.time()
+                logger.info(f"⏱️ TIMING: Content warming (post-T1) took {(warm1_end - warm1_start)*1000:.0f}ms")
+            else:
+                logger.info("Tier 1: skipping initial run — last completion is within schedule window")
 
             # Phase B: Tier 2 (luminary RSS) - generates rich content per-article inline
             t2_start = time.time()
-            t2_ingested = await self._run_tier2_safe()
-            t2_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 2 ingestion took {(t2_end - t2_start)*1000:.0f}ms ({t2_ingested} new articles)")
+            if self._should_run_tier("tier2_luminary", settings.TIER2_SCHEDULE_HOURS):
+                t2_ingested = await self._run_tier2_safe()
+                t2_end = time.time()
+                logger.info(f"⏱️ TIMING: Tier 2 ingestion took {(t2_end - t2_start)*1000:.0f}ms ({t2_ingested} new articles)")
 
-            warm2_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t2_ingested)
-            warm2_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T2) took {(warm2_end - warm2_start)*1000:.0f}ms")
+                warm2_start = time.time()
+                await self._warm_content_safe(new_articles_ingested=t2_ingested)
+                warm2_end = time.time()
+                logger.info(f"⏱️ TIMING: Content warming (post-T2) took {(warm2_end - warm2_start)*1000:.0f}ms")
+            else:
+                logger.info("Tier 2: skipping initial run — last completion is within schedule window")
 
             # Phase C: Tier 3 (web search, slow) - runs last, doesn't block content
             t3_start = time.time()
-            t3_ingested = await self._run_tier3_safe()
-            t3_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 3 ingestion took {(t3_end - t3_start)*1000:.0f}ms ({t3_ingested} new articles)")
+            if self._should_run_tier("tier3_discovery", settings.TIER3_SCHEDULE_HOURS):
+                t3_ingested = await self._run_tier3_safe()
+                t3_end = time.time()
+                logger.info(f"⏱️ TIMING: Tier 3 ingestion took {(t3_end - t3_start)*1000:.0f}ms ({t3_ingested} new articles)")
 
-            warm3_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t3_ingested)
-            warm3_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T3) took {(warm3_end - warm3_start)*1000:.0f}ms")
+                warm3_start = time.time()
+                await self._warm_content_safe(new_articles_ingested=t3_ingested)
+                warm3_end = time.time()
+                logger.info(f"⏱️ TIMING: Content warming (post-T3) took {(warm3_end - warm3_start)*1000:.0f}ms")
+            else:
+                logger.info("Tier 3: skipping initial run — last completion is within schedule window")
 
             overall_end = time.time()
             logger.info(f"⏱️ TIMING: Total initial ingestion took {(overall_end - overall_start)*1000:.0f}ms ({(overall_end - overall_start):.1f}s)")
@@ -179,6 +191,45 @@ class IngestionOrchestrator:
             logger.error(f"Tier 3 run failed: {e}")
             return 0
 
+    def _should_run_tier(self, tier: str, schedule_hours: int) -> bool:
+        """
+        Return True if this tier should run now, False if its last successful
+        run is still within the schedule window.
+
+        This is the primary cost guard against Railway redeploys re-firing all
+        tiers on every boot. An article that has already been enriched will be
+        de-duped by URL downstream, but the cost of re-discovering and re-calling
+        the web_search API for Tier 3 is not zero — so we skip the tier entirely.
+        """
+        try:
+            db = SessionLocal()
+            try:
+                cutoff = datetime.utcnow() - timedelta(hours=schedule_hours)
+                latest = (
+                    db.query(IngestionRun)
+                    .filter(
+                        IngestionRun.tier == tier,
+                        IngestionRun.status == "completed",
+                        IngestionRun.completed_at.isnot(None),
+                        IngestionRun.completed_at >= cutoff,
+                    )
+                    .order_by(IngestionRun.completed_at.desc())
+                    .first()
+                )
+                if latest:
+                    logger.info(
+                        f"{tier}: last completion at {latest.completed_at.isoformat()} "
+                        f"is within {schedule_hours}h window — skipping initial run"
+                    )
+                    return False
+                return True
+            finally:
+                db.close()
+        except Exception as e:
+            # If we can't check, default to allowing the run (fail-open).
+            logger.warning(f"_should_run_tier check failed for {tier}: {e} — allowing run")
+            return True
+
     async def _warm_content_safe(self, new_articles_ingested: int = 0):
         """Safety-net: backfill any articles missing rich content, then pre-generate storyboards.
 
@@ -186,7 +237,9 @@ class IngestionOrchestrator:
         This method catches edge cases where inline generation failed.
 
         If new_articles_ingested > 0, clears all base storyboard caches first
-        so storyboards are rebuilt with the new articles included.
+        so storyboards are rebuilt with the new articles included. Otherwise
+        the 24h-cached base storyboards are still valid and we skip the
+        expensive Haiku call entirely.
         """
         try:
             logger.info(f"Content warming: backfilling rich content + storyboards (new_articles={new_articles_ingested})...")
@@ -196,18 +249,27 @@ class IngestionOrchestrator:
                 from app.services.startup_service import _warm_rich_content
                 db = SessionLocal()
                 try:
-                    _warm_rich_content(db, limit=200)
+                    # Cap at 20 per run (matches startup_service default) — the
+                    # previous limit=200 override negated commit 318933f's cap
+                    # and caused 10× the rich-content LLM calls per warm cycle.
+                    _warm_rich_content(db, limit=20)
                 finally:
                     db.close()
 
             await asyncio.to_thread(_warm_sync)
 
-            # If new articles were ingested, invalidate all base storyboard caches
-            # so they get rebuilt with the new articles
-            if new_articles_ingested > 0:
-                logger.info(f"Invalidating base storyboard caches ({new_articles_ingested} new articles)...")
-                from app.services.clustering_service import clear_storyboard_cache
-                await asyncio.to_thread(clear_storyboard_cache)
+            # If no new articles were ingested, the existing base storyboard cache
+            # is still valid (24h TTL) — skip the Haiku regeneration pass entirely.
+            # This saves one full pre_generate_base_storyboards sweep per warm cycle
+            # on redeploys where nothing new landed.
+            if new_articles_ingested == 0:
+                logger.info("Content warming: no new articles, skipping base storyboard regeneration")
+                return
+
+            # New articles landed — invalidate caches and regenerate storyboards.
+            logger.info(f"Invalidating base storyboard caches ({new_articles_ingested} new articles)...")
+            from app.services.clustering_service import clear_storyboard_cache
+            await asyncio.to_thread(clear_storyboard_cache)
 
             from app.services.startup_service import pre_generate_base_storyboards
             await pre_generate_base_storyboards()
