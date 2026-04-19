@@ -43,7 +43,7 @@ class UserProfileRequest(BaseModel):
     core_industry: str  # Industry ID (e.g., 'consumer', 'technology')
     specializations: List[str]  # Specialization IDs (e.g., 'food_beverage', 'ai_ml')
     additional_interest_industries: Optional[List[str]] = []  # Industry IDs for additional interests
-    total_weekly_capacity_band: str
+    total_weekly_capacity_band: Optional[str] = 'Medium'
     catchup_daily_goal_minutes: int
     catchup_daily_max_minutes: int
     divein_weekly_goal_minutes: int

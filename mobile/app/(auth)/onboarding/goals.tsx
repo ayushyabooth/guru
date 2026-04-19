@@ -203,6 +203,8 @@ export default function GoalsScreen() {
       // Prepare profile data
       const profileData = {
         ...getProfileData(),
+        // Ensure non-null values for required backend fields
+        total_weekly_capacity_band: state.weeklyCapacity ?? 'Medium',
         catchup_daily_goal_minutes: catchupDaily,
         catchup_daily_max_minutes: Math.max(catchupDaily + 15, 45),
         divein_weekly_goal_minutes: diveinWeekly,
