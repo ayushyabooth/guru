@@ -154,7 +154,12 @@ export default function CatchupScreen() {
             <View style={styles.authPrompt}>
               <Text style={[styles.authTitle, { color: colors.textPrimary }]}>Sign in to continue</Text>
               <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>Your personalized feed is ready when you log in.</Text>
-              <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={[styles.authButton, { backgroundColor: colors.accent }]}>
+              <TouchableOpacity
+                onPress={() => router.replace('/(auth)/login')}
+                style={[styles.authButton, { backgroundColor: colors.accent }]}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in"
+              >
                 <Text style={styles.authButtonText}>Sign In</Text>
               </TouchableOpacity>
             </View>

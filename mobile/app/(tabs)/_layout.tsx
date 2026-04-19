@@ -184,7 +184,10 @@ function TabsWithMetrics() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: isDark ? '#F1F5F9' : '#6366F1',
-        tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
+        // WCAG AA: bumped from #64748B / #94A3B8 to #94A3B8 / #475569 so the
+        // 11px tab labels meet 4.5:1 against the floating glass tab-bar
+        // background in both themes.
+        tabBarInactiveTintColor: isDark ? '#94A3B8' : '#475569',
         tabBarAccessibilityLabel: 'Main navigation',
         tabBarLabelStyle: {
           fontSize: 11,

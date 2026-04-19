@@ -68,6 +68,10 @@ interface GlassButtonProps {
   size?: 'sm' | 'md' | 'lg';
   style?: ViewStyle;
   textStyle?: TextStyle;
+  /** Override the screen-reader label — defaults to `title`. */
+  accessibilityLabel?: string;
+  /** Optional supplemental hint for screen readers. */
+  accessibilityHint?: string;
 }
 
 export default function GlassButton({
@@ -82,6 +86,8 @@ export default function GlassButton({
   size = 'md',
   style,
   textStyle,
+  accessibilityLabel,
+  accessibilityHint,
 }: GlassButtonProps) {
   const { isDark, colors } = useTheme();
   const palette = getPalette(filterContext);
@@ -111,6 +117,10 @@ export default function GlassButton({
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
         style={[
           styles.primaryContainer,
           {
@@ -189,6 +199,10 @@ export default function GlassButton({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator size="small" color={palette.primary} />
