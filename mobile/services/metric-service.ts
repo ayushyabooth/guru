@@ -100,7 +100,10 @@ class MetricService {
           },
           divein: {
             dailyProgress: metricsData.today?.divein_minutes || 0,
-            dailyGoal: Math.round((profileData.divein_weekly_goal_minutes || 120) / 7), // Convert weekly to daily
+            // Convert weekly to daily, then clamp to the slider minimum (15m).
+            // A stored weekly of 90 would otherwise compute to 13m — below the
+            // 15m minimum shown in GoalEditor — see GUR-174 / GUR-182.
+            dailyGoal: Math.max(15, Math.round((profileData.divein_weekly_goal_minutes || 120) / 7)),
             weeklyProgress: metricsData.week?.reduce((sum: number, day: any) => sum + (day.divein_minutes || 0), 0) || 0,
             weeklyGoal: profileData.divein_weekly_goal_minutes || 120,
           },

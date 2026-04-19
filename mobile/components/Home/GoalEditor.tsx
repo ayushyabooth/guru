@@ -27,6 +27,18 @@ import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
 
+// Slider bounds — kept in sync with CustomSlider min/max props below and the
+// onboarding flow. Stored goals are clamped to these on load so a stale or
+// out-of-range value (e.g. weekly=90 → daily=13) never renders below the
+// slider minimum.
+const CATCHUP_MIN = 10;
+const CATCHUP_MAX = 45;
+const DIVEIN_MIN = 15;
+const DIVEIN_MAX = 60;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 interface GoalEditorProps {
   onClose: () => void;
   onSave: () => void;
@@ -106,8 +118,12 @@ function CustomSlider({ value, min, max, step, color, onChange }: CustomSliderPr
 
 export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditorProps) {
   const { isDark } = useTheme();
-  const [catchupGoal, setCatchupGoal] = useState(currentGoals.catchupDailyGoal || 20);
-  const [diveinGoal, setDiveinGoal] = useState(currentGoals.diveinDailyGoal || 30);
+  const [catchupGoal, setCatchupGoal] = useState(
+    clamp(currentGoals.catchupDailyGoal || 20, CATCHUP_MIN, CATCHUP_MAX)
+  );
+  const [diveinGoal, setDiveinGoal] = useState(
+    clamp(currentGoals.diveinDailyGoal || 30, DIVEIN_MIN, DIVEIN_MAX)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const theme = isDark
@@ -241,8 +257,8 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
 
           <CustomSlider
             value={catchupGoal}
-            min={10}
-            max={45}
+            min={CATCHUP_MIN}
+            max={CATCHUP_MAX}
             step={5}
             color="#38BDF8"
             onChange={setCatchupGoal}
@@ -288,8 +304,8 @@ export default function GoalEditor({ onClose, onSave, currentGoals }: GoalEditor
 
           <CustomSlider
             value={diveinGoal}
-            min={15}
-            max={60}
+            min={DIVEIN_MIN}
+            max={DIVEIN_MAX}
             step={5}
             color="#EC4899"
             onChange={setDiveinGoal}
