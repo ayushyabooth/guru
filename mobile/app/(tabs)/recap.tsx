@@ -542,7 +542,7 @@ export default function RecapScreen() {
   if (viewState === 'loading') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={RingColors.recap.primary} />
           <Text style={styles.loadingText}>Preparing your weekly recap...</Text>
@@ -584,7 +584,7 @@ export default function RecapScreen() {
     if (!RecapRingProgress || !SnapshotStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         {/* Floating ring progress */}
         <View style={styles.floatingRing}>
           <RecapRingProgress
@@ -602,7 +602,7 @@ export default function RecapScreen() {
     if (!RecapRingProgress || !QuestionsStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.floatingRing}>
           <RecapRingProgress
             progress={ringProgress}
@@ -625,7 +625,7 @@ export default function RecapScreen() {
     if (!RecapRingProgress || !SocraticStage) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.floatingRing}>
           <RecapRingProgress
             progress={ringProgress}
@@ -646,7 +646,7 @@ export default function RecapScreen() {
     if (!RecapRingProgress || !CommitmentScreen) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.floatingRing}>
           <RecapRingProgress
             progress={ringProgress}
@@ -666,7 +666,7 @@ export default function RecapScreen() {
     if (!CelebrationOverlay) return null;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
-        <OrganicBackground variant="recap" />
+        {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <CelebrationOverlay
           insightCount={insights.length}
           questionCount={questions.length}

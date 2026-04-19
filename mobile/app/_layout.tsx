@@ -1,5 +1,6 @@
 import '../utils/polyfills';
-import { Platform } from 'react-native';
+import React from 'react';
+import { Platform, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
@@ -41,6 +42,108 @@ const queryClient = new QueryClient({
 
 // Prevent splash screen from auto-hiding while fonts load
 SplashScreen.preventAutoHideAsync();
+
+// ── Global Error Boundary (GUR-187) ─────────────────────────────────
+// Catches any React render error in the entire app tree so a single
+// component crash does not produce a blank white screen. Uses dark
+// background + recap salmon accent matching the design system tokens.
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // Log so the error surfaces in Sentry / dev console / Vercel logs.
+    console.error('[ErrorBoundary] Render error caught:', error, info?.componentStack);
+  }
+
+  handleReload = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.reload();
+    } else {
+      // On native, the only recovery is to clear the error and re-render.
+      this.setState({ hasError: false, error: null });
+    }
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={errorBoundaryStyles.container}>
+          <Text style={errorBoundaryStyles.logo}>GURU</Text>
+          <Text style={errorBoundaryStyles.title}>Something went wrong</Text>
+          {this.state.error?.message ? (
+            <Text style={errorBoundaryStyles.message} numberOfLines={3}>
+              {this.state.error.message}
+            </Text>
+          ) : null}
+          <TouchableOpacity
+            style={errorBoundaryStyles.button}
+            onPress={this.handleReload}
+            accessibilityRole="button"
+            accessibilityLabel="Reload the app"
+          >
+            <Text style={errorBoundaryStyles.buttonText}>Reload</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const errorBoundaryStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    minHeight: '100%' as any,
+    backgroundColor: '#0A0E17',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  logo: {
+    color: '#FB923C',
+    fontFamily: Platform.OS === 'web' ? "'Orbitron_700Bold', 'Orbitron', sans-serif" : undefined,
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 4,
+    marginBottom: 24,
+  },
+  title: {
+    color: '#F8FAFC',
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  message: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+    maxWidth: 320,
+  },
+  button: {
+    backgroundColor: '#FB923C',
+    borderWidth: 1.5,
+    borderColor: '#EA580C',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 999,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -154,14 +257,16 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TimeTrackingProvider>
-          <DiveInProvider userId="default">
-            <ThemeAwareNav />
-          </DiveInProvider>
-        </TimeTrackingProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TimeTrackingProvider>
+            <DiveInProvider userId="default">
+              <ThemeAwareNav />
+            </DiveInProvider>
+          </TimeTrackingProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

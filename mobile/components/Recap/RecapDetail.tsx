@@ -76,6 +76,13 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
     fetchSummary();
   }, [fetchSummary]);
 
+  // Defensive null-guard (GUR-185 — same pattern as GUR-179): if any
+  // imported child component resolves to undefined under React Compiler
+  // / barrel-init edge cases, render nothing instead of throwing
+  // React error #130 ("Element type is invalid"). Placed AFTER all hooks
+  // to keep the hook call order stable across renders.
+  if (!Icon) return null;
+
   const formatDateRange = (weekStart: string, weekEnd: string) => {
     const start = new Date(weekStart);
     const end = new Date(weekEnd);
