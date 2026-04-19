@@ -24,18 +24,19 @@ Legacy endpoints (kept for backward compatibility):
   GET  /recap/shared/{key}   → Legacy shared recap view
   GET  /recap/user/sessions  → Legacy user sessions
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from typing import Optional, List
 from pathlib import Path
+import json
 import uuid
 import secrets
 import logging
 from datetime import datetime
 
-from app.db.database import get_db
+from app.db.database import SessionLocal, get_db
 from app.deps import get_current_user
 from app.models.user import User
 from app.models.recap import RecapSession, RecapSessionPublish, RecapJourney, KeyInsight
@@ -47,6 +48,17 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["recap"])
+
+
+def _warm_up_script_bg(journey_id: str) -> None:
+    """Background-task wrapper that opens its own DB session."""
+    db = SessionLocal()
+    try:
+        AudioRecapService.warm_up_script(journey_id, db)
+    except Exception as e:
+        logger.warning(f"Background warm_up_script failed for {journey_id}: {e}")
+    finally:
+        db.close()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -389,6 +401,7 @@ async def get_recap_insights(
 async def store_commitment(
     journey_id: str,
     request: CommitmentRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -411,6 +424,11 @@ async def store_commitment(
 
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+
+    # Fire-and-forget warm-up of the audio script so the subsequent
+    # /audio/generate call can skip straight to TTS. Runs after the
+    # response is sent; the wrapper opens its own DB session.
+    background_tasks.add_task(_warm_up_script_bg, journey_id)
 
     return result
 
@@ -690,7 +708,28 @@ async def stream_audio_recap(
     if not journey:
         raise HTTPException(status_code=404, detail="Recap journey not found")
 
-    if journey.audio_status != "ready" or not journey.audio_url:
+    # Text-only journeys (no ElevenLabs / no MP3) — return the script JSON
+    # so callers always get something useful instead of a 404.
+    if journey.audio_status == "text_only" or not journey.audio_url:
+        if journey.audio_status == "text_only" or journey.audio_script:
+            script = journey.audio_script
+            if isinstance(script, str):
+                try:
+                    script = json.loads(script)
+                except (TypeError, ValueError):
+                    script = []
+            return JSONResponse(
+                content={
+                    "status": "text_only",
+                    "script": script or [],
+                }
+            )
+        raise HTTPException(
+            status_code=404,
+            detail="Audio not available. Generate it first via POST /audio/generate",
+        )
+
+    if journey.audio_status != "ready":
         raise HTTPException(
             status_code=404,
             detail="Audio not available. Generate it first via POST /audio/generate",

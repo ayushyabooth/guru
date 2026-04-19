@@ -41,6 +41,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
     expose_headers=["X-Response-Time-Ms"],
+    max_age=600,  # Cache preflights for 10 min — reduces repeated OPTIONS round-trips
 )
 
 # HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
