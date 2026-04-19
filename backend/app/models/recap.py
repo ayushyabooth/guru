@@ -83,11 +83,11 @@ class RecapJourney(Base):
     week_start = Column(Date, nullable=False)
     week_end = Column(Date, nullable=False)
 
-    # Tier: determines which stages are available
-    # 'lite'     -> 1-3 articles: Stages 1-2 only (2 questions)
-    # 'standard' -> 4-7 articles: Stages 1-3 (4-5 questions + Socratic)
-    # 'full'     -> 8+ articles:  All stages including audio eligibility
-    tier = Column(String(20), nullable=False, default='standard')
+    # Tier: legacy column — no longer drives stage gating. All users now get
+    # the full journey (Snapshot → Questions → Socratic → Commitment → Audio).
+    # Retained for backward compatibility with existing rows; always 'full'
+    # for journeys created after the tier-removal change.
+    tier = Column(String(20), nullable=False, default='full')
 
     # Overall journey status
     # not_started -> stage_1 -> stage_2 -> stage_3 -> commitment -> stage_4 -> completed

@@ -1,12 +1,17 @@
 """
 Recap service for:
   - Legacy: collecting weekly Q&A exchanges and generating Claude Opus synthesis (RecapSession)
-  - New: 4-stage Recap Journey with tier calculation, snapshot, guided questions,
-    system-extracted insights, and commitment (RecapJourney + KeyInsight)
+  - New: 4-stage Recap Journey with snapshot, guided questions, system-extracted
+    insights, and commitment (RecapJourney + KeyInsight).
+
+All users get the full journey (Snapshot → Questions → Socratic → Commitment → Audio).
+Depth varies naturally with available data — no tier-based stage gating.
+Q&A exchanges and user annotations are the primary signal for driving questions
+and Socratic dialogue; reading time is background context.
 """
 import json
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional
 from datetime import datetime, timedelta, date
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
@@ -505,29 +510,26 @@ Format your response as a JSON array of strings:
 class RecapJourneyService:
     """Service for the new 4-stage Recap Journey (replacing legacy RecapSession flow)"""
 
-    # ── Step 3: Tier Calculation ──────────────────────────────────────
+    # ── Activity Stats (cheap counts used for journey metadata) ───────
 
     @staticmethod
-    def calculate_recap_tier(
+    def _compute_activity_stats(
         user_id, week_start: date, week_end: date, db: Session
-    ) -> Tuple[str, Dict]:
+    ) -> Dict:
         """
-        Calculate the recap tier based on the user's weekly activity level.
+        Count the user's weekly activity for display/metadata purposes.
 
-        Tiers:
-          'lite'     — 1-3 articles, no Q&As → Stages 1-2 only (2 questions)
-          'standard' — 4-7 articles, some Q&As → Stages 1-3 (4-5 questions + Socratic)
-          'full'     — 8+ articles, 3+ Q&As, 2+ filters → All stages + audio eligibility
+        This is a lightweight DB-count pass — no LLM, no heavy aggregation.
+        The full snapshot (articles, anchors, Q&A highlights, annotations) is
+        built lazily on first Stage 1 fetch so mid-week activity is captured.
 
-        Returns:
-            (tier_name, activity_stats_dict)
+        Returns activity_stats_dict (no tier — all users get the full journey).
         """
         user_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
         week_start_dt = datetime.combine(week_start, datetime.min.time())
         week_end_dt = datetime.combine(week_end, datetime.max.time())
 
         # ── Count articles engaged with (via time logs) ──
-        # An article is "engaged" if the user spent time on it (catchup or divein)
         article_time_logs = db.query(TimeLog).filter(
             and_(
                 TimeLog.user_id == user_uuid,
@@ -537,7 +539,6 @@ class RecapJourneyService:
             )
         ).all()
 
-        # Unique articles/storyboards engaged with
         engaged_context_ids = set()
         total_time_seconds = 0
         industries_seen = set()
@@ -555,7 +556,6 @@ class RecapJourneyService:
         articles_read_count = len(engaged_context_ids)
         total_time_minutes = total_time_seconds // 60
 
-        # ── Count saved articles this week ──
         articles_saved_count = db.query(UserSavedArticle).filter(
             and_(
                 UserSavedArticle.user_id == user_uuid,
@@ -564,7 +564,6 @@ class RecapJourneyService:
             )
         ).count()
 
-        # ── Count Q&A exchanges this week ──
         qa_count = db.query(QAExchange).filter(
             and_(
                 QAExchange.user_id == user_uuid,
@@ -573,15 +572,11 @@ class RecapJourneyService:
             )
         ).count()
 
-        # ── Count distinct filters explored ──
         filters_explored = len(industries_seen) + len(specializations_seen)
         if filters_explored == 0:
-            filters_explored = 1  # At minimum, user has their core filter
+            filters_explored = 1
 
-        # ── Single tier: all users get the full recap experience ──
-        tier = 'full'
-
-        activity_stats = {
+        return {
             "articles_read_count": articles_read_count,
             "articles_saved_count": articles_saved_count,
             "qa_count": qa_count,
@@ -590,12 +585,6 @@ class RecapJourneyService:
             "industries": list(industries_seen),
             "specializations": list(specializations_seen),
         }
-
-        logger.info(
-            f"Recap tier for user {user_id}: {tier} "
-            f"(articles={articles_read_count}, qa={qa_count}, filters={filters_explored})"
-        )
-        return tier, activity_stats
 
     # ── Step 4: Stage 1 — Weekly Snapshot Generation ──────────────────
 
@@ -1022,14 +1011,57 @@ class RecapJourneyService:
 
         return anchors
 
+    # ── Stage 1 Lazy Compute: ensure_snapshot ─────────────────────────
+
+    @staticmethod
+    def ensure_snapshot(journey, db: Session) -> Dict:
+        """
+        Compute and cache the weekly snapshot on the journey record if missing.
+
+        Called at first Stage 1 fetch (not at /recap/start) so that mid-week
+        activity between journey creation and Recap open is captured. Subsequent
+        calls return the cached snapshot without recomputation.
+
+        Also updates the activity count columns on the journey from the fresh data.
+        """
+        if journey.snapshot_data:
+            return journey.snapshot_data
+
+        snapshot = RecapJourneyService.generate_weekly_snapshot(
+            journey.user_id, journey.week_start, journey.week_end, db
+        )
+        journey.snapshot_data = snapshot
+
+        # Refresh activity counts from the fresh snapshot so the journey row
+        # reflects current state rather than the stale counts from /recap/start.
+        stats = RecapJourneyService._compute_activity_stats(
+            journey.user_id, journey.week_start, journey.week_end, db
+        )
+        journey.articles_read_count = stats["articles_read_count"]
+        journey.articles_saved_count = stats["articles_saved_count"]
+        journey.qa_count = stats["qa_count"]
+        journey.filters_explored_count = stats["filters_explored_count"]
+        journey.total_time_minutes = stats["total_time_minutes"]
+
+        flag_modified(journey, 'snapshot_data')
+        db.commit()
+        db.refresh(journey)
+
+        logger.info(
+            f"Lazily computed Stage 1 snapshot for journey {journey.id} "
+            f"({stats['articles_read_count']} articles, {stats['qa_count']} QAs, "
+            f"{len(snapshot.get('user_highlights', []))} annotations)"
+        )
+        return snapshot
+
     # ── Step 5: Stage 2 — Guided Question Generation ──────────────────
 
     @staticmethod
     def generate_guided_questions(
-        user_id, snapshot_data: Dict, tier: str, db: Session
+        user_id, snapshot_data: Dict, db: Session
     ) -> List[Dict]:
         """
-        Generate 4-5 typed guided questions based on the weekly snapshot.
+        Generate 5 typed guided questions based on the weekly snapshot.
 
         Question types:
           'retrieval'       — "What was the key argument in [Article X]?"
@@ -1037,13 +1069,15 @@ class RecapJourneyService:
           'reflection'      — "How does [Insight] connect to your work in [Specialization]?"
           'surprise'        — "What was the most unexpected thing you encountered?"
 
-        For Lite tier: 2 questions (1 retrieval + 1 reflection)
-        For Standard/Full: 4-5 questions (mix of all types)
+        Q&A exchanges and user annotations are the PRIMARY signal — questions
+        should build on what the user actually asked and highlighted. Reading
+        time is secondary context.
 
         Returns list of question dicts.
         """
         articles = snapshot_data.get("articles_engaged", [])
         qa_highlights = snapshot_data.get("qa_highlights", [])
+        user_highlights = snapshot_data.get("user_highlights", [])
         topic_clusters = snapshot_data.get("topic_clusters", [])
         filters = snapshot_data.get("filters_explored", [])
         anchor_interactions = snapshot_data.get("anchor_interactions", [])
@@ -1083,10 +1117,47 @@ class RecapJourneyService:
                 },
             ]
 
-        # Always generate 5 questions (no tier gating)
+        # Always generate 5 questions — everyone gets the full journey
         question_count = 5
 
-        # Build context for Claude — prioritize anchor interactions
+        # ── PRIMARY SIGNAL: The user's own questions ──
+        # Q&A is the highest-value signal of curiosity — lead with it.
+        qa_primary = ""
+        if qa_highlights:
+            qa_lines = []
+            for q in qa_highlights[:5]:
+                qa_lines.append(
+                    f'- They asked: "{q["question"][:150]}" (about: {q["article_title"]})'
+                )
+            qa_primary = (
+                "\n\n═══ PRIMARY SIGNAL — THE USER'S OWN QUESTIONS ═══\n"
+                "These are the questions the user ACTUALLY asked this week. They are "
+                "the single most valuable signal of what the user is curious about. "
+                "Your generated questions MUST build on this curiosity:\n"
+                + "\n".join(qa_lines)
+                + "\n\nAt LEAST 2 of your 5 generated questions should directly build on these. "
+                  "Open one of them with a phrase like \"Building on your question about...\" or "
+                  "\"You asked why X — what does that imply for Y?\" Extend, challenge, or connect "
+                  "the threads THEY already pulled on."
+            )
+
+        # ── SECONDARY SIGNAL: The user's annotations (verbatim highlights + notes) ──
+        annotations_primary = ""
+        if user_highlights:
+            ann_lines = []
+            for h in user_highlights[:8]:
+                line = f'- Highlighted: "{h.get("highlighted_text", "")[:160]}" (in: {h.get("article_title", "?")})'
+                if h.get("note"):
+                    line += f'\n  User\'s own note: "{h["note"][:140]}"'
+                ann_lines.append(line)
+            annotations_primary = (
+                "\n\n═══ SECONDARY SIGNAL — PASSAGES THE USER HIGHLIGHTED/NOTED ═══\n"
+                "These are the exact passages the user stopped to mark. Reference their\n"
+                "highlighted words VERBATIM in at least one question — quote them back:\n"
+                + "\n".join(ann_lines)
+            )
+
+        # ── BACKGROUND CONTEXT: Anchor interactions (engagement depth by time) ──
         anchors_context = ""
         if anchor_interactions:
             anchors_parts = []
@@ -1102,19 +1173,17 @@ class RecapJourneyService:
                 if a.get("spotlight_taps"):
                     parts.append(f"  Spotlights tapped: {'; '.join(s[:80] for s in a['spotlight_taps'][:3])}")
                 anchors_parts.append("\n".join(parts))
-            anchors_context = "\n\nPRIORITY ANCHOR INTERACTIONS (user's deepest engagements):\n" + "\n\n".join(anchors_parts)
+            anchors_context = (
+                "\n\nBACKGROUND CONTEXT — DEEPEST ENGAGEMENTS BY TIME:\n"
+                "(Reading time is background. Prefer Q&A + annotations when both point to the same article.)\n"
+                + "\n\n".join(anchors_parts)
+            )
 
+        # ── Articles and clusters — pure background context ──
         articles_summary = "\n".join([
             f"- [id:{a.get('id', 'unknown')}] \"{a['title']}\" (filter: {a['filter_context']}, time: {a['time_spent_minutes']}m, type: {a['engagement_type']})"
             for a in articles[:15]
         ])
-
-        qa_summary = ""
-        if qa_highlights:
-            qa_summary = "\nQ&A exchanges:\n" + "\n".join([
-                f"- Q: {q['question'][:100]} (article: {q['article_title']})"
-                for q in qa_highlights[:5]
-            ])
 
         clusters_summary = ""
         if topic_clusters:
@@ -1123,7 +1192,6 @@ class RecapJourneyService:
                 for c in topic_clusters[:5]
             ])
 
-        # Always generate full 5-question mix (no tier gating)
         types_instruction = (
             "Generate exactly 5 questions with this mix:\n"
             "- 1 'retrieval' (tests recall of specific content)\n"
@@ -1134,18 +1202,23 @@ class RecapJourneyService:
 
         prompt = f"""You are generating guided reflection questions for a professional reader's weekly recap.
 
-ARTICLES ENGAGED THIS WEEK:
-{articles_summary}
-{qa_summary}
-{clusters_summary}
+Q&A and annotations are the PRIMARY signal of what the user actually cares about.
+Reading time is background. Lead every question from what they asked and highlighted.
+{qa_primary}
+{annotations_primary}
+
 {anchors_context}
+
+ARTICLES ENGAGED THIS WEEK (background):
+{articles_summary}
+{clusters_summary}
 
 {types_instruction}
 
 IMPORTANT INSTRUCTIONS:
-- Root each question in the user's ACTUAL engagement — reference specific highlights they made, notes they wrote, questions they asked, or spotlight quotes they tapped
-- Use the ANCHOR INTERACTIONS above as primary source material — these represent the user's deepest engagements
-- Cross-reference between different anchors to create questions that connect multiple articles
+- If the user asked ANY Q&A this week, at least 2 of your 5 questions MUST directly extend one of their actual questions (build on it, challenge it, or connect it to another article)
+- If the user highlighted ANY passages, quote at least ONE highlighted phrase VERBATIM in one of your questions and ask them to unpack why it struck them
+- Only after you've anchored on Q&A + annotations, layer in pattern/retrieval/surprise questions across the broader article set
 - Include article IDs using format [[Article: "title" | id:UUID]] so the UI can render tappable article links
 
 For each question, provide:
@@ -1158,9 +1231,9 @@ For each question, provide:
 Return a JSON array of question objects. Example:
 [
   {{
-    "type": "retrieval",
-    "text": "What was the central argument in 'Article Title Here'?",
-    "referenced_articles": ["article-id-1"],
+    "type": "reflection",
+    "text": "Building on your question \\"Why do founders miss the signals?\\" — does that apply to the distribution pivot in [[Article: \\"Foo\\" | id:abc]]?",
+    "referenced_articles": ["abc"],
     "response_format": "free_text",
     "chips": []
   }},
@@ -1199,16 +1272,41 @@ Return ONLY the JSON array, no other text."""
                 return questions[:question_count]
             else:
                 logger.warning("Claude returned non-list for guided questions")
-                return RecapJourneyService._fallback_questions(articles, tier)
+                return RecapJourneyService._fallback_questions(articles, qa_highlights)
 
         except (json.JSONDecodeError, Exception) as e:
             logger.error(f"Failed to generate guided questions via Claude: {e}")
-            return RecapJourneyService._fallback_questions(articles, tier)
+            return RecapJourneyService._fallback_questions(articles, qa_highlights)
 
     @staticmethod
-    def _fallback_questions(articles: List[Dict], tier: str) -> List[Dict]:
-        """Generate fallback questions if Claude fails."""
+    def _fallback_questions(
+        articles: List[Dict], qa_highlights: Optional[List[Dict]] = None
+    ) -> List[Dict]:
+        """Generate fallback questions if Claude fails. Leads with Q&A when present."""
         questions = []
+        qa_highlights = qa_highlights or []
+
+        # Lead with the user's actual Q&A if they asked anything this week
+        if qa_highlights:
+            first_q = qa_highlights[0]
+            questions.append({
+                "type": "reflection",
+                "text": (
+                    f"Building on the question you asked about \"{first_q.get('article_title', '?')}\" — "
+                    f"\"{first_q.get('question', '')[:120]}\" — what partial answer are you now sitting with?"
+                ),
+                "referenced_articles": [],
+                "response_format": "free_text",
+                "chips": [],
+            })
+            if len(qa_highlights) >= 2:
+                questions.append({
+                    "type": "pattern_spotting",
+                    "text": "The questions you asked this week — do they share a hidden thread? What are you really chasing?",
+                    "referenced_articles": [],
+                    "response_format": "free_text",
+                    "chips": [],
+                })
 
         if articles:
             questions.append({
@@ -1227,7 +1325,7 @@ Return ONLY the JSON array, no other text."""
             "chips": [],
         })
 
-        if tier != 'lite' and len(articles) >= 2:
+        if len(articles) >= 2:
             questions.append({
                 "type": "pattern_spotting",
                 "text": "Did you notice any common themes across the articles you read this week?",
@@ -1242,15 +1340,8 @@ Return ONLY the JSON array, no other text."""
                 "response_format": "free_text",
                 "chips": [],
             })
-            questions.append({
-                "type": "reflection",
-                "text": "If you could share one insight from this week with a colleague, what would it be?",
-                "referenced_articles": [],
-                "response_format": "free_text",
-                "chips": [],
-            })
 
-        return questions
+        return questions[:5]
 
     # ── Step 5b: Generate Follow-up After User Answer ──────────────────
 
@@ -1537,13 +1628,16 @@ Return ONLY the JSON array."""
     @staticmethod
     def start_journey(user_id, db: Session, force_new: bool = False) -> Dict:
         """
-        Start a new Recap Journey for the current week.
+        Create (or resume) a Recap Journey record for the current week.
+
+        IMPORTANT: Does NOT compute the weekly snapshot. The snapshot is built
+        lazily on the first Stage 1 fetch (see ensure_snapshot) so that mid-week
+        activity between journey creation and Recap open is captured.
 
         1. Compute week boundaries (Monday-Sunday)
         2. Check for existing journey
-        3. Calculate tier
-        4. Generate snapshot
-        5. Create RecapJourney record
+        3. Compute lightweight activity stats (counts only) for UI display
+        4. Create RecapJourney record with snapshot_data=None
 
         Pass force_new=True to start a fresh recap even if one is completed.
 
@@ -1572,16 +1666,15 @@ Return ONLY the JSON array."""
                 db.query(KeyInsight).filter(
                     KeyInsight.recap_journey_id == existing.id
                 ).delete()
-                tier, activity_stats = RecapJourneyService.calculate_recap_tier(
+                activity_stats = RecapJourneyService._compute_activity_stats(
                     user_uuid, week_start, week_end, db
                 )
-                snapshot = RecapJourneyService.generate_weekly_snapshot(
-                    user_uuid, week_start, week_end, db
-                )
-                existing.tier = tier
-                existing.status = 'stage_1'
-                existing.stage_progress = 1
-                existing.snapshot_data = snapshot
+                existing.status = 'not_started'
+                existing.stage_progress = 0
+                existing.snapshot_data = None  # Force fresh compute on first Stage 1 fetch
+                existing.guided_questions = None
+                existing.guided_responses = None
+                existing.socratic_exchanges = None
                 existing.commitment_text = None
                 existing.socratic_exchange_count = 0
                 existing.synthesis_text = None
@@ -1602,9 +1695,9 @@ Return ONLY the JSON array."""
                     "journey_id": str(existing.id),
                     "week_start": week_start.isoformat(),
                     "week_end": week_end.isoformat(),
-                    "tier": tier,
-                    "status": "stage_1",
-                    "stage_progress": 1,
+                    "tier": existing.tier,
+                    "status": existing.status,
+                    "stage_progress": existing.stage_progress,
                     "activity_summary": activity_stats,
                     "resumed": False,
                 }
@@ -1625,25 +1718,19 @@ Return ONLY the JSON array."""
                     "resumed": True,
                 }
 
-        # Calculate tier
-        tier, activity_stats = RecapJourneyService.calculate_recap_tier(
+        # Cheap activity stats for the response (counts only — no snapshot).
+        activity_stats = RecapJourneyService._compute_activity_stats(
             user_uuid, week_start, week_end, db
         )
 
-        # Generate snapshot
-        snapshot = RecapJourneyService.generate_weekly_snapshot(
-            user_uuid, week_start, week_end, db
-        )
-
-        # Create journey record
+        # Create journey record with NO snapshot — it's computed lazily at Stage 1.
         journey = RecapJourney(
             user_id=user_uuid,
             week_start=week_start,
             week_end=week_end,
-            tier=tier,
-            status='stage_1',
-            stage_progress=1,
-            snapshot_data=snapshot,
+            status='not_started',
+            stage_progress=0,
+            snapshot_data=None,
             articles_read_count=activity_stats["articles_read_count"],
             articles_saved_count=activity_stats["articles_saved_count"],
             qa_count=activity_stats["qa_count"],
@@ -1654,15 +1741,18 @@ Return ONLY the JSON array."""
         db.commit()
         db.refresh(journey)
 
-        logger.info(f"Started recap journey {journey.id} for user {user_id} (tier={tier})")
+        logger.info(
+            f"Started recap journey {journey.id} for user {user_id} "
+            f"(snapshot deferred to first Stage 1 fetch)"
+        )
 
         return {
             "journey_id": str(journey.id),
             "week_start": week_start.isoformat(),
             "week_end": week_end.isoformat(),
-            "tier": tier,
-            "status": "stage_1",
-            "stage_progress": 1,
+            "tier": journey.tier,
+            "status": journey.status,
+            "stage_progress": journey.stage_progress,
             "activity_summary": activity_stats,
             "resumed": False,
         }
@@ -1768,23 +1858,27 @@ Return ONLY the JSON array."""
 
             system_prompt = f"""You are Guru — a sharp, insightful mentor conducting a weekly learning synthesis dialogue.
 
-This is a WEEKLY RECAP conversation, not about a single article. Your goal: help the reader see CONNECTIONS across everything they read this week, extract novel insights, and deepen their understanding.
+This is a WEEKLY RECAP conversation, not about a single article. Your goal: help the reader see CONNECTIONS across what they read this week, extract novel insights, and deepen their understanding.
 
-ARTICLES THE USER ENGAGED WITH THIS WEEK:
-{articles_context}
-{anchors_ctx}
+PRIMARY SIGNAL — the questions the user asked and passages they highlighted
+are what you should build the dialogue around. Reading time is background.
 {qa_context}
-{spotlight_ctx}
 {highlights_ctx}
+{anchors_ctx}
+
+SECONDARY CONTEXT:
+{articles_context}
+{spotlight_ctx}
 {guided_context}
 {user_context}
 
 How to conduct this dialogue:
-1. Find threads that connect multiple articles — "Did you notice that both [Article A] and [Article B] point to..."
-2. Challenge the user's assumptions — "You mentioned X, but [Article C] suggests the opposite. How do you reconcile that?"
-3. Draw out implications for their work — specific, actionable, connected to their industry
-4. When the user says something insightful, acknowledge it naturally and build on it
-5. Reference specific quotes the user highlighted or spotlight passages they engaged with
+1. LEAD with what the user asked or highlighted. Quote their exact highlighted words back to them verbatim (in quotes) when you probe — "You underlined 'X' in [Article A]. What pulled you to that line?"
+2. If the user asked a Q&A this week, extend it — "You asked '{{their question}}' — that question implies something about Y. Do you see it?"
+3. Find threads that connect multiple articles — "Did you notice that both [Article A] and [Article B] point to..."
+4. Challenge assumptions — "[Article C] suggests the opposite of what you said. How do you reconcile?"
+5. Draw out implications for their work — specific, actionable, connected to their industry
+6. When the user says something insightful, acknowledge it naturally and build on it
 
 ARTICLE REFERENCES:
 When you mention a specific article, include a reference tag like this: [[Article: "title" | id:UUID]]
@@ -1793,7 +1887,7 @@ This allows the UI to render tappable article links. Use the article IDs provide
 Voice:
 - Conversational, like a brilliant colleague who gets excited about finding patterns
 - Short paragraphs — let ideas breathe
-- Specific beats generic (reference actual articles, quotes, numbers)
+- Specific beats generic (quote their highlights VERBATIM, reference their actual questions, use real article titles)
 - ONE question per response — let each exchange go deep before pivoting
 
 NEVER DO THIS:
@@ -1801,6 +1895,7 @@ NEVER DO THIS:
 - Don't announce what you're doing
 - Don't lecture — this is a dialogue
 - Don't ask multiple questions — one punchy question to close
+- Don't paraphrase a highlight when you could quote it directly
 
 After 4-5 exchanges, naturally wrap up with a synthesis of the insights generated."""
 
@@ -1814,7 +1909,9 @@ After 4-5 exchanges, naturally wrap up with a synthesis of the insights generate
 
             # If no prior exchanges, generate opening prompt
             if not messages:
-                opening = RecapJourneyService._generate_opening_prompt(articles, guided_responses, journey.guided_questions)
+                opening = RecapJourneyService._generate_opening_prompt(
+                    articles, guided_responses, journey.guided_questions, snapshot
+                )
 
                 # Handle __open__ sentinel: return opening prompt without LLM call
                 if user_message.strip() == '__open__':
@@ -1920,17 +2017,55 @@ After 4-5 exchanges, naturally wrap up with a synthesis of the insights generate
 
     @staticmethod
     def _generate_opening_prompt(
-        articles: List[Dict], guided_responses: Dict, guided_questions: List
+        articles: List[Dict], guided_responses: Dict, guided_questions: List,
+        snapshot: Optional[Dict] = None
     ) -> str:
-        """Generate the opening Socratic prompt based on the week's content."""
+        """Generate the opening Socratic prompt — leads with Q&A + annotations."""
         if not articles:
             return "Tell me about something interesting you read this week."
 
-        # Prioritize articles user did Q&A on or spent most time with
+        snapshot = snapshot or {}
+        qa_highlights = snapshot.get("qa_highlights", [])
+        user_highlights = snapshot.get("user_highlights", [])
+
+        # ── PRIMARY: If the user asked Q&A, open from their exact question ──
+        if qa_highlights:
+            first_q = qa_highlights[0]
+            q_text = (first_q.get("question") or "").strip()
+            q_article = first_q.get("article_title") or "your reading"
+            if q_text:
+                if len(qa_highlights) >= 2:
+                    return (
+                        f"You asked some sharp things this week. One that stuck out: "
+                        f"\"{q_text[:160]}\" — from \"{q_article}\". "
+                        f"Where did that question actually come from?"
+                    )
+                return (
+                    f"You asked: \"{q_text[:160]}\" while reading \"{q_article}\". "
+                    f"What partial answer are you sitting with now?"
+                )
+
+        # ── SECONDARY: Lead from a verbatim highlight if the user annotated ──
+        if user_highlights:
+            first_h = user_highlights[0]
+            hl_text = (first_h.get("highlighted_text") or "").strip()
+            hl_article = first_h.get("article_title") or "your reading"
+            if hl_text:
+                note = first_h.get("note")
+                if note:
+                    return (
+                        f"You underlined this in \"{hl_article}\": \"{hl_text[:160]}\" — "
+                        f"and wrote alongside it: \"{note[:120]}\". Unpack that for me."
+                    )
+                return (
+                    f"You underlined this in \"{hl_article}\": \"{hl_text[:160]}\". "
+                    f"What pulled you to that line?"
+                )
+
+        # Fallback: articles marked with qa engagement_type
         qa_articles = [a for a in articles if a.get("engagement_type") == "qa_asked"]
         top_article = articles[0]["title"] if articles else "your reading"
 
-        # If user asked questions on specific articles, lead with those
         if qa_articles:
             qa_title = qa_articles[0]["title"]
             if len(qa_articles) > 1:

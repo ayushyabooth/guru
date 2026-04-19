@@ -1,7 +1,7 @@
 """
 Audio Recap Service — Phase 2: Stage 4 Audio Capstone
 
-Generates NotebookLM-style two-host audio recaps for Full-tier users.
+Generates NotebookLM-style two-host audio recaps for every Recap journey.
 Pipeline: Script generation (Claude Sonnet) → TTS (ElevenLabs) → MP3 storage.
 Runs asynchronously via fire-and-forget background tasks.
 """
@@ -331,10 +331,10 @@ Generate a 15-25 segment two-host dialogue script as a JSON array."""
         """
         Pre-generate the audio script (no TTS) during earlier stages.
 
-        Called when entering 'commitment' status for Full tier users.
-        The script is generated with available data (snapshot + questions +
-        Socratic), and stored on the journey. When trigger_audio_generation
-        is later called, it can skip script generation and go straight to TTS.
+        Called when entering 'commitment' status. The script is generated with
+        available data (snapshot + questions + Socratic), and stored on the
+        journey. When trigger_audio_generation is later called, it can skip
+        script generation and go straight to TTS.
         """
         try:
             journey_uuid = uuid.UUID(journey_id)
@@ -345,8 +345,8 @@ Generate a 15-25 segment two-host dialogue script as a JSON array."""
             RecapJourney.id == journey_uuid
         ).first()
 
-        if not journey or journey.tier != "full":
-            return {"error": "Not eligible for audio warm-up"}
+        if not journey:
+            return {"error": "Journey not found"}
 
         # Skip if script already exists
         if journey.audio_script:
@@ -368,7 +368,7 @@ Generate a 15-25 segment two-host dialogue script as a JSON array."""
         """
         Trigger async audio generation. Returns immediately.
 
-        Validates the journey is eligible (Full tier, stage_4 or completed).
+        Validates the journey is eligible (stage_4 or completed).
         Idempotent: returns early if generation is already in progress.
         """
         try:

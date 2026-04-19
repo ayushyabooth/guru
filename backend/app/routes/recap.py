@@ -2,15 +2,15 @@
 Recap API routes — New 4-stage Journey + Legacy Q&A synthesis
 
 New Journey endpoints (Stage 1-4):
-  POST /recap/start                → Start journey, compute tier, generate snapshot
-  GET  /recap/{id}/snapshot        → Get Stage 1 snapshot data
+  POST /recap/start                → Create journey record (snapshot deferred to Stage 1 fetch)
+  GET  /recap/{id}/snapshot        → Compute (or return cached) Stage 1 snapshot data
   GET  /recap/{id}/questions       → Get Stage 2 questions
   POST /recap/{id}/answer          → Submit Stage 2 answer
   POST /recap/{id}/socratic        → Stage 3 Socratic exchange
   GET  /recap/{id}/insights        → Get all Key Insights
   POST /recap/{id}/commitment      → Store One Commitment
   GET  /recap/{id}/summary         → Get journey summary
-  POST /recap/{id}/audio/generate  → Trigger audio recap generation (Full tier)
+  POST /recap/{id}/audio/generate  → Trigger audio recap generation
   GET  /recap/{id}/audio/status    → Poll audio generation status
   GET  /recap/{id}/audio/stream    → Stream generated audio MP3
   GET  /recap/sessions             → List all recap journeys (archive)
@@ -80,10 +80,11 @@ async def start_recap_journey(
     db: Session = Depends(get_db),
 ):
     """
-    Start (or resume) a Recap Journey for the current week.
+    Create (or resume) a Recap Journey for the current week.
 
-    Computes tier (lite/standard/full) based on weekly activity,
-    generates the weekly snapshot, and returns journey details.
+    Only creates the session record — the weekly snapshot is computed lazily
+    on the first Stage 1 fetch (GET /recap/{id}/snapshot) so that mid-week
+    activity between journey creation and Recap open is captured.
 
     Pass force_new=true to start a fresh recap when one is already completed.
     """
@@ -118,7 +119,13 @@ async def get_recap_snapshot(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get Stage 1 snapshot data (Glass Memory Wall content)."""
+    """
+    Get Stage 1 snapshot data (Glass Memory Wall content).
+
+    Computes the snapshot fresh from the current week's activity on first
+    call (so mid-week reading/Q&A since /recap/start is captured) and caches
+    it on the journey record. Subsequent calls return the cached snapshot.
+    """
     try:
         journey_uuid = uuid.UUID(journey_id)
     except ValueError:
@@ -132,12 +139,22 @@ async def get_recap_snapshot(
     if not journey:
         raise HTTPException(status_code=404, detail="Recap journey not found")
 
+    # Compute snapshot on first fetch (mid-week activity captured here).
+    snapshot = RecapJourneyService.ensure_snapshot(journey, db)
+
+    # Advance status from 'not_started' → 'stage_1' on first snapshot fetch.
+    if journey.status == 'not_started':
+        journey.status = 'stage_1'
+        journey.stage_progress = 1
+        db.commit()
+        db.refresh(journey)
+
     return {
         "journey_id": str(journey.id),
         "tier": journey.tier,
         "status": journey.status,
         "stage_progress": journey.stage_progress,
-        "snapshot": journey.snapshot_data,
+        "snapshot": snapshot,
         "week_start": journey.week_start.isoformat(),
         "week_end": journey.week_end.isoformat(),
     }
@@ -169,16 +186,19 @@ async def get_recap_questions(
     if not journey:
         raise HTTPException(status_code=404, detail="Recap journey not found")
 
+    # Ensure the Stage 1 snapshot is computed before generating questions
+    # (in case the caller jumped straight to /questions without fetching /snapshot).
+    snapshot = RecapJourneyService.ensure_snapshot(journey, db)
+
     # Generate questions if not already generated
     if not journey.guided_questions:
         questions = RecapJourneyService.generate_guided_questions(
             current_user.id,
-            journey.snapshot_data or {},
-            journey.tier,
+            snapshot,
             db,
         )
         journey.guided_questions = questions
-        if journey.status == 'stage_1':
+        if journey.status in ('not_started', 'stage_1'):
             journey.status = 'stage_2'
             journey.stage_progress = 2
         db.commit()
@@ -559,7 +579,7 @@ async def advance_recap_stage(
 
 
 # ══════════════════════════════════════════════════════════════════════
-# Stage 4: Audio Recap Endpoints (Full tier only)
+# Stage 4: Audio Recap Endpoints
 # ══════════════════════════════════════════════════════════════════════
 
 
@@ -573,7 +593,7 @@ async def generate_audio_recap(
     db: Session = Depends(get_db),
 ):
     """
-    Trigger async audio recap generation (Full tier only).
+    Trigger async audio recap generation.
 
     Returns immediately. Frontend polls /audio/status for progress.
     Idempotent: returns early if already generating or ready (unless force=True).
