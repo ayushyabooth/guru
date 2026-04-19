@@ -12,7 +12,7 @@ Uses APScheduler (AsyncIOScheduler) for scheduling.
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -59,10 +59,14 @@ class IngestionOrchestrator:
             self._scheduler = AsyncIOScheduler()
 
             # Schedule tiers (each tier runs ingestion + warming afterward)
+            # Delay first run so ingestion never fires on cold start / Railway restart.
+            # Each tier's first execution is offset from the schedule interval to stagger load.
+            now = datetime.now()
             self._scheduler.add_job(
                 self._scheduled_tier1,
                 "interval",
                 hours=settings.TIER1_SCHEDULE_HOURS,
+                start_date=now + timedelta(hours=settings.TIER1_SCHEDULE_HOURS),
                 id="tier1_expert",
                 name="Tier 1: Expert Links",
             )
@@ -70,6 +74,7 @@ class IngestionOrchestrator:
                 self._scheduled_tier2,
                 "interval",
                 hours=settings.TIER2_SCHEDULE_HOURS,
+                start_date=now + timedelta(hours=settings.TIER2_SCHEDULE_HOURS),
                 id="tier2_luminary",
                 name="Tier 2: Luminary RSS",
             )
@@ -77,52 +82,13 @@ class IngestionOrchestrator:
                 self._scheduled_tier3,
                 "interval",
                 hours=settings.TIER3_SCHEDULE_HOURS,
+                start_date=now + timedelta(hours=settings.TIER3_SCHEDULE_HOURS),
                 id="tier3_discovery",
                 name="Tier 3: Web Discovery",
             )
 
             self._scheduler.start()
-            logger.info("APScheduler started with tier schedules")
-
-            # Run initial ingestion immediately (with timing)
-            overall_start = time.time()
-
-            # Phase A: Tier 1 (expert links, local file, fast)
-            t1_start = time.time()
-            t1_ingested = await self._run_tier1_safe()
-            t1_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 1 ingestion took {(t1_end - t1_start)*1000:.0f}ms ({t1_ingested} new articles)")
-
-            warm1_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t1_ingested)
-            warm1_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T1) took {(warm1_end - warm1_start)*1000:.0f}ms")
-
-            # Phase B: Tier 2 (luminary RSS) - generates rich content per-article inline
-            t2_start = time.time()
-            t2_ingested = await self._run_tier2_safe()
-            t2_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 2 ingestion took {(t2_end - t2_start)*1000:.0f}ms ({t2_ingested} new articles)")
-
-            warm2_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t2_ingested)
-            warm2_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T2) took {(warm2_end - warm2_start)*1000:.0f}ms")
-
-            # Phase C: Tier 3 (web search, slow) - runs last, doesn't block content
-            t3_start = time.time()
-            t3_ingested = await self._run_tier3_safe()
-            t3_end = time.time()
-            logger.info(f"⏱️ TIMING: Tier 3 ingestion took {(t3_end - t3_start)*1000:.0f}ms ({t3_ingested} new articles)")
-
-            warm3_start = time.time()
-            await self._warm_content_safe(new_articles_ingested=t3_ingested)
-            warm3_end = time.time()
-            logger.info(f"⏱️ TIMING: Content warming (post-T3) took {(warm3_end - warm3_start)*1000:.0f}ms")
-
-            overall_end = time.time()
-            logger.info(f"⏱️ TIMING: Total initial ingestion took {(overall_end - overall_start)*1000:.0f}ms ({(overall_end - overall_start):.1f}s)")
-            logger.info("Initial ingestion runs complete")
+            logger.info("APScheduler started with tier schedules (first runs deferred to scheduled intervals)")
 
         except Exception as e:
             logger.error(f"Failed to start orchestrator: {e}")

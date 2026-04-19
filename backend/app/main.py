@@ -41,6 +41,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
     expose_headers=["X-Response-Time-Ms"],
+    max_age=600,
 )
 
 # HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
@@ -49,6 +50,10 @@ app.add_middleware(
 # API timing middleware - logs response time and records to PerfStore
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
+    # OPTIONS preflights must be handled by CORSMiddleware without body consumption.
+    # BaseHTTPMiddleware deadlocks on OPTIONS when call_next reads the body; skip it.
+    if request.method == "OPTIONS":
+        return await call_next(request)
     from app.services.perf_store import PerfStore
     start = time.time()
     response = await call_next(request)
