@@ -16,16 +16,14 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 
 // GUR-137: pill covers icon + label.
-// Bar = 64px. The icon doesn't render centered — React Navigation pushes it
-// toward the top of the tab and the breathing-scale animation (1.08x) plus
-// the ring's 12-o'clock progress highlight sit ABOVE the icon's nominal box.
-// So we (a) pull the pill upward (top=2), not vertically centered; and
-// (b) keep it tall enough (54px) that the icon's top highlight + label both
-// fit with headroom. Bottom at 56 still leaves 8px above the bar's bottom
-// rule for the label baseline to breathe.
+// Bar = 64px. The Home tab uses a Triskelion whose canvas is ~48px wide
+// (size 28 + 10px glow padding on each side) — so the top ring protrudes
+// ~10px above the icon's nominal 28px box. A short pill clipped that.
+// Make the pill span almost the full bar (top=2, height=60) so the pill
+// fully wraps the Triskelion's glow padding AND the icon+label stack.
 const PILL_WIDTH = 72;
-const PILL_HEIGHT = 54;
-const PILL_RADIUS = 20;
+const PILL_HEIGHT = 60;
+const PILL_RADIUS = 22;
 const PILL_TOP = 2;
 
 // Spring tuned to match the filter-pill transition spec in GUR-132 (mass:1,
