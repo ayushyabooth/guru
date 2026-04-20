@@ -15,13 +15,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 
-// GUR-137: pill covers icon + label (not just the icon). Tab bar is 64px tall
-// with the label flush to the bottom — pill is a bit shorter than the bar so
-// it has visible breathing room above + below (the earlier 54px version hit
-// the bar's top border, making it look clipped).
+// GUR-137: pill covers icon + label.
+// Bar = 64px. The icon doesn't render centered — React Navigation pushes it
+// toward the top of the tab and the breathing-scale animation (1.08x) plus
+// the ring's 12-o'clock progress highlight sit ABOVE the icon's nominal box.
+// So we (a) pull the pill upward (top=2), not vertically centered; and
+// (b) keep it tall enough (54px) that the icon's top highlight + label both
+// fit with headroom. Bottom at 56 still leaves 8px above the bar's bottom
+// rule for the label baseline to breathe.
 const PILL_WIDTH = 72;
-const PILL_HEIGHT = 48;
-const PILL_RADIUS = 18;
+const PILL_HEIGHT = 54;
+const PILL_RADIUS = 20;
+const PILL_TOP = 2;
 
 // Spring tuned to match the filter-pill transition spec in GUR-132 (mass:1,
 // stiffness:280, damping:24). RN's Animated.spring maps to roughly equivalent
@@ -150,10 +155,8 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
 const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
-    // Pure vertical center inside the 64px bar. With PILL_HEIGHT=48 this is
-    // 8px above and 8px below — plenty of breathing room so the pill's top
-    // no longer touches the bar's top border.
-    top: (64 - PILL_HEIGHT) / 2,
+    // Top-anchored (not centered) — see PILL_TOP rationale.
+    top: PILL_TOP,
     left: 0,
     width: PILL_WIDTH,
     height: PILL_HEIGHT,
