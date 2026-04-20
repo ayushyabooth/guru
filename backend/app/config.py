@@ -105,6 +105,8 @@ class Settings(BaseSettings):
         "https://dist-guru8.vercel.app",
         "https://dist-69e8jssok-guru8.vercel.app",
         "https://mobile-guru8.vercel.app",
+        "https://mobile-tan-one.vercel.app",
+        "https://mobile-ayushyabooth-guru8.vercel.app",
         "https://dist-ayushyabooth-guru8.vercel.app",
     ]
     

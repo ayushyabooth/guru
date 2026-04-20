@@ -36,7 +36,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
-    allow_origin_regex=r"^chrome-extension://.*$",
+    # Allow any preview/alias deployment under our Vercel team + the Chrome extension.
+    # Vercel generates new URLs per deploy (e.g. mobile-g8ppgy0ke-guru8.vercel.app) so a
+    # regex is required — an explicit allowlist goes stale every push.
+    allow_origin_regex=r"^(chrome-extension://.*|https://([a-z0-9-]+-)?(mobile|dist)(-[a-z0-9]+)?-guru8\.vercel\.app|https://mobile-tan-one\.vercel\.app)$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
