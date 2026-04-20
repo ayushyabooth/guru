@@ -33,6 +33,7 @@ import {
   CommitmentScreen,
   CelebrationOverlay,
   AudioPlayerStage,
+  TextPodcastStage,
   RecapArchive,
   RecapDetail,
 } from '../../components/Recap';
@@ -235,29 +236,31 @@ export default function RecapScreen() {
       } else if (status === 'commitment') {
         setViewState('commitment');
       } else if (status === 'stage_4') {
-        // Check audio status and resume accordingly
+        // GUR-192: Stage 4 is the text podcast screen. Always route to the
+        // 'audio' view; TextPodcastStage renders loading/error/ready states.
+        setViewState('audio');
         try {
           const audioStatusResp = await recapService.getAudioStatus(j.journey_id);
           if (audioStatusResp.status === 'ready' && audioStatusResp.audio_url) {
             setAudioUrl(recapService.getAudioStreamUrl(j.journey_id));
             setAudioDuration(audioStatusResp.audio_duration_seconds || 0);
             setAudioStatus('ready');
-            setViewState('audio');
           } else if (audioStatusResp.status === 'text_only') {
             setAudioScript(audioStatusResp.script || []);
             setAudioStatus('text_only');
-            setViewState('audio');
           } else if (audioStatusResp.status === 'generating_script' || audioStatusResp.status === 'generating_audio') {
             setAudioStatus('generating');
-            setViewState('celebration');
             startAudioPollingImpl(j.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
           } else {
-            setAudioStatus('idle');
-            setViewState('celebration');
+            // No status yet — kick off generation and poll for the script.
+            setAudioStatus('generating');
+            try { await recapService.generateAudio(j.journey_id); } catch { /* already queued */ }
+            startAudioPollingImpl(j.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
           }
         } catch {
-          setAudioStatus('idle');
-          setViewState('celebration');
+          setAudioStatus('generating');
+          try { await recapService.generateAudio(j.journey_id); } catch { /* fine */ }
+          startAudioPollingImpl(j.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
         }
       } else {
         // Default: start from snapshot
@@ -395,7 +398,10 @@ export default function RecapScreen() {
         setInsights(insightData.insights);
       } catch { /* fine */ }
 
-      // Check audio status since backend auto-triggers generation on stage_4
+      // GUR-192: After commitment, transition to Stage 4 (text podcast).
+      // TextPodcastStage renders loading/error/ready states itself, so we
+      // can switch views immediately and poll in the background.
+      setViewState('audio');
       try {
         const audioStatusResp = await recapService.getAudioStatus(journey.journey_id);
         if (audioStatusResp.status === 'ready' && audioStatusResp.audio_url) {
@@ -408,10 +414,17 @@ export default function RecapScreen() {
         } else if (audioStatusResp.status === 'generating_script' || audioStatusResp.status === 'generating_audio') {
           setAudioStatus('generating');
           startAudioPollingImpl(journey.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
+        } else {
+          // No status yet — explicitly request generation before polling.
+          setAudioStatus('generating');
+          try { await recapService.generateAudio(journey.journey_id); } catch { /* already queued */ }
+          startAudioPollingImpl(journey.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
         }
-      } catch { /* audio not available — celebration will show generate button */ }
-
-      setViewState('celebration');
+      } catch {
+        setAudioStatus('generating');
+        try { await recapService.generateAudio(journey.journey_id); } catch { /* fine */ }
+        startAudioPollingImpl(journey.journey_id, pollingRef, setAudioUrl, setAudioDuration, setAudioStatus, setAudioScript, setViewState);
+      }
     } catch (err: any) {
       Alert.alert('Error', 'Failed to save commitment. Please try again.');
     }
@@ -498,31 +511,17 @@ export default function RecapScreen() {
     }
   }, [audioUrl]);
 
-  const handleAudioDismiss = useCallback(async () => {
-    if (!journey) return;
-    try {
-      // Advance from stage_4 to completed
-      const result = await recapService.advanceStage(journey.journey_id);
-      setJourney(prev => prev ? { ...prev, stage_progress: result.stage_progress, status: result.status } : null);
-    } catch { /* fine if already completed */ }
-
-    // Refresh metrics so tab bar rings update immediately
-    fetchMetrics().catch(() => {});
-
-    // Reset all state
-    setViewState('entry');
-    setJourney(null);
-    setSnapshot(null);
-    setQuestions([]);
-    setResponses({});
-    setInsights([]);
-    setSocraticExchanges([]);
-    setCommitmentText('');
-    setAudioStatus('idle');
-    setAudioUrl(null);
-    setAudioDuration(0);
-    setAudioScript(undefined);
-  }, [journey, fetchMetrics]);
+  // GUR-192: Finishing Stage 4 transitions to the Celebration overlay.
+  // Keeps audio/script state around so the overlay can still reference it
+  // (e.g., insights, commitment). `handleCelebrationDismiss` clears state
+  // when the user exits celebration.
+  const handleTextRecapFinish = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setViewState('celebration');
+  }, []);
 
   // ── Render Journey Stages ───────────────────────────────────────
 
@@ -684,19 +683,44 @@ export default function RecapScreen() {
     );
   }
 
-  // Stage 4: Audio Player / Text Recap (Full tier)
-  if (viewState === 'audio' && journey && (audioUrl || audioStatus === 'text_only')) {
-    if (!AudioPlayerStage) return null;
-    return (
-      <AudioPlayerStage
-        journeyId={journey.journey_id}
-        audioUrl={audioUrl || ''}
-        audioDuration={audioDuration}
-        script={audioScript}
-        textOnly={audioStatus === 'text_only'}
-        onDismiss={handleAudioDismiss}
-      />
-    );
+  // Stage 4: Text Podcast (GUR-192). For text-only, loading, and error states
+  // we render the new TextPodcastStage. If real audio ever lands we fall
+  // through to AudioPlayerStage. "Finish Recap" dismisses to the Celebration
+  // overlay rather than returning straight to the entry screen.
+  if (viewState === 'audio' && journey) {
+    const showTextPodcast =
+      audioStatus === 'text_only' ||
+      audioStatus === 'generating' ||
+      audioStatus === 'failed' ||
+      (audioStatus === 'idle' && !audioUrl);
+
+    if (showTextPodcast) {
+      if (!TextPodcastStage) return null;
+      const hasScript = !!audioScript && audioScript.length > 0;
+      return (
+        <TextPodcastStage
+          script={audioScript || []}
+          isLoading={!hasScript && audioStatus !== 'failed'}
+          error={audioStatus === 'failed' ? "We couldn't generate your conversation this week." : null}
+          onFinish={handleTextRecapFinish}
+          onDismiss={handleTextRecapFinish}
+        />
+      );
+    }
+
+    if (audioUrl) {
+      if (!AudioPlayerStage) return null;
+      return (
+        <AudioPlayerStage
+          journeyId={journey.journey_id}
+          audioUrl={audioUrl}
+          audioDuration={audioDuration}
+          script={audioScript}
+          textOnly={false}
+          onDismiss={handleTextRecapFinish}
+        />
+      );
+    }
   }
 
   // ── Default: Entry Screen ───────────────────────────────────────
