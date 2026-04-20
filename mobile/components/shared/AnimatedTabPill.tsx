@@ -16,11 +16,11 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 
 // GUR-137: pill covers icon + label (not just the icon). Tab bar is 64px tall
-// with the label flush to the bottom — pill extends from just above the icon
-// down past the label so both sit inside the glass surface. Width is tight
-// enough that the bar's outer border still reads around each slot.
+// with the label flush to the bottom — pill is a bit shorter than the bar so
+// it has visible breathing room above + below (the earlier 54px version hit
+// the bar's top border, making it look clipped).
 const PILL_WIDTH = 72;
-const PILL_HEIGHT = 54;
+const PILL_HEIGHT = 48;
 const PILL_RADIUS = 18;
 
 // Spring tuned to match the filter-pill transition spec in GUR-132 (mass:1,
@@ -98,34 +98,47 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
           {
             opacity,
             transform: [{ translateX }],
-            // Stronger fill than the first draft — the tab bar already sits on
-            // its own blur layer, so a faint tint disappeared into it. Bump
-            // to ~28% dark / 22% light so the pill reads as a discrete glass
-            // element, not a vague glow.
+            // Base fill is the accent at ~28%/22% — the vertical gradient on
+            // web stacks an extra highlight on top for the 3D read.
             backgroundColor: isDark
-              ? `${accent}47` // ~28% alpha on dark
-              : `${accent}38`, // ~22% on light
+              ? `${accent}47`
+              : `${accent}38`,
             borderColor: isDark
-              ? `${accent}7A` // ~48% border on dark
-              : `${accent}52`, // ~32% on light
-            // Web-only glass blur + glow + inner top highlight (gives the
-            // floating-glass depth called for in the GUR-137 spec).
+              ? `${accent}7A`
+              : `${accent}52`,
+            // Web gets the full glass recipe: vertical gradient (bright top,
+            // faded bottom) layered over the fill, strong inset highlight,
+            // bottom inset shadow, outer glow, and a drop shadow underneath
+            // for lift. Together these give the "3D glassmorphic" depth.
             ...(Platform.OS === 'web'
-              ? {
-                  backdropFilter: 'blur(16px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+              ? ({
+                  backdropFilter: 'blur(20px) saturate(190%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(190%)',
+                  // Linear-gradient layer stacked above the accent fill.
+                  // The gradient is color-only; transparency lets the accent
+                  // fill show through.
+                  backgroundImage: isDark
+                    ? `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 35%, rgba(255,255,255,0) 70%, rgba(0,0,0,0.10) 100%)`
+                    : `linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 40%, rgba(255,255,255,0.10) 75%, rgba(15,23,42,0.04) 100%)`,
                   boxShadow: [
-                    `0 0 18px ${accent}40`,
-                    `inset 0 1px 0 ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.85)'}`,
-                    `inset 0 -1px 0 ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.06)'}`,
+                    // Outer drop shadow for lift
+                    `0 6px 18px ${accent}55`,
+                    `0 2px 6px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.18)'}`,
+                    // Inner top highlight (specular edge)
+                    `inset 0 1.5px 0 ${isDark ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.95)'}`,
+                    // Inner bottom shadow (concave lip)
+                    `inset 0 -1.5px 2px ${isDark ? 'rgba(0,0,0,0.20)' : 'rgba(15,23,42,0.10)'}`,
+                    // Soft inner glow on the left/right edges
+                    `inset 1px 0 0 ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.45)'}`,
+                    `inset -1px 0 0 ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.45)'}`,
                   ].join(', '),
-                }
+                } as any)
               : {
                   shadowColor: accent,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 12,
-                  elevation: 4,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 14,
+                  elevation: 6,
                 }),
           },
         ]}
@@ -137,10 +150,10 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
 const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
-    // Nudge 1px below vertical center — the icon sits slightly above the
-    // label, so a centered pill looks low. Pushing the pill down by 1px
-    // visually balances it around the icon+label column.
-    top: (64 - PILL_HEIGHT) / 2 + 1,
+    // Pure vertical center inside the 64px bar. With PILL_HEIGHT=48 this is
+    // 8px above and 8px below — plenty of breathing room so the pill's top
+    // no longer touches the bar's top border.
+    top: (64 - PILL_HEIGHT) / 2,
     left: 0,
     width: PILL_WIDTH,
     height: PILL_HEIGHT,
