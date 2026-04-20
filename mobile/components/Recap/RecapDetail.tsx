@@ -83,19 +83,46 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   // to keep the hook call order stable across renders.
   if (!Icon) return null;
 
-  const formatDateRange = (weekStart: string, weekEnd: string) => {
+  const formatDateRange = (weekStart: unknown, weekEnd: unknown) => {
+    if (typeof weekStart !== 'string' || typeof weekEnd !== 'string') return '';
     const start = new Date(weekStart);
     const end = new Date(weekEnd);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
     return `${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
-  const parseAudioScript = (raw: string | null): ScriptSegment[] => {
+  const parseAudioScript = (raw: unknown): ScriptSegment[] => {
     if (!raw) return [];
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
+    // Backend stores audio_script as a JSON-stringified array, but be defensive:
+    // if a raw array ever comes through, accept it; otherwise JSON.parse the string.
+    let parsed: unknown = raw;
+    if (typeof raw === 'string') {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return [];
+      }
     }
+    if (!Array.isArray(parsed)) return [];
+    // Only keep segments with string text and recognised speaker — guarantees
+    // no object is ever rendered as a Text child (React error #130).
+    return parsed.filter(
+      (seg): seg is ScriptSegment =>
+        !!seg &&
+        typeof seg === 'object' &&
+        typeof (seg as any).text === 'string' &&
+        ((seg as any).speaker === 'narrator' || (seg as any).speaker === 'analyst')
+    );
+  };
+
+  // Safely coerce a value to a string for rendering inside <Text>. If an
+  // object sneaks through the API response (legacy records, schema drift, etc.)
+  // this prevents React error #130 ("Objects are not valid as a React child").
+  const asText = (v: unknown): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return '';
   };
 
   if (loading) {
@@ -136,7 +163,14 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   }
 
   const script = parseAudioScript(summary.audio_script);
-  const { activity, insights, commitment } = summary;
+  // Defensive defaults — if the backend ever omits a field or returns a
+  // non-object for activity, the destructure below would explode when we
+  // later read `.articles_read` etc. GUR-194.
+  const activity = (summary.activity && typeof summary.activity === 'object')
+    ? summary.activity
+    : { articles_read: 0, total_time_minutes: 0, qa_count: 0, filters_explored: 0 };
+  const insights = Array.isArray(summary.insights) ? summary.insights : [];
+  const commitment = typeof summary.commitment === 'string' ? summary.commitment : null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -162,17 +196,17 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
         {/* Activity Stats */}
         <View style={[GM.card, styles.statsRow]}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{activity.articles_read}</Text>
+            <Text style={styles.statValue}>{Number(activity.articles_read) || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>articles</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatMinutes(activity.total_time_minutes)}</Text>
+            <Text style={styles.statValue}>{formatMinutes(Number(activity.total_time_minutes) || 0)}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>reading</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{activity.qa_count}</Text>
+            <Text style={styles.statValue}>{Number(activity.qa_count) || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>questions</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.glassBorder }]} />
@@ -189,7 +223,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
               <Icon name="flag-outline" size={16} color={RingColors.recap.primary} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Commitment</Text>
             </View>
-            <Text style={styles.commitmentText}>"{commitment}"</Text>
+            <Text style={styles.commitmentText}>"{asText(commitment)}"</Text>
           </View>
         )}
 
@@ -200,12 +234,14 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
               <Icon name="star-four-points" size={16} color={RingColors.recap.primary} />
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Key Insights</Text>
             </View>
-            {insights.map((insight, i) => (
-              <View key={insight.id} style={styles.insightItem}>
-                <View style={styles.insightDot} />
-                <Text style={[styles.insightText, { color: colors.textPrimary }]}>{insight.insight_text}</Text>
-              </View>
-            ))}
+            {insights
+              .filter((insight) => insight && typeof insight.insight_text === 'string')
+              .map((insight, i) => (
+                <View key={insight.id || `insight-${i}`} style={styles.insightItem}>
+                  <View style={styles.insightDot} />
+                  <Text style={[styles.insightText, { color: colors.textPrimary }]}>{asText(insight.insight_text)}</Text>
+                </View>
+              ))}
           </View>
         )}
 
@@ -231,7 +267,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
                     {segment.speaker === 'narrator' ? 'Narrator' : 'Analyst'}
                   </Text>
                 </View>
-                <Text style={[styles.scriptText, { color: colors.textPrimary }]}>{segment.text}</Text>
+                <Text style={[styles.scriptText, { color: colors.textPrimary }]}>{asText(segment.text)}</Text>
               </View>
             ))}
           </View>
