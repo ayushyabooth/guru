@@ -15,11 +15,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 
-// GUR-137: 48x44 pill, 20px radius. Tighter fit than the bar (64px) so the
-// bar's glass border still reads around each tab.
-const PILL_WIDTH = 48;
-const PILL_HEIGHT = 44;
-const PILL_RADIUS = 20;
+// GUR-137: pill covers icon + label (not just the icon). Tab bar is 64px tall
+// with the label flush to the bottom — pill extends from just above the icon
+// down past the label so both sit inside the glass surface. Width is tight
+// enough that the bar's outer border still reads around each slot.
+const PILL_WIDTH = 72;
+const PILL_HEIGHT = 54;
+const PILL_RADIUS = 18;
 
 // Spring tuned to match the filter-pill transition spec in GUR-132 (mass:1,
 // stiffness:280, damping:24). RN's Animated.spring maps to roughly equivalent
@@ -96,24 +98,33 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
           {
             opacity,
             transform: [{ translateX }],
+            // Stronger fill than the first draft — the tab bar already sits on
+            // its own blur layer, so a faint tint disappeared into it. Bump
+            // to ~28% dark / 22% light so the pill reads as a discrete glass
+            // element, not a vague glow.
             backgroundColor: isDark
-              ? `${accent}29` // ~16% alpha on dark
-              : `${accent}1F`, // ~12% on light
+              ? `${accent}47` // ~28% alpha on dark
+              : `${accent}38`, // ~22% on light
             borderColor: isDark
-              ? `${accent}52` // ~32% border on dark
-              : `${accent}33`, // ~20% on light
-            // Web-only glass blur + glow; native gets a subtle shadow.
+              ? `${accent}7A` // ~48% border on dark
+              : `${accent}52`, // ~32% on light
+            // Web-only glass blur + glow + inner top highlight (gives the
+            // floating-glass depth called for in the GUR-137 spec).
             ...(Platform.OS === 'web'
               ? {
-                  backdropFilter: 'blur(14px) saturate(160%)',
-                  WebkitBackdropFilter: 'blur(14px) saturate(160%)',
-                  boxShadow: `0 0 14px ${accent}33, inset 0 1px 0 ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.7)'}`,
+                  backdropFilter: 'blur(16px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                  boxShadow: [
+                    `0 0 18px ${accent}40`,
+                    `inset 0 1px 0 ${isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.85)'}`,
+                    `inset 0 -1px 0 ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.06)'}`,
+                  ].join(', '),
                 }
               : {
                   shadowColor: accent,
                   shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 10,
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
                   elevation: 4,
                 }),
           },
@@ -126,7 +137,10 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
 const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
-    top: (64 - PILL_HEIGHT) / 2, // Vertically center inside the 64px bar
+    // Nudge 1px below vertical center — the icon sits slightly above the
+    // label, so a centered pill looks low. Pushing the pill down by 1px
+    // visually balances it around the icon+label column.
+    top: (64 - PILL_HEIGHT) / 2 + 1,
     left: 0,
     width: PILL_WIDTH,
     height: PILL_HEIGHT,
