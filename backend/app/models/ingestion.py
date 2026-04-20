@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
+from app.db.types import UUID
 import uuid
 import enum
 
@@ -49,7 +50,7 @@ class IngestionLog(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     ingestion_state_id = Column(String(36), ForeignKey("ingestion_states.id"), nullable=False)
     action = Column(String(50), nullable=False)  # 'parsed', 'created_article', 'updated_article', 'skipped'
-    article_id = Column(String(36), ForeignKey("articles.id"), nullable=True)
+    article_id = Column(UUID(), ForeignKey("articles.id"), nullable=True)
     details = Column(Text, nullable=True)  # Additional context about the action
     timestamp = Column(DateTime, default=func.now())
     
