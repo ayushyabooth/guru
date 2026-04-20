@@ -268,12 +268,16 @@ export default function SignupScreen() {
             />
 
             {/* Sign In Link */}
-            <Text
-              style={[styles.signInText, { color: colors.textSecondary }, ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as any] : [])]}
+            <TouchableOpacity
               onPress={() => router.push('/(auth)/login')}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="link"
+              accessibilityLabel="Already have an account? Sign in"
             >
-              Already have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign in</Text>
-            </Text>
+              <Text style={[styles.signInText, { color: colors.textSecondary }]}>
+                Already have an account? <Text style={{ color: '#6366F1', textDecorationLine: 'underline' }}>Sign in</Text>
+              </Text>
+            </TouchableOpacity>
           </GlassCard>
         </ScrollView>
       </KeyboardAvoidingView>

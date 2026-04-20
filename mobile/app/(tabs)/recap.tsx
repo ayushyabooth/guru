@@ -741,7 +741,12 @@ export default function RecapScreen() {
         }]}>
           <View style={styles.headerRow}>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.recap }]}>Recap</Text>
-            <TouchableOpacity style={styles.archiveButton} onPress={() => setViewState('archive')}>
+            <TouchableOpacity
+              style={styles.archiveButton}
+              onPress={() => setViewState('archive')}
+              accessibilityRole="button"
+              accessibilityLabel="Open learning journal"
+            >
               <Text style={styles.archiveButtonText}>Journal</Text>
             </TouchableOpacity>
           </View>
@@ -791,10 +796,20 @@ export default function RecapScreen() {
                 You've completed your weekly learning recap.
               </Text>
               <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
-                <TouchableOpacity style={styles.viewRecapButton} onPress={() => setViewState('archive')}>
+                <TouchableOpacity
+                  style={styles.viewRecapButton}
+                  onPress={() => setViewState('archive')}
+                  accessibilityRole="button"
+                  accessibilityLabel="View completed recap"
+                >
                   <Text style={styles.viewRecapText}>View Recap</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.redoButton} onPress={handleRedoRecap}>
+                <TouchableOpacity
+                  style={styles.redoButton}
+                  onPress={handleRedoRecap}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start a new recap journey"
+                >
                   <Text style={styles.redoButtonText}>Start New Recap</Text>
                 </TouchableOpacity>
               </View>
@@ -866,6 +881,10 @@ export default function RecapScreen() {
                     }
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Stage ${stage.num}: ${stage.name}`}
+                  accessibilityHint={stage.desc}
+                  accessibilityState={{ disabled: isLocked && !hasCompletedRecap, selected: isCurrent }}
                 >
                   <View style={[
                     styles.stageNumber,
@@ -914,7 +933,12 @@ export default function RecapScreen() {
         )}
 
         {/* Past recaps link */}
-        <TouchableOpacity style={styles.archiveLink} onPress={() => setViewState('archive')}>
+        <TouchableOpacity
+          style={styles.archiveLink}
+          onPress={() => setViewState('archive')}
+          accessibilityRole="link"
+          accessibilityLabel="View past recaps and learning journal"
+        >
           <Text style={styles.archiveLinkText}>View past recaps & learning journal</Text>
         </TouchableOpacity>
       </ScrollView>

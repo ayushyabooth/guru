@@ -484,10 +484,22 @@ function HomeContent() {
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={toggleTheme}>
-                  <Text style={styles.themeToggleText}>{isDark ? '☀️' : '🌙'}</Text>
+                <TouchableOpacity
+                  style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]}
+                  onPress={toggleTheme}
+                  accessibilityRole="button"
+                  accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.themeToggleText} accessibilityElementsHidden importantForAccessibility="no">{isDark ? '☀️' : '🌙'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]} onPress={handleLogout}>
+                <TouchableOpacity
+                  style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]}
+                  onPress={handleLogout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Log out"
+                  accessibilityHint="Signs you out and returns to the login screen"
+                >
                   <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
                 </TouchableOpacity>
               </View>
@@ -575,7 +587,12 @@ function HomeContent() {
                       {displayMetrics.catchup.weeklyTotal}m / {catchupGoal}m
                     </Text>
                   </View>
-                  <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
+                  <View
+                    style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="Catch-up weekly progress"
+                    accessibilityValue={{ min: 0, max: catchupGoal, now: Math.min(displayMetrics.catchup.weeklyTotal, catchupGoal), text: `${displayMetrics.catchup.weeklyTotal} of ${catchupGoal} minutes` }}
+                  >
                     <View style={[
                       styles.goalProgressFill,
                       { backgroundColor: catchupExceeded ? DarkThemeColors.success : RingColors.catchup.primary },
@@ -599,7 +616,12 @@ function HomeContent() {
                       {displayMetrics.divein.weeklyProgress}m / {displayMetrics.divein.weeklyGoal}m
                     </Text>
                   </View>
-                  <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
+                  <View
+                    style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
+                    accessibilityRole="progressbar"
+                    accessibilityLabel="Dive-in weekly progress"
+                    accessibilityValue={{ min: 0, max: displayMetrics.divein.weeklyGoal, now: Math.min(displayMetrics.divein.weeklyProgress, displayMetrics.divein.weeklyGoal), text: `${displayMetrics.divein.weeklyProgress} of ${displayMetrics.divein.weeklyGoal} minutes` }}
+                  >
                     <View style={[
                       styles.goalProgressFill,
                       { backgroundColor: diveinExceeded ? DarkThemeColors.success : RingColors.divein.primary },
@@ -620,7 +642,17 @@ function HomeContent() {
                   {displayMetrics.recap.status === 'completed' ? 'Done' : displayMetrics.recap.status === 'in_progress' ? 'In Progress' : 'Not Started'}
                 </Text>
               </View>
-              <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}>
+              <View
+                style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
+                accessibilityRole="progressbar"
+                accessibilityLabel="Recap weekly progress"
+                accessibilityValue={{
+                  min: 0,
+                  max: 100,
+                  now: displayMetrics.recap.status === 'completed' ? 100 : displayMetrics.recap.status === 'in_progress' ? 50 : 0,
+                  text: displayMetrics.recap.status === 'completed' ? 'Done' : displayMetrics.recap.status === 'in_progress' ? 'In progress' : 'Not started',
+                }}
+              >
                 <View style={[
                   styles.goalProgressFill,
                   { backgroundColor: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : RingColors.recap.primary },
