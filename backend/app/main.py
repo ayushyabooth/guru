@@ -32,25 +32,14 @@ from app.routes.auth import limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    # Allow any preview/alias deployment under our Vercel team + the Chrome extension.
-    # Vercel generates new URLs per deploy (e.g. mobile-g8ppgy0ke-guru8.vercel.app) so a
-    # regex is required — an explicit allowlist goes stale every push.
-    allow_origin_regex=r"^(chrome-extension://.*|https://([a-z0-9-]+-)?(mobile|dist)(-[a-z0-9]+)?-guru8\.vercel\.app|https://mobile-tan-one\.vercel\.app)$",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["X-Response-Time-Ms"],
-    max_age=600,  # Cache preflights for 10 min — reduces repeated OPTIONS round-trips
-)
+# NOTE on middleware order (GUR-180): Starlette's add_middleware inserts each new
+# middleware at index 0, so the LAST one added becomes the OUTERMOST. CORSMiddleware
+# must therefore be added LAST so it wraps every other layer — otherwise 5xx / error
+# responses bubble up without Access-Control-Allow-Origin headers and the browser
+# reports them as opaque CORS failures (the Catch-up reader "infinite spinner" symptom).
 
-# HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
-# Adding HTTPSRedirectMiddleware causes redirect loops behind reverse proxies.
-
-# API timing middleware - logs response time and records to PerfStore
+# API timing middleware - logs response time and records to PerfStore.
+# Registered BEFORE CORS so that CORSMiddleware ends up outermost (see note above).
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
     from app.services.perf_store import PerfStore
@@ -70,6 +59,25 @@ async def add_timing_header(request: Request, call_next):
     if duration_ms > 500:
         logger.warning(f"🐌 SLOW API: {request.method} {path} - {duration_ms:.1f}ms")
     return response
+
+# HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
+# Adding HTTPSRedirectMiddleware causes redirect loops behind reverse proxies.
+
+# Add CORS middleware — MUST be added LAST so it is the outermost user middleware
+# and attaches CORS headers even to error responses (GUR-180). See note above.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    # Allow any preview/alias deployment under our Vercel team + the Chrome extension.
+    # Vercel generates new URLs per deploy (e.g. mobile-g8ppgy0ke-guru8.vercel.app) so a
+    # regex is required — an explicit allowlist goes stale every push.
+    allow_origin_regex=r"^(chrome-extension://.*|https://([a-z0-9-]+-)?(mobile|dist)(-[a-z0-9]+)?-guru8\.vercel\.app|https://mobile-tan-one\.vercel\.app)$",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["X-Response-Time-Ms"],
+    max_age=600,  # Cache preflights for 10 min — reduces repeated OPTIONS round-trips
+)
 
 # Include routers
 app.include_router(auth.router)

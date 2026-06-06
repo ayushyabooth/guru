@@ -207,7 +207,9 @@ def _count_expert_flags(article_id, db: Session) -> int:
 # ============================================================
 
 @router.get("/articles/{article_id}/overlay", response_model=OverlayArticleResponse)
-async def get_overlay_article(
+def get_overlay_article(  # sync def → FastAPI runs it in a threadpool; the blocking
+    # annotation/Claude call in _ensure_annotations no longer jams the event loop and
+    # block concurrent OPTIONS preflights (GUR-180).
     article_id: str,
     db: Session = Depends(get_db)
 ):
@@ -303,7 +305,7 @@ async def get_overlay_article(
 # ============================================================
 
 @router.get("/articles/{article_id}/deep", response_model=DeepArticleResponse)
-async def get_deep_article(
+def get_deep_article(  # sync def → runs in threadpool, won't block the event loop (GUR-180)
     article_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
