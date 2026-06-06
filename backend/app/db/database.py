@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 
 # Import all models to ensure they are registered with SQLAlchemy
 from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content
-from app.models.article import ExpertLink
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
@@ -77,57 +76,6 @@ def create_tables():
             except Exception as table_err:
                 logger.error(f"  Failed to create table '{table.name}': {table_err}")
     _run_column_migrations()
-    _seed_expert_links()
-
-
-def _seed_expert_links():
-    """Seed ExpertLink table from the legacy file on first startup (if table is empty)."""
-    try:
-        db = SessionLocal()
-        try:
-            count = db.query(ExpertLink).count()
-            if count > 0:
-                logger.info(f"ExpertLink table already has {count} rows — skipping seed")
-                return
-
-            # Look for legacy expert-links.md in the backend directory
-            import os
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            legacy_path = os.path.join(backend_dir, "expert-links.md")
-            if not os.path.exists(legacy_path):
-                logger.info("No expert-links.md found for seeding — ExpertLink table stays empty")
-                return
-
-            from app.services.csv_ingestion_service import parse_expert_links_csv
-            articles = parse_expert_links_csv(legacy_path)
-            if not articles:
-                logger.warning("expert-links.md parsed 0 articles — nothing to seed")
-                return
-
-            inserted = 0
-            for art in articles:
-                url = art.get('url', '').strip()
-                if not url:
-                    continue
-                existing = db.query(ExpertLink).filter(ExpertLink.url == url).first()
-                if existing:
-                    continue
-                link = ExpertLink(
-                    url=url,
-                    title=art.get('title', ''),
-                    domain=art.get('domain', ''),
-                    article_type=art.get('type', ''),
-                    importance=art.get('priority', 'Normal'),
-                )
-                db.add(link)
-                inserted += 1
-
-            db.commit()
-            logger.info(f"Seeded {inserted} expert links from expert-links.md into DB")
-        finally:
-            db.close()
-    except Exception as e:
-        logger.error(f"ExpertLink seeding failed (non-fatal): {e}")
 
 
 def _run_column_migrations():

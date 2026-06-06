@@ -111,7 +111,12 @@ class Tier1LuminaryService:
         old_timeout = socket.getdefaulttimeout()
         try:
             socket.setdefaulttimeout(timeout)
-            feed = feedparser.parse(feed_url, request_headers={"User-Agent": "Guru-MVP/1.0"})
+            # Use a realistic browser User-Agent — many trade-publication RSS feeds sit
+            # behind Cloudflare and return 403 to non-browser agents like "Guru-MVP/1.0".
+            feed = feedparser.parse(feed_url, request_headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+            })
         except Exception as e:
             logger.warning(f"feedparser.parse() raised for {luminary_name}: {e}")
             return []

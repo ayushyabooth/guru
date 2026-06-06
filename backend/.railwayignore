@@ -1,0 +1,23 @@
+# Keep `railway up` uploads small — same exclusions as .dockerignore.
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.claude/
+tests/
+*.db
+*.db-shm
+*.db-wal
+.db-reset-log
+*.log
+.git/
+.env
+.env.*
+!.env.example
+.DS_Store
+node_modules/

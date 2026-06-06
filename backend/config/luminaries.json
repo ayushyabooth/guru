@@ -396,6 +396,685 @@
         "website": "https://www.pymnts.com",
         "description": "Breaking news and analysis on payments, digital commerce, and fintech innovation."
       }
+    ],
+    "clinical_practice": [
+      {
+        "id": "medpage_today",
+        "name": "MedPage Today",
+        "feed_url": "https://www.medpagetoday.com/rss/headlines.xml",
+        "website": "https://www.medpagetoday.com",
+        "description": "Daily clinical news and practice-relevant medical research updates written for practicing physicians."
+      },
+      {
+        "id": "healthcare_dive_clinical",
+        "name": "Healthcare Dive",
+        "feed_url": "https://www.healthcaredive.com/feeds/news/",
+        "website": "https://www.healthcaredive.com",
+        "description": "News on care delivery, providers, payers, and policy affecting clinical practice in the US."
+      },
+      {
+        "id": "fierce_healthcare_clinical",
+        "name": "Fierce Healthcare",
+        "feed_url": "https://www.fiercehealthcare.com/rss/xml",
+        "website": "https://www.fiercehealthcare.com",
+        "description": "Coverage of providers, health systems, regulation, and clinical care trends."
+      }
+    ],
+    "medical_technology": [
+      {
+        "id": "medtech_dive",
+        "name": "MedTech Dive",
+        "feed_url": "https://www.medtechdive.com/feeds/news/",
+        "website": "https://www.medtechdive.com",
+        "description": "News on medical devices, diagnostics, FDA regulation, and the medtech industry."
+      },
+      {
+        "id": "medcity_news_medtech",
+        "name": "MedCity News",
+        "feed_url": "https://medcitynews.com/feed/",
+        "website": "https://medcitynews.com",
+        "description": "Business of healthcare innovation, covering devices, digital health, and health tech startups."
+      }
+    ],
+    "pharmaceuticals": [
+      {
+        "id": "fierce_pharma",
+        "name": "Fierce Pharma",
+        "feed_url": "https://www.fiercepharma.com/rss/xml",
+        "website": "https://www.fiercepharma.com",
+        "description": "News on pharma manufacturing, marketing, regulation, and major drugmaker business moves."
+      },
+      {
+        "id": "biopharma_dive",
+        "name": "BioPharma Dive",
+        "feed_url": "https://www.biopharmadive.com/feeds/news/",
+        "website": "https://www.biopharmadive.com",
+        "description": "Coverage of drug development, clinical trials, FDA decisions, and pharma industry strategy."
+      },
+      {
+        "id": "endpoints_news",
+        "name": "Endpoints News",
+        "feed_url": "https://endpoints.news/feed/",
+        "website": "https://endpoints.news",
+        "description": "Biotech and pharma business news with a focus on drug R&D and dealmaking."
+      }
+    ],
+    "healthcare_operations": [
+      {
+        "id": "healthcare_dive_ops",
+        "name": "Healthcare Dive",
+        "feed_url": "https://www.healthcaredive.com/feeds/news/",
+        "website": "https://www.healthcaredive.com",
+        "description": "Operational news on hospital finance, M&A, payers, and health-system management."
+      },
+      {
+        "id": "fierce_healthcare_ops",
+        "name": "Fierce Healthcare",
+        "feed_url": "https://www.fiercehealthcare.com/rss/xml",
+        "website": "https://www.fiercehealthcare.com",
+        "description": "News on health-system operations, payers, regulation, and healthcare business."
+      },
+      {
+        "id": "medcity_news_ops",
+        "name": "MedCity News",
+        "feed_url": "https://medcitynews.com/feed/",
+        "website": "https://medcitynews.com",
+        "description": "Healthcare business and innovation news including operations, payment, and delivery models."
+      }
+    ],
+    "biotech_research": [
+      {
+        "id": "fierce_biotech",
+        "name": "Fierce Biotech",
+        "feed_url": "https://www.fiercebiotech.com/rss/xml",
+        "website": "https://www.fiercebiotech.com",
+        "description": "News on biotech R&D, clinical data, funding rounds, and emerging therapeutics."
+      },
+      {
+        "id": "gen_news",
+        "name": "GEN - Genetic Engineering & Biotechnology News",
+        "feed_url": "https://www.genengnews.com/feed/",
+        "website": "https://www.genengnews.com",
+        "description": "Coverage of life-science research, genomics, biomanufacturing, and biotech innovation."
+      },
+      {
+        "id": "stat_news",
+        "name": "STAT",
+        "feed_url": "https://www.statnews.com/feed/",
+        "website": "https://www.statnews.com",
+        "description": "Reporting on life sciences, biotech research, and the business of health and medicine."
+      }
+    ],
+    "operations_supply_chain": [
+      {
+        "id": "supply_chain_dive",
+        "name": "Supply Chain Dive",
+        "feed_url": "https://www.supplychaindive.com/feeds/news/",
+        "website": "https://www.supplychaindive.com",
+        "description": "News on logistics, procurement, transportation, and supply chain operations."
+      },
+      {
+        "id": "manufacturing_dive_ops",
+        "name": "Manufacturing Dive",
+        "feed_url": "https://www.manufacturingdive.com/feeds/news/",
+        "website": "https://www.manufacturingdive.com",
+        "description": "Coverage of manufacturing operations, industrial policy, plants, and the factory economy."
+      }
+    ],
+    "advanced_manufacturing": [
+      {
+        "id": "manufacturing_dive_adv",
+        "name": "Manufacturing Dive",
+        "feed_url": "https://www.manufacturingdive.com/feeds/news/",
+        "website": "https://www.manufacturingdive.com",
+        "description": "News on manufacturing technology, investment, reshoring, and industrial production."
+      },
+      {
+        "id": "engineering_com",
+        "name": "Engineering.com",
+        "feed_url": "https://www.engineering.com/feed/",
+        "website": "https://www.engineering.com",
+        "description": "Coverage of design, additive manufacturing, CAD/CAE software, and advanced engineering tools."
+      },
+      {
+        "id": "assembly_mag_adv",
+        "name": "ASSEMBLY",
+        "feed_url": "https://www.assemblymag.com/rss/articles",
+        "website": "https://www.assemblymag.com",
+        "description": "Processes, technologies, and strategies for assembling parts across discrete manufacturing industries."
+      }
+    ],
+    "industrial_automation": [
+      {
+        "id": "the_robot_report",
+        "name": "The Robot Report",
+        "feed_url": "https://www.therobotreport.com/feed/",
+        "website": "https://www.therobotreport.com",
+        "description": "News on robotics, autonomous systems, and automation across industrial and commercial sectors."
+      },
+      {
+        "id": "plant_engineering",
+        "name": "Plant Engineering",
+        "feed_url": "https://www.plantengineering.com/feed/",
+        "website": "https://www.plantengineering.com",
+        "description": "Coverage of plant operations, industrial automation, controls, maintenance, and asset management."
+      }
+    ],
+    "quality_process": [
+      {
+        "id": "quality_magazine",
+        "name": "Quality Magazine",
+        "feed_url": "https://www.qualitymag.com/rss/articles",
+        "website": "https://www.qualitymag.com",
+        "description": "News on quality assurance, metrology, inspection, and process improvement for manufacturers."
+      },
+      {
+        "id": "assembly_mag_quality",
+        "name": "ASSEMBLY",
+        "feed_url": "https://www.assemblymag.com/rss/articles",
+        "website": "https://www.assemblymag.com",
+        "description": "Assembly processes and technologies with frequent coverage of quality and process control."
+      }
+    ],
+    "product_development": [
+      {
+        "id": "engineering_com_pd",
+        "name": "Engineering.com",
+        "feed_url": "https://www.engineering.com/feed/",
+        "website": "https://www.engineering.com",
+        "description": "Coverage of product design, CAD/PLM software, prototyping, and engineering R&D."
+      },
+      {
+        "id": "plastics_today",
+        "name": "PlasticsToday",
+        "feed_url": "https://www.plasticstoday.com/rss.xml",
+        "website": "https://www.plasticstoday.com",
+        "description": "News on materials, design, and processing for plastics-based product development and manufacturing."
+      }
+    ],
+    "renewable_energy": [
+      {
+        "id": "renewable_energy_world",
+        "name": "Renewable Energy World",
+        "feed_url": "https://www.renewableenergyworld.com/feed/",
+        "website": "https://www.renewableenergyworld.com/",
+        "description": "Solar, wind, storage and clean energy industry news, projects and policy."
+      },
+      {
+        "id": "power_magazine_renewables",
+        "name": "Power Magazine",
+        "feed_url": "https://www.powermag.com/feed/",
+        "website": "https://www.powermag.com/",
+        "description": "Power generation news spanning renewables, nuclear, storage and grid technology."
+      },
+      {
+        "id": "trellis_renewables",
+        "name": "Trellis (formerly GreenBiz)",
+        "feed_url": "https://trellis.net/feed/",
+        "website": "https://trellis.net/",
+        "description": "Clean energy, decarbonization and sustainable business transformation coverage."
+      }
+    ],
+    "grid_distribution": [
+      {
+        "id": "utility_dive_grid",
+        "name": "Utility Dive",
+        "feed_url": "https://www.utilitydive.com/feeds/news/",
+        "website": "https://www.utilitydive.com/",
+        "description": "Daily news on utilities, the power grid, transmission, distribution and regulation."
+      },
+      {
+        "id": "td_world",
+        "name": "T&D World",
+        "feed_url": "https://www.tdworld.com/rss.xml",
+        "website": "https://www.tdworld.com/",
+        "description": "Transmission and distribution engineering, grid modernization and utility operations."
+      },
+      {
+        "id": "rto_insider_grid",
+        "name": "RTO Insider",
+        "feed_url": "https://www.rtoinsider.com/feed/",
+        "website": "https://www.rtoinsider.com/",
+        "description": "In-depth coverage of RTO/ISO grid operations, transmission planning and wholesale markets."
+      }
+    ],
+    "oil_gas_operations": [
+      {
+        "id": "world_oil",
+        "name": "World Oil",
+        "feed_url": "https://www.worldoil.com/rss?feed=news",
+        "website": "https://www.worldoil.com/",
+        "description": "Upstream oil and gas exploration, drilling and production operations news."
+      },
+      {
+        "id": "rigzone",
+        "name": "Rigzone",
+        "feed_url": "https://www.rigzone.com/news/rss/rigzone_latest.aspx",
+        "website": "https://www.rigzone.com/",
+        "description": "Oil and gas industry news covering operations, markets, companies and jobs."
+      },
+      {
+        "id": "ogj_general",
+        "name": "Oil & Gas Journal",
+        "feed_url": "https://www.ogj.com/__rss/website-scheduled-content.xml?input=%7B%22sectionAlias%22%3A%22general-interest%22%7D",
+        "website": "https://www.ogj.com/",
+        "description": "General oil and gas industry coverage including pricing, operations and policy."
+      }
+    ],
+    "sustainability_esg": [
+      {
+        "id": "esg_today",
+        "name": "ESG Today",
+        "feed_url": "https://www.esgtoday.com/feed/",
+        "website": "https://www.esgtoday.com/",
+        "description": "ESG investing, corporate sustainability, green finance and regulatory news."
+      },
+      {
+        "id": "trellis_esg",
+        "name": "Trellis (formerly GreenBiz)",
+        "feed_url": "https://trellis.net/feed/",
+        "website": "https://trellis.net/",
+        "description": "Sustainable business strategy, corporate climate action and ESG reporting."
+      }
+    ],
+    "energy_trading": [
+      {
+        "id": "oilprice",
+        "name": "OilPrice.com",
+        "feed_url": "https://oilprice.com/rss/main",
+        "website": "https://oilprice.com/",
+        "description": "Crude oil, gas and energy commodity market prices, trading and analysis."
+      },
+      {
+        "id": "rto_insider_markets",
+        "name": "RTO Insider",
+        "feed_url": "https://www.rtoinsider.com/feed/",
+        "website": "https://www.rtoinsider.com/",
+        "description": "Wholesale electricity market design, capacity auctions and ISO/RTO trading news."
+      }
+    ],
+    "commercial_development": [
+      {
+        "id": "construction_dive",
+        "name": "Construction Dive",
+        "feed_url": "https://www.constructiondive.com/feeds/news/",
+        "website": "https://www.constructiondive.com/",
+        "description": "Commercial construction, development projects, contractors and building industry news."
+      },
+      {
+        "id": "commercial_observer",
+        "name": "Commercial Observer",
+        "feed_url": "https://commercialobserver.com/feed/",
+        "website": "https://commercialobserver.com/",
+        "description": "Commercial real estate development, leasing and major property deals."
+      },
+      {
+        "id": "connect_cre",
+        "name": "Connect CRE",
+        "feed_url": "https://www.connectcre.com/feed/",
+        "website": "https://www.connectcre.com/",
+        "description": "National commercial real estate news on development, transactions and leasing."
+      }
+    ],
+    "residential_urban_planning": [
+      {
+        "id": "multifamily_dive",
+        "name": "Multifamily Dive",
+        "feed_url": "https://www.multifamilydive.com/feeds/news/",
+        "website": "https://www.multifamilydive.com/",
+        "description": "Multifamily housing development, rents, zoning and residential real estate trends."
+      },
+      {
+        "id": "smart_cities_dive_planning",
+        "name": "Smart Cities Dive",
+        "feed_url": "https://www.smartcitiesdive.com/feeds/news/",
+        "website": "https://www.smartcitiesdive.com/",
+        "description": "Urban planning, housing policy, zoning and smart city development news."
+      }
+    ],
+    "real_estate_finance": [
+      {
+        "id": "commercial_observer_finance",
+        "name": "Commercial Observer",
+        "feed_url": "https://commercialobserver.com/feed/",
+        "website": "https://commercialobserver.com/",
+        "description": "Commercial real estate finance, lending, refinancing and capital markets deals."
+      },
+      {
+        "id": "connect_cre_finance",
+        "name": "Connect CRE",
+        "feed_url": "https://www.connectcre.com/feed/",
+        "website": "https://www.connectcre.com/",
+        "description": "CRE capital markets, financing, investment sales and lending activity."
+      },
+      {
+        "id": "rebusiness_online",
+        "name": "REBusinessOnline",
+        "feed_url": "https://rebusinessonline.com/feed/",
+        "website": "https://rebusinessonline.com/",
+        "description": "Commercial real estate transactions, financing and leasing across U.S. markets."
+      }
+    ],
+    "property_management": [
+      {
+        "id": "multifamily_dive_pm",
+        "name": "Multifamily Dive",
+        "feed_url": "https://www.multifamilydive.com/feeds/news/",
+        "website": "https://www.multifamilydive.com/",
+        "description": "Apartment operations, rents, occupancy and property management industry news."
+      },
+      {
+        "id": "rentcafe_blog",
+        "name": "RentCafe Blog",
+        "feed_url": "https://www.rentcafe.com/blog/feed/",
+        "website": "https://www.rentcafe.com/blog/",
+        "description": "Rental market data, apartment trends and property management insights."
+      }
+    ],
+    "infrastructure": [
+      {
+        "id": "smart_cities_dive_infra",
+        "name": "Smart Cities Dive",
+        "feed_url": "https://www.smartcitiesdive.com/feeds/news/",
+        "website": "https://www.smartcitiesdive.com/",
+        "description": "Transportation, infrastructure funding, transit and public works coverage."
+      },
+      {
+        "id": "construction_dive_infra",
+        "name": "Construction Dive",
+        "feed_url": "https://www.constructiondive.com/feeds/news/",
+        "website": "https://www.constructiondive.com/",
+        "description": "Infrastructure megaprojects, tunnels, transportation and heavy civil construction."
+      }
+    ],
+    "higher_education_leadership": [
+      {
+        "id": "higher_ed_dive",
+        "name": "Higher Ed Dive",
+        "feed_url": "https://www.highereddive.com/feeds/news/",
+        "website": "https://www.highereddive.com",
+        "description": "Daily news on higher education administration, finance, policy, and institutional leadership."
+      },
+      {
+        "id": "inside_higher_ed",
+        "name": "Inside Higher Ed",
+        "feed_url": "https://www.insidehighered.com/rss.xml",
+        "website": "https://www.insidehighered.com",
+        "description": "News and analysis covering college governance, faculty affairs, and higher ed policy."
+      },
+      {
+        "id": "hechinger_report",
+        "name": "The Hechinger Report",
+        "feed_url": "https://hechingerreport.org/feed/",
+        "website": "https://hechingerreport.org",
+        "description": "Nonprofit, independent reporting on education inequality and higher education policy."
+      }
+    ],
+    "edtech_digital_learning": [
+      {
+        "id": "edsurge",
+        "name": "EdSurge",
+        "feed_url": "https://www.edsurge.com/articles_rss",
+        "website": "https://www.edsurge.com",
+        "description": "Coverage of education technology, digital learning tools, and edtech industry trends."
+      },
+      {
+        "id": "ecampus_news",
+        "name": "eCampus News",
+        "feed_url": "https://www.ecampusnews.com/feed/",
+        "website": "https://www.ecampusnews.com",
+        "description": "Higher education technology news on digital learning, IT, and campus innovation."
+      },
+      {
+        "id": "edtech_higher",
+        "name": "EdTech Magazine (Higher Ed)",
+        "feed_url": "https://edtechmagazine.com/higher/rss.xml",
+        "website": "https://edtechmagazine.com/higher",
+        "description": "Technology trends, tools, and IT strategy for higher education institutions."
+      }
+    ],
+    "curriculum_development": [
+      {
+        "id": "edtech_k12",
+        "name": "EdTech Magazine (K-12)",
+        "feed_url": "https://edtechmagazine.com/k12/rss.xml",
+        "website": "https://edtechmagazine.com/k12",
+        "description": "K-12 technology, classroom tools, and instructional technology integration."
+      },
+      {
+        "id": "k12_dive",
+        "name": "K-12 Dive",
+        "feed_url": "https://www.k12dive.com/feeds/news/",
+        "website": "https://www.k12dive.com",
+        "description": "News on K-12 curriculum, instruction, policy, and district leadership."
+      },
+      {
+        "id": "edsurge_curriculum",
+        "name": "EdSurge",
+        "feed_url": "https://www.edsurge.com/articles_rss",
+        "website": "https://www.edsurge.com",
+        "description": "Teaching and learning coverage including curriculum design and instructional practice."
+      }
+    ],
+    "student_success_retention": [
+      {
+        "id": "higher_ed_dive_success",
+        "name": "Higher Ed Dive",
+        "feed_url": "https://www.highereddive.com/feeds/news/",
+        "website": "https://www.highereddive.com",
+        "description": "Reporting on enrollment, retention, completion, and student success initiatives."
+      },
+      {
+        "id": "inside_higher_ed_success",
+        "name": "Inside Higher Ed",
+        "feed_url": "https://www.insidehighered.com/rss.xml",
+        "website": "https://www.insidehighered.com",
+        "description": "Coverage of student affairs, advising, retention strategy, and degree completion."
+      },
+      {
+        "id": "hechinger_success",
+        "name": "The Hechinger Report",
+        "feed_url": "https://hechingerreport.org/feed/",
+        "website": "https://hechingerreport.org",
+        "description": "Reporting on student outcomes, persistence, and equity in education attainment."
+      }
+    ],
+    "research_innovation": [
+      {
+        "id": "higher_ed_dive_research",
+        "name": "Higher Ed Dive",
+        "feed_url": "https://www.highereddive.com/feeds/news/",
+        "website": "https://www.highereddive.com",
+        "description": "News on university research funding, federal science policy, and academic innovation."
+      },
+      {
+        "id": "inside_higher_ed_research",
+        "name": "Inside Higher Ed",
+        "feed_url": "https://www.insidehighered.com/rss.xml",
+        "website": "https://www.insidehighered.com",
+        "description": "Coverage of research administration, grants, and innovation in academia."
+      }
+    ],
+    "policy_administration": [
+      {
+        "id": "govexec",
+        "name": "Government Executive",
+        "feed_url": "https://www.govexec.com/rss/all/",
+        "website": "https://www.govexec.com",
+        "description": "Federal management, workforce, and public administration news."
+      },
+      {
+        "id": "route_fifty",
+        "name": "Route Fifty",
+        "feed_url": "https://www.route-fifty.com/rss/all/",
+        "website": "https://www.route-fifty.com",
+        "description": "State and local government policy, management, and administration coverage."
+      },
+      {
+        "id": "statetech_mag",
+        "name": "StateTech Magazine",
+        "feed_url": "https://statetechmagazine.com/rss.xml",
+        "website": "https://statetechmagazine.com",
+        "description": "Technology and operations news for state and local government agencies."
+      }
+    ],
+    "public_safety_defense": [
+      {
+        "id": "defense_news",
+        "name": "Defense News",
+        "feed_url": "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml",
+        "website": "https://www.defensenews.com",
+        "description": "Global defense, military procurement, and national security news."
+      },
+      {
+        "id": "breaking_defense",
+        "name": "Breaking Defense",
+        "feed_url": "https://breakingdefense.com/feed/",
+        "website": "https://breakingdefense.com",
+        "description": "Defense technology, policy, and national security analysis."
+      },
+      {
+        "id": "route_fifty_public_safety",
+        "name": "Route Fifty (Public Safety)",
+        "feed_url": "https://www.route-fifty.com/rss/public-safety/",
+        "website": "https://www.route-fifty.com",
+        "description": "State and local public safety, policing technology, and emergency response."
+      }
+    ],
+    "infrastructure_planning": [
+      {
+        "id": "smart_cities_dive_gov",
+        "name": "Smart Cities Dive",
+        "feed_url": "https://www.smartcitiesdive.com/feeds/news/",
+        "website": "https://www.smartcitiesdive.com",
+        "description": "Urban planning, infrastructure, mobility, and smart city development news."
+      },
+      {
+        "id": "route_fifty_infrastructure",
+        "name": "Route Fifty (Infrastructure)",
+        "feed_url": "https://www.route-fifty.com/rss/infrastructure/",
+        "website": "https://www.route-fifty.com",
+        "description": "State and local infrastructure, broadband, and capital planning coverage."
+      }
+    ],
+    "social_programs": [
+      {
+        "id": "nonprofit_quarterly_social",
+        "name": "Nonprofit Quarterly",
+        "feed_url": "https://nonprofitquarterly.org/feed/",
+        "website": "https://nonprofitquarterly.org",
+        "description": "Analysis of social policy, safety-net programs, and civic justice issues."
+      },
+      {
+        "id": "kff_health_policy",
+        "name": "KFF",
+        "feed_url": "https://www.kff.org/feed/",
+        "website": "https://www.kff.org",
+        "description": "Independent health policy research and news on Medicaid, Medicare, and public health programs."
+      }
+    ],
+    "digital_government": [
+      {
+        "id": "nextgov_digital_gov",
+        "name": "Nextgov/FCW (Digital Government)",
+        "feed_url": "https://www.nextgov.com/rss/digital-government/",
+        "website": "https://www.nextgov.com",
+        "description": "Federal digital services, IT modernization, and government technology news."
+      },
+      {
+        "id": "statescoop",
+        "name": "StateScoop",
+        "feed_url": "https://statescoop.com/feed/",
+        "website": "https://statescoop.com",
+        "description": "State and local government IT, cybersecurity, and digital service delivery."
+      },
+      {
+        "id": "nextgov_all",
+        "name": "Nextgov/FCW",
+        "feed_url": "https://www.nextgov.com/rss/all/",
+        "website": "https://www.nextgov.com",
+        "description": "Federal technology, cybersecurity, and digital transformation coverage."
+      }
+    ],
+    "program_management": [
+      {
+        "id": "nonprofit_pro",
+        "name": "NonProfit PRO",
+        "feed_url": "https://www.nonprofitpro.com/feed/",
+        "website": "https://www.nonprofitpro.com",
+        "description": "Leadership, strategy, and operations guidance for nonprofit organizations."
+      },
+      {
+        "id": "nonprofit_quarterly_pm",
+        "name": "Nonprofit Quarterly",
+        "feed_url": "https://nonprofitquarterly.org/feed/",
+        "website": "https://nonprofitquarterly.org",
+        "description": "Management practice, governance, and organizational strategy for nonprofits."
+      }
+    ],
+    "fundraising_development": [
+      {
+        "id": "nonprofit_pro_fundraising",
+        "name": "NonProfit PRO (Fundraising)",
+        "feed_url": "https://www.nonprofitpro.com/category/fundraising/feed/",
+        "website": "https://www.nonprofitpro.com/topic/fundraising/",
+        "description": "Fundraising strategy, donor development, and gift solicitation coverage."
+      },
+      {
+        "id": "nonprofit_pro_dev",
+        "name": "NonProfit PRO",
+        "feed_url": "https://www.nonprofitpro.com/feed/",
+        "website": "https://www.nonprofitpro.com",
+        "description": "Development, donor relations, and revenue strategy for nonprofits."
+      }
+    ],
+    "social_entrepreneurship": [
+      {
+        "id": "ssir",
+        "name": "Stanford Social Innovation Review",
+        "feed_url": "https://ssir.org/site/rss_2.0",
+        "website": "https://ssir.org",
+        "description": "Research and ideas on social innovation, impact, and systems change."
+      },
+      {
+        "id": "nonprofit_quarterly_se",
+        "name": "Nonprofit Quarterly",
+        "feed_url": "https://nonprofitquarterly.org/feed/",
+        "website": "https://nonprofitquarterly.org",
+        "description": "Coverage of social enterprise, mission-driven business, and the civic sector."
+      }
+    ],
+    "community_engagement": [
+      {
+        "id": "nonprofit_quarterly_community",
+        "name": "Nonprofit Quarterly",
+        "feed_url": "https://nonprofitquarterly.org/feed/",
+        "website": "https://nonprofitquarterly.org",
+        "description": "Coverage of community organizing, civic participation, and grassroots movements."
+      },
+      {
+        "id": "ssir_community",
+        "name": "Stanford Social Innovation Review",
+        "feed_url": "https://ssir.org/site/rss_2.0",
+        "website": "https://ssir.org",
+        "description": "Ideas on community-led change, participatory practice, and civic engagement."
+      }
+    ],
+    "impact_measurement": [
+      {
+        "id": "ssir_impact",
+        "name": "Stanford Social Innovation Review",
+        "feed_url": "https://ssir.org/site/rss_2.0",
+        "website": "https://ssir.org",
+        "description": "Research on impact evaluation, outcomes measurement, and effectiveness in the social sector."
+      },
+      {
+        "id": "nonprofit_quarterly_impact",
+        "name": "Nonprofit Quarterly",
+        "feed_url": "https://nonprofitquarterly.org/feed/",
+        "website": "https://nonprofitquarterly.org",
+        "description": "Analysis of nonprofit performance, accountability, and outcomes measurement."
+      }
     ]
   }
 }

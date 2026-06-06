@@ -1,8 +1,7 @@
 """
 Ingestion Orchestrator - Master controller for 3-tier content ingestion.
 
-Manages scheduling and execution of all three content tiers:
-- Tier 1: Expert links file (every 2 hours) - runs first, fastest
+Manages scheduling and execution of the content tiers:
 - Tier 2: Luminary RSS feeds (every 6 hours)
 - Tier 3: Web discovery via Claude Web Search (every 12 hours) - runs last
 
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class IngestionOrchestrator:
-    """Master orchestrator for 3-tier content ingestion."""
+    """Master orchestrator for multi-tier content ingestion."""
 
     _instance = None
 
@@ -60,13 +59,6 @@ class IngestionOrchestrator:
 
             # Schedule tiers (each tier runs ingestion + warming afterward)
             self._scheduler.add_job(
-                self._scheduled_tier1,
-                "interval",
-                hours=settings.TIER1_SCHEDULE_HOURS,
-                id="tier1_expert",
-                name="Tier 1: Expert Links",
-            )
-            self._scheduler.add_job(
                 self._scheduled_tier2,
                 "interval",
                 hours=settings.TIER2_SCHEDULE_HOURS,
@@ -89,20 +81,6 @@ class IngestionOrchestrator:
             # schedule window. Without this guard, every Railway redeploy re-fires
             # all three tiers (which are weekly), hammering the Anthropic API.
             overall_start = time.time()
-
-            # Phase A: Tier 1 (expert links, local file, fast)
-            t1_start = time.time()
-            if self._should_run_tier("tier1_expert", settings.TIER1_SCHEDULE_HOURS):
-                t1_ingested = await self._run_tier1_safe()
-                t1_end = time.time()
-                logger.info(f"⏱️ TIMING: Tier 1 ingestion took {(t1_end - t1_start)*1000:.0f}ms ({t1_ingested} new articles)")
-
-                warm1_start = time.time()
-                await self._warm_content_safe(new_articles_ingested=t1_ingested)
-                warm1_end = time.time()
-                logger.info(f"⏱️ TIMING: Content warming (post-T1) took {(warm1_end - warm1_start)*1000:.0f}ms")
-            else:
-                logger.info("Tier 1: skipping initial run — last completion is within schedule window")
 
             # Phase B: Tier 2 (luminary RSS) - generates rich content per-article inline
             t2_start = time.time()
@@ -150,11 +128,6 @@ class IngestionOrchestrator:
 
     # ── Scheduled wrappers (tier + warming) ────────────────────────
 
-    async def _scheduled_tier1(self):
-        """Scheduled Tier 1: run ingestion then warm storyboards."""
-        ingested = await self._run_tier1_safe()
-        await self._warm_content_safe(new_articles_ingested=ingested)
-
     async def _scheduled_tier2(self):
         """Scheduled Tier 2: run ingestion then warm storyboards."""
         ingested = await self._run_tier2_safe()
@@ -166,14 +139,6 @@ class IngestionOrchestrator:
         await self._warm_content_safe(new_articles_ingested=ingested)
 
     # ── Tier execution wrappers (safe, with error handling) ──────────
-
-    async def _run_tier1_safe(self) -> int:
-        """Run Tier 1 (expert links) with error handling. Returns articles ingested."""
-        try:
-            return await self.run_tier1()
-        except Exception as e:
-            logger.error(f"Tier 1 run failed: {e}")
-            return 0
 
     async def _run_tier2_safe(self) -> int:
         """Run Tier 2 (luminary RSS) with error handling. Returns articles ingested."""
@@ -277,58 +242,6 @@ class IngestionOrchestrator:
             logger.info("Content warming complete")
         except Exception as e:
             logger.error(f"Content warming failed: {e}")
-
-    # ── Tier 1: Expert Links (existing pipeline, wrapped) ────────────
-
-    async def run_tier1(self) -> int:
-        """
-        Run Tier 1: Expert links file ingestion.
-        Wraps the existing smart_ingest_expert_links() pipeline.
-        Runs in a thread to avoid blocking the event loop.
-        Returns number of articles ingested.
-        """
-        run = self._create_run("tier1_expert")
-        try:
-            logger.info("Tier 1: Starting expert links ingestion...")
-
-            from app.services.markdown_ingestion_service import get_expert_links_filepath
-            from app.tasks.ingestion_tasks import smart_ingest_expert_links
-
-            try:
-                expert_links_path = get_expert_links_filepath("auto")
-            except FileNotFoundError:
-                logger.info("Tier 1: No expert links file found, skipping")
-                self._complete_run(run, articles_found=0, articles_ingested=0)
-                return 0
-
-            # smart_ingest_expert_links is async but internally synchronous,
-            # so we run it in a thread to avoid blocking the event loop.
-            def _run_sync():
-                import asyncio
-                loop = asyncio.new_event_loop()
-                try:
-                    return loop.run_until_complete(smart_ingest_expert_links(expert_links_path))
-                finally:
-                    loop.close()
-
-            result = await asyncio.to_thread(_run_sync)
-            logger.info(f"Tier 1 complete: {result.get('message', 'done')}")
-
-            # Update run tracking with quality pipeline stats
-            created = result.get("total_created", 0)
-            skipped = result.get("total_skipped", 0)
-            found = created + skipped
-            self._complete_run(
-                run,
-                articles_found=found,
-                articles_ingested=created,
-            )
-            return created
-
-        except Exception as e:
-            logger.error(f"Tier 1 failed: {e}")
-            self._fail_run(run, str(e))
-            return 0
 
     # ── Tier 2: Luminaries RSS Feeds ─────────────────────────────────
 

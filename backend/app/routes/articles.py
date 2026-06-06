@@ -13,9 +13,7 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.models.article import Article, ExpertNote
 from app.services.ingestion_service import ingest_url, validate_url
-from app.services.markdown_ingestion_service import append_to_expert_links_md
 from app.services.industries_config import IndustriesConfig
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +50,6 @@ async def create_expert_article(
     2. Checks if article already exists
     3. Ingests content from URL
     4. Creates Article and ExpertNote records
-    5. Optionally appends to expert-links.md
     """
     
     url_str = str(article_data.url)
@@ -120,23 +117,7 @@ async def create_expert_article(
         
         db.add(expert_note)
         db.commit()
-        
-        # Optionally append to expert-links.md (if configured)
-        expert_links_path = getattr(settings, 'EXPERT_LINKS_MD_PATH', None)
-        if expert_links_path and article_data.notes:
-            try:
-                append_to_expert_links_md(
-                    filepath=expert_links_path,
-                    url=url_str,
-                    title=ingestion_result.get('title', 'Untitled'),
-                    notes=article_data.notes,
-                    priority=article_data.priority,
-                    category=article_data.category
-                )
-                logger.info(f"Appended article to expert-links.md: {url_str}")
-            except Exception as e:
-                logger.warning(f"Failed to append to expert-links.md: {e}")
-        
+
         logger.info(f"Successfully created article {article_id} from URL: {url_str}")
         
         return ExpertArticleResponse(

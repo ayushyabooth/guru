@@ -1,0 +1,26 @@
+# Build-context hygiene — keep the Docker/Railway upload small and reproducible.
+# The Dockerfile reinstalls deps from requirements.txt, so the local venv must
+# never be shipped (it is macOS-native and ~850MB incl. torch).
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.claude/
+tests/
+*.db
+*.db-shm
+*.db-wal
+.db-reset-log
+*.log
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+.DS_Store
+node_modules/

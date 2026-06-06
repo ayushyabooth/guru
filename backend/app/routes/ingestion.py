@@ -138,10 +138,8 @@ async def trigger_ingestion(tier: str, current_user: User = Depends(get_current_
     Use GET /status to check progress.
     """
     valid_tiers = {
-        "tier1": "tier1_expert",
         "tier2": "tier2_luminary",
         "tier3": "tier3_discovery",
-        "tier1_expert": "tier1_expert",
         "tier2_luminary": "tier2_luminary",
         "tier3_discovery": "tier3_discovery",
     }
@@ -150,16 +148,14 @@ async def trigger_ingestion(tier: str, current_user: User = Depends(get_current_
     if not normalized_tier:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid tier '{tier}'. Use: tier1, tier2, tier3",
+            detail=f"Invalid tier '{tier}'. Use: tier2, tier3",
         )
 
     try:
         from app.services.ingestion_orchestrator import IngestionOrchestrator
         orchestrator = IngestionOrchestrator.get_instance()
 
-        if normalized_tier == "tier1_expert":
-            asyncio.create_task(orchestrator._scheduled_tier1())
-        elif normalized_tier == "tier2_luminary":
+        if normalized_tier == "tier2_luminary":
             asyncio.create_task(orchestrator._scheduled_tier2())
         elif normalized_tier == "tier3_discovery":
             asyncio.create_task(orchestrator._scheduled_tier3())

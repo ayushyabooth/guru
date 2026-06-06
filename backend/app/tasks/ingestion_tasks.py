@@ -1,8 +1,6 @@
 """
 Celery tasks for background article ingestion and processing
 """
-import asyncio
-import os
 import uuid
 from datetime import datetime
 from typing import List, Dict
@@ -17,13 +15,6 @@ from app.services.ingestion_service import ingest_url
 from app.services.image_scraping_service import ImageScrapingService
 from app.services.rich_summary_service import RichSummaryService
 from app.models.article import Article, ExpertNote
-from app.models.ingestion import IngestionStatus
-from app.services.csv_ingestion_service import parse_expert_links_csv
-from app.services.ingestion_state_service import IngestionStateService
-from app.services.markdown_ingestion_service import (
-    parse_expert_links_md_with_state,
-    get_expert_links_filepath
-)
 from app.services.industries_config import IndustriesConfig
 from app.services.content_quality_service import ContentQualityService
 
@@ -31,78 +22,6 @@ logger = logging.getLogger(__name__)
 
 # Create a session factory for background tasks
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def load_expert_links_from_md(filepath: str = "auto") -> Dict:
-    """
-    Load expert links from markdown file and queue ingestion tasks.
-
-    Args:
-        filepath: Path to expert-links.md file, or "auto" to auto-detect latest
-
-    Returns:
-        Dictionary with processing results
-    """
-    result = {
-        'processed': 0,
-        'skipped': 0,
-        'errors': 0,
-        'queued_for_ingestion': 0,
-        'file_used': None
-    }
-
-    # Auto-detect the file path
-    try:
-        actual_filepath = get_expert_links_filepath(filepath)
-        result['file_used'] = actual_filepath
-    except FileNotFoundError as e:
-        logger.warning(str(e))
-        return result
-
-    if not os.path.exists(actual_filepath):
-        logger.warning(f"Expert links file not found: {actual_filepath}")
-        return result
-
-    filepath = actual_filepath  # Use the resolved path
-    
-    # Parse the CSV file
-    articles = parse_expert_links_csv(filepath)
-    logger.info(f"Found {len(articles)} articles in {filepath}")
-    
-    db = SessionLocal()
-    try:
-        for article_data in articles:
-            url = article_data['url']
-            result['processed'] += 1
-            
-            # Check if article already exists
-            existing_article = db.query(Article).filter(Article.url == url).first()
-            if existing_article:
-                logger.debug(f"Article already exists, skipping: {url}")
-                result['skipped'] += 1
-                continue
-            
-            # Queue ingestion task
-            try:
-                ingest_article(
-                    url=url,
-                    notes=article_data.get('notes'),
-                    priority=article_data.get('priority', 'Normal'),
-                    category=article_data.get('category', 'General'),
-                    article_data=article_data
-                )
-                result['queued_for_ingestion'] += 1
-                logger.info(f"Queued article for ingestion: {url}")
-                
-            except Exception as e:
-                logger.error(f"Error queuing article {url}: {e}")
-                result['errors'] += 1
-    
-    finally:
-        db.close()
-    
-    logger.info(f"Expert links processing complete: {result}")
-    return result
 
 
 def _get_expiration_settings() -> tuple:
@@ -194,189 +113,6 @@ def cleanup_expired_articles(db, expiration_days: int = None) -> Dict:
     except Exception as e:
         db.rollback()
         logger.error(f"Error during expired article cleanup: {e}")
-
-    return result
-
-
-def find_new_urls_in_file(filepath: str, db) -> List[str]:
-    """
-    Find expert-link URLs that have not yet been ingested into the articles table.
-    Prefers the ExpertLink DB table (survives Railway redeploys) and falls back to
-    the filesystem file only when the DB table is empty.
-
-    Args:
-        filepath: Path to the expert links file (used as fallback when DB is empty)
-        db: Database session
-
-    Returns:
-        List of new URLs not yet in the articles table
-    """
-    from app.models.article import ExpertLink
-    from app.services.csv_ingestion_service import parse_expert_links_csv, get_expert_links_from_db
-
-    try:
-        # Prefer DB table so ingestion survives ephemeral-filesystem redeploys
-        db_links = db.query(ExpertLink.url).all()
-        if db_links:
-            curated_urls = {row[0] for row in db_links}
-        else:
-            # DB empty — fall back to file (first-ever run before seeding completes)
-            try:
-                actual_filepath = get_expert_links_filepath(filepath)
-                articles = parse_expert_links_csv(actual_filepath)
-                curated_urls = {art['url'] for art in articles}
-            except FileNotFoundError:
-                logger.warning("No expert links found in DB or filesystem — skipping Tier 1")
-                return []
-
-        existing_urls = {row[0] for row in db.query(Article.url).all()}
-        new_urls = curated_urls - existing_urls
-        return list(new_urls)
-
-    except Exception as e:
-        logger.error(f"Error finding new expert-link URLs: {e}")
-        return []
-
-
-async def smart_ingest_expert_links(filepath: str = "auto") -> Dict:
-    """
-    Truly smart ingestion that:
-    1. Checks for new URLs in the file (not just file hash)
-    2. Ingests only new articles
-    3. Auto-deletes expired articles based on config
-
-    This runs on every startup and will:
-    - Skip if no new URLs are found
-    - Ingest only new URLs if some are missing from DB
-    - Clean up expired articles based on article_expiration_days config
-
-    Args:
-        filepath: Path to the expert-links.md file, or "auto" to auto-detect latest
-
-    Returns:
-        Dictionary with ingestion results and timing information
-    """
-    import time
-    start_time = time.time()
-
-    result = {
-        'status': 'success',
-        'action': 'unknown',
-        'duration_seconds': 0,
-        'total_created': 0,
-        'total_updated': 0,
-        'total_skipped': 0,
-        'total_expired_deleted': 0,
-        'errors': 0,
-        'message': ''
-    }
-
-    db = SessionLocal()
-
-    try:
-        logger.info(f"🔍 Starting smart ingestion check for {filepath}")
-
-        # Step 1: Clean up expired articles first
-        expiration_days, auto_cleanup = _get_expiration_settings()
-        if auto_cleanup:
-            logger.info(f"🗑️ Checking for expired articles (older than {expiration_days} days)...")
-            cleanup_result = cleanup_expired_articles(db, expiration_days)
-            result['total_expired_deleted'] = cleanup_result['deleted_articles']
-            if cleanup_result['deleted_articles'] > 0:
-                logger.info(f"✅ Cleaned up {cleanup_result['deleted_articles']} expired articles")
-
-        # Step 2: Check for new URLs in the file (not just file hash)
-        new_urls = find_new_urls_in_file(filepath, db)
-
-        if not new_urls:
-            # No new URLs found - nothing to ingest
-            total_in_db = db.query(Article).count()
-            result.update({
-                'action': 'skipped',
-                'message': f'No new articles to ingest. {total_in_db} articles already in database.',
-                'total_skipped': total_in_db
-            })
-            logger.info(f"✅ No new articles found - {total_in_db} articles already ingested")
-            return result
-
-        # New URLs found - proceed with ingestion
-        logger.info(f"📰 Found {len(new_urls)} new articles to ingest")
-
-        # Create new ingestion state
-        ingestion_state = IngestionStateService.create_ingestion_state(filepath, db)
-
-        # Update state to in_progress
-        IngestionStateService.update_ingestion_state(
-            str(ingestion_state.id),
-            IngestionStatus.IN_PROGRESS,
-            db=db
-        )
-
-        try:
-            # Parse and ingest with state tracking
-            # This will automatically skip existing articles
-            ingestion_result = parse_expert_links_md_with_state(
-                filepath,
-                str(ingestion_state.id),
-                db
-            )
-
-            # Update result
-            result.update({
-                'action': 'ingested',
-                'total_created': ingestion_result['created'],
-                'total_updated': ingestion_result['updated'],
-                'total_skipped': ingestion_result['skipped'],
-                'errors': ingestion_result['errors'],
-                'message': f"Ingested {ingestion_result['created']} new articles, skipped {ingestion_result['skipped']} existing"
-            })
-
-            if result['total_expired_deleted'] > 0:
-                result['message'] += f", deleted {result['total_expired_deleted']} expired"
-
-            # Update state to completed
-            total_articles = ingestion_result['created'] + ingestion_result['updated']
-            IngestionStateService.update_ingestion_state(
-                str(ingestion_state.id),
-                IngestionStatus.COMPLETED,
-                total_articles=total_articles,
-                db=db
-            )
-
-            logger.info(f"✅ Smart ingestion completed: {result['message']}")
-
-        except Exception as e:
-            # Update state to failed
-            error_msg = str(e)
-            IngestionStateService.update_ingestion_state(
-                str(ingestion_state.id),
-                IngestionStatus.FAILED,
-                error_message=error_msg,
-                db=db
-            )
-
-            result.update({
-                'status': 'failed',
-                'action': 'failed',
-                'message': f'Ingestion failed: {error_msg}',
-                'errors': 1
-            })
-
-            logger.error(f"❌ Smart ingestion failed: {error_msg}")
-            raise
-
-    except Exception as e:
-        result.update({
-            'status': 'failed',
-            'action': 'failed',
-            'message': f'Smart ingestion error: {str(e)}',
-            'errors': 1
-        })
-        logger.error(f"❌ Smart ingestion error: {e}")
-
-    finally:
-        result['duration_seconds'] = round(time.time() - start_time, 2)
-        db.close()
 
     return result
 
@@ -703,10 +439,6 @@ def cleanup_failed_ingestions(days_old: int = 7) -> Dict:
 
 
 # Celery task decorators would be added in production:
-# @celery_app.task(bind=True, max_retries=3)
-# def load_expert_links_from_md_task(self, filepath: str):
-#     return load_expert_links_from_md(filepath)
-
 # @celery_app.task(bind=True, max_retries=3)
 # def ingest_article_task(self, url: str, notes: str = None, priority: str = "Normal", category: str = "General"):
 #     return ingest_article(url, notes, priority, category)

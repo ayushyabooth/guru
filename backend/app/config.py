@@ -63,14 +63,10 @@ class Settings(BaseSettings):
     # Signup gating
     SIGNUP_INVITE_CODES: str = "GURU2026"  # comma-separated invite codes
 
-    # Expert links directory (empty = auto-detect local path)
-    EXPERT_LINKS_DIR: str = ""
-    
     # Article filtering
     ARTICLE_TIME_WINDOW_DAYS: int = 14  # 2 weeks - articles older than this are excluded from feeds
 
-    # 3-Tier Ingestion Settings (Tier 1=Expert Links, Tier 2=Luminary RSS, Tier 3=Web Discovery)
-    TIER1_SCHEDULE_HOURS: int = 168  # Weekly (was 2h — $50/day cost)
+    # Ingestion Settings (Tier 2=Luminary RSS, Tier 3=Web Discovery)
     TIER2_SCHEDULE_HOURS: int = 168  # Weekly (was 6h)
     TIER3_SCHEDULE_HOURS: int = 168  # Weekly (was 12h)
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
@@ -79,7 +75,7 @@ class Settings(BaseSettings):
     MAX_ARTICLES_PER_INGESTION_RUN: int = 50  # Hard cap on articles processed per ingestion run
 
     # Content Quality Pipeline
-    QUALITY_GATE_TIER1: float = 0.35  # Expert links quality threshold
+    QUALITY_GATE_TIER1: float = 0.35  # Legacy tier1 quality threshold (kept for existing tier1 rows)
     QUALITY_GATE_TIER2: float = 0.35  # Luminary quality threshold
     QUALITY_GATE_TIER3: float = 0.50  # Web discovery quality threshold
     QUALITY_MIN_WORD_COUNT: int = 150

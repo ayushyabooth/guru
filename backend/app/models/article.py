@@ -65,9 +65,9 @@ class ExpertNote(Base):
 
 class ExpertLink(Base):
     """
-    Stores the curated list of expert (Tier 1) article URLs in the database.
-    Survives Railway redeploys (unlike the filesystem-based expert-links.md).
-    Seeded from expert-links.md on first startup if the table is empty.
+    Legacy DB table (kept for schema/back-compat; the curated-links ingestion
+    pathway that populated it has been decommissioned). No code writes to this
+    table any more — it is retained only so existing rows and the schema survive.
     """
     __tablename__ = "expert_links"
 
