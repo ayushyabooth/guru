@@ -18,7 +18,8 @@ import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
 import FeedTabBar from '../../components/Home/FeedTabBar';
-import { removeAuthToken } from '../../utils/auth';
+import { removeAuthToken, getAuthToken } from '../../utils/auth';
+import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
 const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
@@ -360,6 +361,21 @@ function HomeContent() {
   const queryClient = useQueryClient();
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
+  // GUR-13: this week's One Commitment for the reminder card
+  const [commitment, setCommitment] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/me/commitment`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        const text = data?.commitment?.commitment_text;
+        if (text) setCommitment(text);
+      } catch { /* non-blocking */ }
+    })();
+  }, []);
   const COLORS = useHomeColors();
   const { toggleTheme, isDark } = useTheme();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
@@ -691,7 +707,13 @@ function HomeContent() {
           </View>
         </View>
 
-        {/* TODO: Commitment Reminder Card — shows last week's commitment (Step 8) */}
+        {/* GUR-13: Commitment Reminder Card — this week's One Commitment from Recap */}
+        {commitment && (
+          <View style={{ marginHorizontal: Spacing.md, marginTop: Spacing.sm, padding: Spacing.md, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(251,146,60,0.35)', backgroundColor: 'rgba(251,146,60,0.10)' }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#FB923C', marginBottom: 4, letterSpacing: 0.5 }}>YOUR COMMITMENT THIS WEEK</Text>
+            <Text style={{ fontSize: 15, lineHeight: 21, color: COLORS.textPrimary }}>{commitment}</Text>
+          </View>
+        )}
 
         {/* Last Updated */}
         {displayMetrics.lastUpdated && (
