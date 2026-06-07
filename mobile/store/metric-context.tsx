@@ -21,6 +21,12 @@ export interface MetricsData {
     weeklyGoal: number;
   };
   streak: number;
+  stats: {
+    articlesRead: number;
+    articlesSaved: number;
+    filtersExplored: number;
+    topTopics: { name: string; count: number }[];
+  };
   lastUpdated: string | null;
 }
 
@@ -66,6 +72,7 @@ const initialState: MetricState = {
       weeklyGoal: 60,
     },
     streak: 0,
+    stats: { articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [] },
     lastUpdated: null,
   },
   profile: null,

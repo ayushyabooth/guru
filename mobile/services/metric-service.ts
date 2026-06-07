@@ -31,6 +31,12 @@ export interface MetricsResponse {
       weeklyGoal: number;
     };
     streak: number;
+    stats: {
+      articlesRead: number;
+      articlesSaved: number;
+      filtersExplored: number;
+      topTopics: { name: string; count: number }[];
+    };
     lastUpdated: string;
   };
   profile: {
@@ -118,6 +124,12 @@ class MetricService {
             weeklyGoal: profileData.recap_weekly_goal_minutes || 60,
           },
           streak: metricsData.current_streak || 0,
+          stats: {
+            articlesRead: metricsData.articles_read || 0,
+            articlesSaved: metricsData.articles_saved || 0,
+            filtersExplored: metricsData.filters_explored || 0,
+            topTopics: metricsData.top_topics || [],
+          },
           lastUpdated: new Date().toISOString(),
         },
         profile: {
@@ -169,6 +181,7 @@ class MetricService {
         divein: { dailyProgress: 0, dailyGoal: 30, weeklyProgress: 0, weeklyGoal: 120 },
         recap: { status: 'not_started', weeklyProgress: 0, weeklyGoal: 60 },
         streak: 0,
+        stats: { articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [] },
         lastUpdated: new Date().toISOString(),
       },
       profile: {

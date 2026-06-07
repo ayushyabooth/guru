@@ -530,19 +530,20 @@ function HomeContent() {
               />
             );
           })()}
+          {/* GUR-12: legend items are tappable → navigate to each ring's section */}
           <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <TouchableOpacity onPress={() => router.push('/catchup')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="button" accessibilityLabel="Go to Catch-up">
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.catchup.primary }} />
               <Text style={{ ...Typography.labelSmall, color: RingColors.catchup.primary }}>Catch-up</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/divein')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="button" accessibilityLabel="Go to Dive-in">
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.divein.primary }} />
               <Text style={{ ...Typography.labelSmall, color: RingColors.divein.primary }}>Dive-in</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/recap')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} accessibilityRole="button" accessibilityLabel="Go to Recap">
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RingColors.recap.primary }} />
               <Text style={{ ...Typography.labelSmall, color: RingColors.recap.primary }}>Recap</Text>
-            </View>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity
             onPress={handleChangeGoals}
@@ -578,6 +579,25 @@ function HomeContent() {
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#FB923C' }}>🔥 {displayMetrics.streak} day{displayMetrics.streak === 1 ? '' : 's'}</Text>
               </View>
             )}
+          </View>
+          {/* GUR-13: weekly activity stat chips (data from /me/metrics) */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, marginBottom: 4 }}>
+            {[
+              { n: displayMetrics.stats.articlesRead, l: 'read' },
+              { n: displayMetrics.stats.articlesSaved, l: 'saved' },
+              { n: displayMetrics.stats.filtersExplored, l: 'filters' },
+            ].map((s, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>{s.n}</Text>
+                <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>{s.l}</Text>
+              </View>
+            ))}
+            {displayMetrics.stats.topTopics[0] ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
+                <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>Top</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textPrimary }}>{displayMetrics.stats.topTopics[0].name}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={[styles.goalsCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
             {(() => {

@@ -61,6 +61,11 @@ class MetricsSummaryResponse(BaseModel):
     total_recap_sessions: int
     current_streak: int
     recap_journey_status: str | None = None
+    # GUR-13: weekly activity stats for the Home dashboard
+    articles_read: int = 0
+    articles_saved: int = 0
+    filters_explored: int = 0
+    top_topics: list[dict] = Field(default_factory=list)
 
 
 @router.post("/metrics/log-time", response_model=TimeLogResponse, status_code=status.HTTP_201_CREATED)
@@ -232,6 +237,42 @@ async def get_metrics_summary(
     ).order_by(RecapJourney.created_at.desc()).first()
     recap_journey_status = recap_journey.status if recap_journey else None
 
+    # GUR-13: weekly activity stats for Home dashboard (best-effort; 0 on error)
+    articles_read = 0
+    articles_saved = 0
+    filters_explored = 0
+    top_topics: list[dict] = []
+    try:
+        from app.models.interaction import UserSavedArticle
+        articles_read = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.created_at) >= week_ago,
+            TimeLog.context_id.isnot(None),
+            TimeLog.ring_type.in_(["catchup", "divein"]),
+        ).scalar() or 0
+
+        articles_saved = db.query(func.count(UserSavedArticle.id)).filter(
+            UserSavedArticle.user_id == current_user.id,
+        ).scalar() or 0
+
+        filters_explored = db.query(func.count(func.distinct(TimeLog.industry))).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.created_at) >= week_ago,
+            TimeLog.industry.isnot(None),
+        ).scalar() or 0
+
+        topic_rows = db.query(
+            TimeLog.specialization, func.count(TimeLog.id).label("cnt")
+        ).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.created_at) >= week_ago,
+            TimeLog.specialization.isnot(None),
+        ).group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
+        top_topics = [{"name": r[0], "count": int(r[1])} for r in topic_rows if r[0]]
+    except Exception:
+        # Never let stats computation break the metrics endpoint
+        pass
+
     return MetricsSummaryResponse(
         today=DailyMetricResponse(
             metric_date=today_metric.metric_date,
@@ -255,4 +296,8 @@ async def get_metrics_summary(
         total_recap_sessions=int(totals.total_recaps or 0),
         current_streak=current_streak,
         recap_journey_status=recap_journey_status,
+        articles_read=int(articles_read),
+        articles_saved=int(articles_saved),
+        filters_explored=int(filters_explored),
+        top_topics=top_topics,
     )
