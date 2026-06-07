@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
-import { chatMessages, conversationId, isChatLoading, overlayData } from '../../state';
+import { chatMessages, conversationId, isChatLoading, overlayData, pendingPrompt } from '../../state';
 import { sendChatMessage } from '../../api-client';
 import { richContent } from '../../state';
 import { guruMarkdownToHtml } from '../../format';
@@ -14,6 +14,15 @@ export default function AskGuruTab() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages.value.length]);
+
+  // A "Think about it" prompt tapped in the Summary tab lands here — auto-ask it.
+  useEffect(() => {
+    const p = pendingPrompt.value;
+    if (p && !isChatLoading.value) {
+      pendingPrompt.value = null;
+      handleSend(p);
+    }
+  }, [pendingPrompt.value]);
 
   // Show socratic prompts as initial suggestions if no chat yet
   const prompts = richContent.value?.socratic_prompts ?? [];

@@ -289,12 +289,15 @@ function getBaseStyles(): string {
          full desktop width (tabs + content were spreading edge-to-edge). */
       max-width: 760px;
       margin: 0 auto;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-top: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
-      border-radius: 16px 16px 0 0;
+      /* App EDL: dark liquid glass (matches the rest of the Guru app) instead of
+         a light sheet, so the panel reads as the same material on any page. */
+      background: linear-gradient(180deg, rgba(20,26,42,0.94) 0%, rgba(13,17,28,0.95) 100%);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.10);
+      color: #E2E8F0;
+      border-radius: 18px 18px 0 0;
       pointer-events: auto;
       transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       overflow: hidden;
@@ -315,7 +318,7 @@ function getBaseStyles(): string {
     .guru-panel-handle-bar {
       width: 36px;
       height: 4px;
-      background: #CBD5E1;
+      background: rgba(255,255,255,0.22);
       border-radius: 2px;
     }
 
@@ -330,21 +333,22 @@ function getBaseStyles(): string {
       align-items: center;
       justify-content: center;
       font-size: 14px;
-      color: #94A3B8;
-      background: #F1F5F9;
+      color: #CBD5E1;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
       cursor: pointer;
       transition: background 0.2s, color 0.2s;
       pointer-events: auto;
     }
 
     .guru-panel-close:hover {
-      background: #E2E8F0;
-      color: #475569;
+      background: rgba(255,255,255,0.16);
+      color: #FFFFFF;
     }
 
     .guru-panel-tabs {
       display: flex;
-      border-bottom: 1px solid #E2E8F0;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
       padding: 0 16px;
     }
 
@@ -360,7 +364,7 @@ function getBaseStyles(): string {
     }
 
     .guru-panel-tab.active {
-      color: #6366F1;
+      color: #A5B4FC;
       border-bottom-color: #6366F1;
     }
 
@@ -377,14 +381,14 @@ function getBaseStyles(): string {
     .guru-section-title {
       font-size: 14px;
       font-weight: 600;
-      color: #1E293B;
+      color: #F1F5F9;
       margin-bottom: 8px;
     }
 
     .guru-section-text {
       font-size: 14px;
       line-height: 1.6;
-      color: #475569;
+      color: #CBD5E1;
     }
 
     .guru-peek-card {
@@ -452,8 +456,9 @@ function getBaseStyles(): string {
     }
 
     .guru-chat-message.assistant {
-      background: #F1F5F9;
-      color: #1E293B;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #E2E8F0;
       border-bottom-left-radius: 4px;
     }
 
@@ -463,24 +468,27 @@ function getBaseStyles(): string {
     .guru-md .guru-md-h { font-weight: 700; margin: 4px 0; line-height: 1.45; }
     .guru-md .guru-md-li { margin: 0 0 4px 2px; line-height: 1.5; }
     .guru-md strong { font-weight: 700; }
-    .guru-md code { font-family: ui-monospace, monospace; background: rgba(15,23,42,0.06); padding: 0 4px; border-radius: 4px; font-size: 0.92em; }
+    .guru-md code { font-family: ui-monospace, monospace; background: rgba(255,255,255,0.12); padding: 0 4px; border-radius: 4px; font-size: 0.92em; }
 
     .guru-chat-input-row {
       display: flex;
       gap: 8px;
       padding-top: 8px;
-      border-top: 1px solid #E2E8F0;
+      border-top: 1px solid rgba(255,255,255,0.10);
     }
 
     .guru-chat-input {
       flex: 1;
       padding: 10px 14px;
-      border: 1px solid #E2E8F0;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: #F1F5F9;
       border-radius: 12px;
       font-size: 14px;
       outline: none;
       pointer-events: auto;
     }
+    .guru-chat-input::placeholder { color: #64748B; }
 
     .guru-chat-input:focus {
       border-color: #6366F1;
@@ -509,8 +517,9 @@ function getBaseStyles(): string {
 
     .guru-follow-up-chip {
       padding: 6px 12px;
-      background: #EEF2FF;
-      color: #6366F1;
+      background: rgba(99,102,241,0.18);
+      border: 1px solid rgba(99,102,241,0.35);
+      color: #A5B4FC;
       border-radius: 16px;
       font-size: 12px;
       cursor: pointer;
@@ -519,7 +528,7 @@ function getBaseStyles(): string {
     }
 
     .guru-follow-up-chip:hover {
-      background: #E0E7FF;
+      background: rgba(99,102,241,0.28);
     }
 
     .guru-quotes-scroll {
@@ -533,21 +542,22 @@ function getBaseStyles(): string {
       flex-shrink: 0;
       width: 200px;
       padding: 12px;
-      background: #F8FAFC;
+      background: rgba(255,255,255,0.06);
       border-radius: 8px;
       border-left: 3px solid #6366F1;
       font-size: 13px;
       font-style: italic;
-      color: #475569;
+      color: #CBD5E1;
       line-height: 1.4;
     }
 
     .guru-socratic-prompt {
       padding: 10px 14px;
-      background: #FEF3C7;
-      border-radius: 8px;
+      background: rgba(251,191,36,0.12);
+      border: 1px solid rgba(251,191,36,0.28);
+      border-radius: 10px;
       font-size: 13px;
-      color: #92400E;
+      color: #FCD34D;
       margin-bottom: 8px;
       cursor: pointer;
       pointer-events: auto;
@@ -555,7 +565,7 @@ function getBaseStyles(): string {
     }
 
     .guru-socratic-prompt:hover {
-      background: #FDE68A;
+      background: rgba(251,191,36,0.2);
     }
 
     .guru-loading {

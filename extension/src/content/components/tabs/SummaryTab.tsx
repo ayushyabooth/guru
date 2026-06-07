@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { richContent, overlayData } from '../../state';
+import { richContent, overlayData, activeTab, pendingPrompt } from '../../state';
 
 export default function SummaryTab() {
   const content = richContent.value;
@@ -37,8 +37,18 @@ export default function SummaryTab() {
         <div class="guru-section">
           <div class="guru-section-title">Spotlight Quotes</div>
           <div class="guru-quotes-scroll">
+            {/* Tapping a quote jumps to the Insights tab where the deeper
+                reflections live. */}
             {content.spotlight_quotes.map((quote, i) => (
-              <div key={i} class="guru-quote-card">{quote}</div>
+              <div
+                key={i}
+                class="guru-quote-card guru-interactive"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { activeTab.value = 1; }}
+                title="View insights"
+              >
+                {quote}
+              </div>
             ))}
           </div>
         </div>
@@ -47,8 +57,15 @@ export default function SummaryTab() {
       {content.socratic_prompts && content.socratic_prompts.length > 0 && (
         <div class="guru-section">
           <div class="guru-section-title">Think about it</div>
+          {/* Tapping a prompt jumps straight into the Ask Guru flow and asks it. */}
           {content.socratic_prompts.map((prompt, i) => (
-            <div key={i} class="guru-socratic-prompt">{prompt}</div>
+            <div
+              key={i}
+              class="guru-socratic-prompt"
+              onClick={() => { pendingPrompt.value = prompt; activeTab.value = 3; }}
+            >
+              {prompt}
+            </div>
           ))}
         </div>
       )}

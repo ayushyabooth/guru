@@ -18,6 +18,9 @@ export const activePeekCard = signal<Annotation | null>(null);
 export const chatMessages = signal<ChatMessage[]>([]);
 export const conversationId = signal<string | null>(null);
 export const isChatLoading = signal(false);
+// Set to a question to jump to Ask Guru and auto-send it (e.g. tapping a
+// "Think about it" prompt in the Summary tab). AskGuruTab consumes + clears it.
+export const pendingPrompt = signal<string | null>(null);
 
 // Highlights (loaded from backend UserAnnotation, persisted via /articles/{id}/annotations)
 export const highlights = signal<Array<{ id?: string; text: string; note?: string; timestamp: string }>>([]);
