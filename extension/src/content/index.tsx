@@ -191,12 +191,17 @@ function getBaseStyles(): string {
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      background: #6366F1;
+      /* Liquid glass: translucent dark glass + blur + gradient border + glow,
+         so the Guru triskelion mark reads as the brand on a glassy surface. */
+      background: linear-gradient(145deg, rgba(30,38,60,0.74) 0%, rgba(15,20,35,0.64) 100%);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 8px 24px rgba(10,14,23,0.45), 0 0 18px rgba(99,102,241,0.26), inset 0 1px 0 rgba(255,255,255,0.25);
       transition: transform 0.2s, box-shadow 0.2s, bottom 0.3s;
       pointer-events: auto;
       z-index: 10;
@@ -204,7 +209,7 @@ function getBaseStyles(): string {
 
     .guru-fab:hover {
       transform: scale(1.08);
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 10px 28px rgba(10,14,23,0.5), 0 0 28px rgba(99,102,241,0.42), inset 0 1px 0 rgba(255,255,255,0.3);
     }
 
     .guru-fab-badge {

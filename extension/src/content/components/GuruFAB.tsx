@@ -24,10 +24,12 @@ export default function GuruFAB({ count, visible, onClick }: GuruFABProps) {
       title={isPanelOpen ? 'Close Guru panel' : 'Open Guru insights'}
       style={{ bottom: `${bottomPx}px` }}
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2L2 7l10 5 10-5-10-5z" />
-        <path d="M2 17l10 5 10-5" />
-        <path d="M2 12l10 5 10-5" />
+      {/* Guru triskelion mark — three interlocking rings in the brand accents
+          (Catch-up blue · Dive-in pink · Recap orange). */}
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8.4" r="5" stroke="#38BDF8" stroke-width="1.7" />
+        <circle cx="8.1" cy="14.6" r="5" stroke="#EC4899" stroke-width="1.7" />
+        <circle cx="15.9" cy="14.6" r="5" stroke="#FB923C" stroke-width="1.7" />
       </svg>
       {count > 0 && <span class="guru-fab-badge">{count}</span>}
     </button>
