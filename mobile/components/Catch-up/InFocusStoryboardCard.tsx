@@ -31,6 +31,7 @@ import {
 import Icon from '../ui/Icon';
 import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
+import { openExternalTab } from '../../utils/openExternalTab';
 
 /** Convert raw slug like "food_beverage" → "Food & Beverage" */
 function formatIndustryLabel(slug: string | undefined | null): string {
@@ -177,14 +178,11 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
   const [selectedQuestion, setSelectedQuestion] = useState('');
 
   const handleStartReading = (articleId: string) => {
-    // On web: open article in new tab (user gesture context avoids popup blocker)
-    if (Platform.OS === 'web') {
-      const articles = getCarouselArticles();
-      const article = articles.find(a => a.id === articleId);
-      if (article?.url) {
-        window.open(article.url, '_blank');
-      }
-    }
+    // Open the source in a new tab FIRST (synthetic anchor-click survives the
+    // SPA navigation below — window.open did not, so the tab silently failed to
+    // open and the user had to hit "Reopen"). Then navigate to the in-app reader.
+    const article = getCarouselArticles().find(a => a.id === articleId);
+    openExternalTab(article?.url);
     router.push(`/article/${articleId}?source=catchup`);
   };
 

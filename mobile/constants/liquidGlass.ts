@@ -593,9 +593,15 @@ export const getGlassStyle = (
   const fill = mode === 'dark' ? t.opacityDark : t.opacityLight;
   const border = mode === 'dark' ? t.borderOpacityDark : t.borderOpacityLight;
   const shadowOp = mode === 'dark' ? t.shadowOpacityDark : t.shadowOpacityLight;
-  // In dark mode the glass panel is white-translucent; in light it's still white-translucent but denser.
+  // Dark mode uses a DARK navy-translucent fill (not white) so glass surfaces
+  // blend with the dark UI as true liquid glass instead of reading as bright
+  // gray bands (GUR-218 follow-up / reader polish). opacityDark (0.14–0.40)
+  // maps to a dark fill of ~0.54–0.80 — subtle tiers stay see-through, chrome
+  // bars get dense enough for text legibility. Light mode keeps white glass.
   const base: ViewStyle = {
-    backgroundColor: `rgba(255,255,255,${fill})`,
+    backgroundColor: mode === 'dark'
+      ? `rgba(13,17,28,${Math.min(0.85, 0.4 + fill)})`
+      : `rgba(255,255,255,${fill})`,
     borderWidth: 1.5,
     borderColor: `rgba(255,255,255,${border})`,
     borderRadius: BorderRadius.lg,

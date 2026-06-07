@@ -5,6 +5,7 @@ import WebViewReader, { OverlayArticleData } from '../../components/Reader/WebVi
 import { RelatedArticle } from '../../components/Reader/RelatedArticles';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
+import { openExternalTab } from '../../utils/openExternalTab';
 import { CatchupService } from '../../services/article-service';
 import { useTimeTracking } from '../../hooks/useTimeTracking';
 import DarkThemeColors from '../../constants/darkTheme';
@@ -443,7 +444,7 @@ export default function ArticleDetailScreen() {
         </Text>
         <TouchableOpacity
           style={[styles.webBannerBtn, { backgroundColor: ACCENT }]}
-          onPress={() => window.open(overlayArticle.url, '_blank')}
+          onPress={() => openExternalTab(overlayArticle.url)}
         >
           <Text style={styles.webBannerBtnText}>Reopen Article Tab</Text>
         </TouchableOpacity>
@@ -756,7 +757,7 @@ export default function ArticleDetailScreen() {
             styles.webActionBtnRow,
             { borderColor: TC.glassBorder, borderWidth: 1, borderRadius: BorderRadius.lg },
           ]}
-          onPress={() => window.open(overlayArticle.url, '_blank')}
+          onPress={() => openExternalTab(overlayArticle.url)}
         >
           <Icon name="open-in-new" size={14} color={TC.textSecondary} />
           <Text style={[styles.webActionBtnText, { color: TC.textSecondary }]}>Open Article</Text>

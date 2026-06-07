@@ -22,6 +22,7 @@ import Icon from '../ui/Icon';
 import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CatchupService } from '../../services/article-service';
+import { openExternalTab } from '../../utils/openExternalTab';
 
 const { width } = Dimensions.get('window');
 
@@ -107,12 +108,11 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   };
 
   const handleDiveIn = () => {
+    // Open the source tab FIRST (synthetic anchor-click survives the SPA nav
+    // below — window.open got blocked by the immediate navigation), then mark
+    // engaged + go to the in-app reader.
+    openExternalTab(article.url);
     onDiveIn(article.id);
-    // On web: open article in new tab (must be in user gesture context to avoid popup blocker)
-    // then navigate to the reading state page
-    if (Platform.OS === 'web' && article.url) {
-      window.open(article.url, '_blank');
-    }
     router.push(`/article/${article.id}?source=divein`);
   };
 
