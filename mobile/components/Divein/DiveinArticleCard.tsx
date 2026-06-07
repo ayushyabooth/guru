@@ -108,12 +108,12 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
   };
 
   const handleDiveIn = () => {
-    // Open the source tab FIRST (synthetic anchor-click survives the SPA nav
-    // below — window.open got blocked by the immediate navigation), then mark
-    // engaged + go to the in-app reader.
+    // Open the source tab FIRST (synchronously in the gesture), then DEFER the
+    // in-app navigation a task so a same-task pushState can't cancel the
+    // just-opened tab (which forced the user to hit "Reopen").
     openExternalTab(article.url);
     onDiveIn(article.id);
-    router.push(`/article/${article.id}?source=divein`);
+    setTimeout(() => router.push(`/article/${article.id}?source=divein`), 0);
   };
 
   const getBadgeConfig = () => {

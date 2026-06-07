@@ -178,12 +178,13 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
   const [selectedQuestion, setSelectedQuestion] = useState('');
 
   const handleStartReading = (articleId: string) => {
-    // Open the source in a new tab FIRST (synthetic anchor-click survives the
-    // SPA navigation below — window.open did not, so the tab silently failed to
-    // open and the user had to hit "Reopen"). Then navigate to the in-app reader.
+    // Open the source tab FIRST, synchronously in the click gesture. Then DEFER
+    // the in-app navigation to a separate task — a same-task pushState was
+    // cancelling the just-opened tab (popup-blocked), forcing the user to hit
+    // "Reopen". The setTimeout lets the new tab settle before we navigate.
     const article = getCarouselArticles().find(a => a.id === articleId);
     openExternalTab(article?.url);
-    router.push(`/article/${articleId}?source=catchup`);
+    setTimeout(() => router.push(`/article/${articleId}?source=catchup`), 0);
   };
 
   const handleSave = (articleId: string) => {

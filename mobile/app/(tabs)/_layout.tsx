@@ -92,7 +92,7 @@ function TabRingIcon({ color, progress, focused, size = 26 }: {
 }
 
 /** Breathing Triskelion for the Home tab — same rules as TabRingIcon: no disc. */
-function TabHomeIcon({ focused, size = 28, catchupProgress, diveinProgress, recapProgress }: {
+function TabHomeIcon({ focused, size = 26, catchupProgress, diveinProgress, recapProgress }: {
   focused: boolean; size?: number; catchupProgress: number; diveinProgress: number; recapProgress: number;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;

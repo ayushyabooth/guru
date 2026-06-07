@@ -6,6 +6,7 @@ import { RelatedArticle } from '../../components/Reader/RelatedArticles';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { openExternalTab } from '../../utils/openExternalTab';
+import GuruFormattedText, { cleanGuruResponse } from '../../components/ui/GuruFormattedText';
 import { CatchupService } from '../../services/article-service';
 import { useTimeTracking } from '../../hooks/useTimeTracking';
 import DarkThemeColors from '../../constants/darkTheme';
@@ -144,6 +145,25 @@ export default function ArticleDetailScreen() {
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [savedNotes, setSavedNotes] = useState<{text: string; time: string}[]>([]);
+  // Persisted user annotations (highlights + notes) for this article — loaded
+  // from the backend so they survive close/reopen (GUR-222/persistence) and can
+  // be cleanly split into Highlights vs Notes.
+  const [userAnnotations, setUserAnnotations] = useState<Array<{ id: string; highlighted_text: string; note_text: string | null }>>([]);
+  const loadUserAnnotations = React.useCallback(async () => {
+    if (!articleId) return;
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/articles/${articleId}/annotations`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setUserAnnotations(data.map((a: any) => ({ id: a.id, highlighted_text: a.highlighted_text, note_text: a.note_text ?? null })));
+      }
+    } catch { /* best-effort */ }
+  }, [articleId]);
 
   // Ask Guru state — shared between persistent bar + tab 3 history
   const [guruInput, setGuruInput] = useState('');
@@ -172,7 +192,7 @@ export default function ArticleDetailScreen() {
       });
       if (res.ok) {
         const data = await res.json();
-        setGuruMessages(prev => [...prev, { role: 'guru', text: data.response }]);
+        setGuruMessages(prev => [...prev, { role: 'guru', text: cleanGuruResponse(data.response) }]);
         if (data.conversation_id) setGuruConversationId(data.conversation_id);
       } else {
         setGuruMessages(prev => [...prev, { role: 'guru', text: 'Sorry, I had trouble answering that. Please try again.' }]);
@@ -226,6 +246,9 @@ export default function ArticleDetailScreen() {
     })();
     return () => { cancelled = true; };
   }, [articleId]);
+
+  // Load persisted highlights + notes whenever the article opens.
+  useEffect(() => { loadUserAnnotations(); }, [loadUserAnnotations]);
 
   // Reading timer for web reading state
   useEffect(() => {
@@ -441,13 +464,13 @@ export default function ArticleDetailScreen() {
         { borderRadius: BorderRadius.md, borderColor: TC.glassBorder },
       ]}>
         <Text style={[styles.webBannerText, { color: TC.textSecondary }]}>
-          The article has opened in a new tab. Read it there, then come back here for Guru insights, notes, and Q&A.
+          Opened in a new tab — read there, then come back for Guru insights, notes & Q&A.
         </Text>
         <TouchableOpacity
           style={[styles.webBannerBtn, { backgroundColor: ACCENT }]}
           onPress={() => openExternalTab(overlayArticle.url)}
         >
-          <Text style={styles.webBannerBtnText}>Reopen Article Tab</Text>
+          <Text style={styles.webBannerBtnText}>Open article ↗</Text>
         </TouchableOpacity>
       </View>
 
@@ -604,8 +627,8 @@ export default function ArticleDetailScreen() {
                     body: JSON.stringify({ highlighted_text: 'Note', note_text: noteInput, color: 'gold', start_offset: 0, end_offset: 0 }),
                   });
                   if (res.ok) {
-                    setSavedNotes(prev => [...prev, { text: noteInput, time: new Date().toLocaleTimeString() }]);
                     setNoteInput('');
+                    await loadUserAnnotations(); // refetch so the note persists + shows immediately
                   }
                 } catch (e) {
                   console.error('Failed to save note:', e);
@@ -617,27 +640,53 @@ export default function ArticleDetailScreen() {
             >
               <Text style={styles.saveNoteBtnText}>{savingNote ? 'Saving...' : 'Save Note'}</Text>
             </TouchableOpacity>
-            {savedNotes.length > 0 && (
-              <View style={{ marginTop: Spacing.lg }}>
-                <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Your Notes</Text>
-                {savedNotes.map((n, i) => (
-                  <View key={i} style={{ backgroundColor: notesBg, borderLeftWidth: 3, borderLeftColor: TC.warning, padding: Spacing.md, borderRadius: BorderRadius.sm, marginTop: Spacing.sm }}>
-                    <Text style={{ color: TC.textPrimary, fontSize: 14 }}>{n.text}</Text>
-                    <Text style={{ color: TC.textTertiary, fontSize: 12, marginTop: Spacing.xs }}>{n.time}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            {overlayArticle.annotations.length > 0 && (
-              <View style={{ marginTop: Spacing.lg }}>
-                <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Highlights</Text>
-                {overlayArticle.annotations.map((ann) => (
-                  <View key={ann.id} style={[styles.webAnnotationCard, GM.cardLight, { borderLeftColor: TC.success }]}>
-                    <Text style={[styles.webSectionText, { color: TC.textSecondary }]}>{ann.text}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
+            {(() => {
+              // Split persisted annotations: real highlighted text vs pure notes.
+              const highlights = userAnnotations.filter(a => a.highlighted_text && a.highlighted_text !== 'Note');
+              const notes = userAnnotations.filter(a => a.highlighted_text === 'Note' && a.note_text);
+              return (
+                <>
+                  {/* ── Your Highlights ── */}
+                  {highlights.length > 0 && (
+                    <View style={{ marginTop: Spacing.lg }}>
+                      <View style={styles.sectionTitleRow}>
+                        <Icon name="marker" size={16} color={RingColors.recap.primary} />
+                        <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Your Highlights</Text>
+                      </View>
+                      {highlights.map((a) => (
+                        <View key={a.id} style={{ backgroundColor: 'rgba(245,158,11,0.10)', borderLeftWidth: 3, borderLeftColor: '#F59E0B', padding: Spacing.md, borderRadius: BorderRadius.sm, marginTop: Spacing.sm }}>
+                          <Text style={{ color: TC.textPrimary, fontSize: 14, lineHeight: 20, fontStyle: 'italic' }}>“{a.highlighted_text}”</Text>
+                          {a.note_text ? (
+                            <Text style={{ color: TC.textSecondary, fontSize: 13, lineHeight: 19, marginTop: Spacing.xs }}>{a.note_text}</Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* ── Your Notes ── (clearly separated from highlights) */}
+                  {notes.length > 0 && (
+                    <View style={{ marginTop: Spacing.lg }}>
+                      <View style={styles.sectionTitleRow}>
+                        <Icon name="note-text-outline" size={16} color={RingColors.divein.primary} />
+                        <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Your Notes</Text>
+                      </View>
+                      {notes.map((a) => (
+                        <View key={a.id} style={{ backgroundColor: notesBg, borderLeftWidth: 3, borderLeftColor: TC.warning, padding: Spacing.md, borderRadius: BorderRadius.sm, marginTop: Spacing.sm }}>
+                          <Text style={{ color: TC.textPrimary, fontSize: 14, lineHeight: 20 }}>{a.note_text}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {highlights.length === 0 && notes.length === 0 && (
+                    <Text style={{ color: TC.textTertiary, fontSize: 13, marginTop: Spacing.lg, textAlign: 'center' }}>
+                      No highlights or notes yet. Highlight text on the article (via the Guru extension) or add a note above.
+                    </Text>
+                  )}
+                </>
+              );
+            })()}
           </View>
         )}
 
@@ -686,9 +735,11 @@ export default function ArticleDetailScreen() {
                     alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                   },
                 ]}>
-                  <Text style={{ color: msg.role === 'user' ? '#FFF' : TC.textPrimary, fontSize: 14, lineHeight: 20 }}>
-                    {msg.text}
-                  </Text>
+                  {msg.role === 'user' ? (
+                    <Text style={{ color: '#FFF', fontSize: 14, lineHeight: 20 }}>{msg.text}</Text>
+                  ) : (
+                    <GuruFormattedText text={msg.text} color={TC.textPrimary} accent={ACCENT} fontSize={14} />
+                  )}
                 </View>
               </View>
             ))}

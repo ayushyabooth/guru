@@ -252,8 +252,13 @@ function TriskelionCanvas({
 
   // Geometry — B2a spec
   const minimal = size <= 50;
-  // Add padding so glow blur filters don't clip at canvas edges
-  const PAD = minimal ? 10 : Math.round(size * 0.35);
+  // Add padding so glow blur filters don't clip at canvas edges. At minimal
+  // (tab) size this was 10, which made the canvas 48px for a 28px icon — 14px
+  // taller than the single-ring tabs (PlasmaBlobRing PAD 4), so the top ring's
+  // glow leaked above the floating tab bar. Match PlasmaBlobRing's PAD=4 so the
+  // Home triskelion canvas footprint equals the other tab icons and centers
+  // cleanly inside the bar.
+  const PAD = minimal ? 4 : Math.round(size * 0.35);
   const canvasSize = size + PAD * 2;
   const R = size * 0.32;       // ring radius
   const offset = size * 0.175; // center-to-ring-center distance
