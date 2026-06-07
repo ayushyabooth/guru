@@ -56,9 +56,18 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
   const activeName = routes[index]?.name ?? 'index';
   const accent = TAB_ACCENTS[activeName] ?? FALLBACK_ACCENT;
 
-  const [barWidth, setBarWidth] = useState(0);
+  const [bar, setBar] = useState({ w: 0, h: 0 });
+  const barWidth = bar.w;
   const tabCount = Math.max(routes.length, 1);
   const tabWidth = barWidth / tabCount;
+
+  // Contain the pill within the ACTUAL measured bar height. The bar's rendered
+  // height can exceed the nominal 64px once safe-area padding is applied (web +
+  // native), which made the fixed top-anchored pill protrude ABOVE the glass
+  // island ("off-axis"). Size it to a clear inset and vertically center it so it
+  // always sits cleanly inside the bar regardless of the real height.
+  const pillHeight = bar.h > 0 ? Math.min(52, Math.max(40, bar.h - 14)) : PILL_HEIGHT;
+  const pillTop = bar.h > 0 ? Math.max(0, (bar.h - pillHeight) / 2) : PILL_TOP;
 
   // Center the pill on the active tab: pill.left = tab.center - PILL_WIDTH/2
   const targetX = useMemo(
@@ -93,13 +102,15 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
     <View
       pointerEvents="none"
       style={StyleSheet.absoluteFill}
-      onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+      onLayout={(e) => setBar({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <Animated.View
         style={[
           styles.pill,
           {
             opacity,
+            top: pillTop,
+            height: pillHeight,
             transform: [{ translateX }],
             // Base fill is the accent at ~28%/22% — the vertical gradient on
             // web stacks an extra highlight on top for the 3D read.
@@ -124,8 +135,9 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
                     ? `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 35%, rgba(255,255,255,0) 70%, rgba(0,0,0,0.10) 100%)`
                     : `linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 40%, rgba(255,255,255,0.10) 75%, rgba(15,23,42,0.04) 100%)`,
                   boxShadow: [
-                    // Outer drop shadow for lift
-                    `0 6px 18px ${accent}55`,
+                    // Outer drop shadow for lift (kept tight so the glow does
+                    // not spill below the glass island)
+                    `0 3px 10px ${accent}3D`,
                     `0 2px 6px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.18)'}`,
                     // Inner top highlight (specular edge)
                     `inset 0 1.5px 0 ${isDark ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.95)'}`,
