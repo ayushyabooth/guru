@@ -76,15 +76,6 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   // order stable across renders.
   if (!Icon) return null;
 
-  const getTierBadge = (tier: string) => {
-    switch (tier) {
-      case 'full': return { label: 'Full', color: '#FB923C' };
-      case 'standard': return { label: 'Standard', color: '#EC4899' };
-      case 'lite': return { label: 'Lite', color: '#38BDF8' };
-      default: return { label: tier, color: '#94A3B8' };
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed': return 'Completed';
@@ -103,7 +94,6 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   };
 
   const renderJourneyCard = (journey: RecapJourneySummary) => {
-    const tier = getTierBadge(journey.tier);
     const isCompleted = journey.status === 'completed';
 
     return (
@@ -137,13 +127,6 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
         <Text style={styles.journeyDate}>
           {formatDateRange(journey.week_start, journey.week_end)}
         </Text>
-
-        {/* Tier badge */}
-        <View style={[styles.tierBadge, { backgroundColor: `${tier.color}15` }]}>
-          <Text style={[styles.tierBadgeText, { color: tier.color }]}>
-            {tier.label}
-          </Text>
-        </View>
 
         {/* Stats */}
         <View style={styles.journeyStats}>
@@ -241,7 +224,6 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
           {/* Vertical list for detailed view */}
           <Text style={styles.sectionTitle}>All Recaps</Text>
           {journeys.map(journey => {
-            const tier = getTierBadge(journey.tier);
             const isCompleted = journey.status === 'completed';
             return (
               <TouchableOpacity
@@ -262,11 +244,13 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.listTierBadge, { backgroundColor: `${tier.color}15` }]}>
-                  <Text style={[styles.listTierText, { color: tier.color }]}>
-                    {tier.label}
-                  </Text>
-                </View>
+                {!isCompleted && (
+                  <View style={[styles.listTierBadge, { backgroundColor: 'rgba(148,163,184,0.12)' }]}>
+                    <Text style={[styles.listTierText, { color: '#94A3B8' }]}>
+                      {getStatusLabel(journey.status)}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             );
           })}

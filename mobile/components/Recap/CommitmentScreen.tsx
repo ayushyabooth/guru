@@ -7,10 +7,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 interface CommitmentScreenProps {
   onSave: (commitmentText: string) => void;
-  tier: string;
 }
 
-export default function CommitmentScreen({ onSave, tier }: CommitmentScreenProps) {
+export default function CommitmentScreen({ onSave }: CommitmentScreenProps) {
   const { isDark, colors } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [text, setText] = useState('');
@@ -41,7 +40,7 @@ export default function CommitmentScreen({ onSave, tier }: CommitmentScreenProps
           />
 
           <GlassButton
-            title={tier === 'full' ? 'Save & Unlock Audio' : 'Save & Complete'}
+            title="Save & Complete"
             onPress={() => canSave && onSave(text.trim())}
             accentColor="#FB923C"
             disabled={!canSave}

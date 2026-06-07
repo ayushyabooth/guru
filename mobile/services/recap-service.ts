@@ -82,7 +82,6 @@ export interface RecapJourney {
   journey_id: string;
   week_start: string;
   week_end: string;
-  tier: 'lite' | 'standard' | 'full';
   status: string;
   stage_progress: number;
   activity_summary?: Record<string, any>;
@@ -93,7 +92,6 @@ export interface RecapJourneySummary {
   id: string;
   week_start: string;
   week_end: string;
-  tier: string;
   status: string;
   stage_progress: number;
   articles_read_count: number;
@@ -163,7 +161,6 @@ class RecapServiceClient {
 
   async getSnapshot(journeyId: string): Promise<{
     journey_id: string;
-    tier: string;
     status: string;
     stage_progress: number;
     snapshot: SnapshotData;
@@ -183,7 +180,6 @@ class RecapServiceClient {
     journey_id: string;
     questions: GuidedQuestion[];
     responses: Record<string, string>;
-    tier: string;
   }> {
     return this.request('GET', `/recap/${journeyId}/questions`);
   }

@@ -20,7 +20,6 @@ interface CelebrationOverlayProps {
   questionCount: number;
   commitment: string;
   streak?: number;
-  isFullTier?: boolean;
   audioStatus?: 'idle' | 'generating' | 'ready' | 'failed' | 'text_only';
   onGenerateAudio?: () => void;
   onListenAudio?: () => void;
@@ -34,7 +33,6 @@ export default function CelebrationOverlay({
   questionCount,
   commitment,
   streak = 1,
-  isFullTier = false,
   audioStatus = 'idle',
   onGenerateAudio,
   onListenAudio,

@@ -97,7 +97,7 @@ type ViewState =
   | 'socratic'      // Stage 3: Socratic Dialogue
   | 'commitment'    // Commitment prompt
   | 'celebration'   // Level-up celebration
-  | 'audio'         // Stage 4: Audio player (Full tier)
+  | 'audio'         // Stage 4: Audio player
   | 'archive'       // Learning journal view
   | 'detail';       // Past recap detail view
 
@@ -680,7 +680,6 @@ export default function RecapScreen() {
         </View>
         <CommitmentScreen
           onSave={handleCommitmentSave}
-          tier={journey?.tier || 'standard'}
         />
       </SafeAreaView>
     );
@@ -697,7 +696,6 @@ export default function RecapScreen() {
           questionCount={questions.length}
           commitment={commitmentText}
           streak={1}
-          isFullTier={true}
           audioStatus={audioStatus}
           onGenerateAudio={handleGenerateAudio}
           onListenAudio={handleListenAudio}
@@ -917,15 +915,14 @@ export default function RecapScreen() {
           <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
-            { num: 1, name: 'Your Week', desc: 'Review the articles and insights you explored', lockHint: '' },
-            { num: 2, name: 'Reflect', desc: 'Answer guided questions to strengthen recall', lockHint: '' },
-            { num: 3, name: 'Explore', desc: 'Deep Socratic dialogue to find connections', lockHint: '' },
-            { num: 4, name: 'Listen', desc: 'NotebookLM-style audio recap of your week', lockHint: '' },
+            { num: 1, name: 'Your Week', desc: 'Review the articles and insights you explored' },
+            { num: 2, name: 'Reflect', desc: 'Answer guided questions to strengthen recall' },
+            { num: 3, name: 'Explore', desc: 'Deep Socratic dialogue to find connections' },
+            { num: 4, name: 'Listen', desc: 'NotebookLM-style audio recap of your week' },
           ].map((stage, index, arr) => {
             const isCompleted = stage.num <= completedStages;
             const isCurrent = isInProgress && stage.num === completedStages + 1;
             const isLocked = !isCompleted && !isCurrent;
-            const tierLocked = false; // No tier gating
 
             return (
               <React.Fragment key={stage.num}>
@@ -961,8 +958,6 @@ export default function RecapScreen() {
                   ]}>
                     {isCompleted ? (
                       <Icon name="check" size={18} color="#FB923C" />
-                    ) : tierLocked ? (
-                      <Icon name="lock" size={16} color="#64748B" />
                     ) : (
                       <Text style={styles.stageNumberText}>{stage.num}</Text>
                     )}
@@ -974,7 +969,7 @@ export default function RecapScreen() {
                         mode. Override to the theme's primary text token. */}
                     <Text style={[styles.stageName, { color: colors.textPrimary }]}>{stage.name}</Text>
                     <Text style={[styles.stageDescription, { color: colors.textSecondary }]}>
-                      {tierLocked && stage.lockHint ? stage.lockHint : stage.desc}
+                      {stage.desc}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -1267,18 +1262,6 @@ const styles = StyleSheet.create({
     ...Typography.labelMedium,
     color: RingColors.recap.primary,
     fontWeight: '600',
-  },
-  tierBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.pill,
-    borderWidth: 1,
-    marginTop: Spacing.sm,
-  },
-  tierBadgeText: {
-    ...Typography.labelSmall,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   // Stages preview
   stagesPreview: {
