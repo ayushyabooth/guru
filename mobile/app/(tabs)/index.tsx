@@ -734,8 +734,8 @@ function HomeContent() {
         animationType="fade"
         onRequestClose={() => setShowSettings(false)}
       >
-        <TouchableOpacity activeOpacity={1} onPress={() => setShowSettings(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, borderRadius: 20, padding: 20, ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px)' } as any) : {}) }}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowSettings(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%', maxWidth: 420, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, borderRadius: 20, padding: 20, ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px)' } as any) : {}) }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 12 }}>Settings</Text>
             <TouchableOpacity onPress={toggleTheme} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }} accessibilityRole="button" accessibilityLabel="Toggle appearance">
               <Text style={{ fontSize: 15, color: COLORS.textPrimary }}>{isDark ? '☀️  Switch to light' : '🌙  Switch to dark'}</Text>

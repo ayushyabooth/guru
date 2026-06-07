@@ -199,6 +199,32 @@ export default function ArticleDetailScreen() {
     activityType: 'article',
   });
 
+  // GUR-205: restore prior Ask Guru Q&A for this article when the reader opens.
+  // Best-effort + only seeds when the chat is empty, so it never clobbers a
+  // fresh in-session conversation or the send logic.
+  useEffect(() => {
+    if (!articleId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/socratic/history/${articleId}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data?.messages) || data.messages.length === 0) return;
+        const restored = data.messages
+          .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string')
+          .map((m: any) => ({ role: (m.role === 'user' ? 'user' : 'guru') as 'user' | 'guru', text: m.content }));
+        setGuruMessages(prev => (prev.length === 0 ? restored : prev));
+        if (data.conversation_id) setGuruConversationId(prev => prev || data.conversation_id);
+      } catch { /* history is best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  }, [articleId]);
+
   // Reading timer for web reading state
   useEffect(() => {
     if (Platform.OS !== 'web' || !overlayArticle) return;
