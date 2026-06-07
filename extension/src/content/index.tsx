@@ -457,6 +457,14 @@ function getBaseStyles(): string {
       border-bottom-left-radius: 4px;
     }
 
+    /* Formatted Guru responses (markdown → HTML) */
+    .guru-md .guru-md-p { margin: 0 0 6px 0; line-height: 1.5; }
+    .guru-md .guru-md-p:last-child { margin-bottom: 0; }
+    .guru-md .guru-md-h { font-weight: 700; margin: 4px 0; line-height: 1.45; }
+    .guru-md .guru-md-li { margin: 0 0 4px 2px; line-height: 1.5; }
+    .guru-md strong { font-weight: 700; }
+    .guru-md code { font-family: ui-monospace, monospace; background: rgba(15,23,42,0.06); padding: 0 4px; border-radius: 4px; font-size: 0.92em; }
+
     .guru-chat-input-row {
       display: flex;
       gap: 8px;

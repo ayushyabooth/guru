@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'preact/hooks';
 import { chatMessages, conversationId, isChatLoading, overlayData } from '../../state';
 import { sendChatMessage } from '../../api-client';
 import { richContent } from '../../state';
+import { guruMarkdownToHtml } from '../../format';
 
 export default function AskGuruTab() {
   const [input, setInput] = useState('');
@@ -56,7 +57,7 @@ export default function AskGuruTab() {
         {chatMessages.value.length === 0 && prompts.length > 0 && (
           <div style={{ marginBottom: '12px' }}>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '8px' }}>
-              Try asking:
+              Think about:
             </div>
             {prompts.map((prompt, i) => (
               <div
@@ -71,9 +72,17 @@ export default function AskGuruTab() {
         )}
 
         {chatMessages.value.map((msg, i) => (
-          <div key={i} class={`guru-chat-message ${msg.role}`}>
-            {msg.content}
-          </div>
+          msg.role === 'assistant' ? (
+            <div
+              key={i}
+              class="guru-chat-message assistant guru-md"
+              dangerouslySetInnerHTML={{ __html: guruMarkdownToHtml(msg.content) }}
+            />
+          ) : (
+            <div key={i} class={`guru-chat-message ${msg.role}`}>
+              {msg.content}
+            </div>
+          )
         ))}
 
         {isChatLoading.value && (
