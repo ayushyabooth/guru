@@ -274,6 +274,10 @@ function getBaseStyles(): string {
       left: 0;
       right: 0;
       bottom: 0;
+      /* CX fix: constrain to a centered column so the sheet doesn't stretch the
+         full desktop width (tabs + content were spreading edge-to-edge). */
+      max-width: 760px;
+      margin: 0 auto;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
