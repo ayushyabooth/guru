@@ -30,6 +30,18 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# GUR-218: a single reading session realistically tops out well under an hour.
+# Sessions that are never closed (tab left open, no blur/visibility stop) can log
+# many hours of wall-clock time and inflate snapshot aggregates (e.g. 1184 min on
+# one article). Clamp each session's contribution to a sane ceiling so one runaway
+# log can't dominate reading_pattern / deepest_dive.
+MAX_SESSION_SECONDS = 60 * 60  # 60 minutes
+
+
+def _capped_seconds(log) -> int:
+    """Per-session reading seconds, clamped to MAX_SESSION_SECONDS (GUR-218)."""
+    return min(log.duration_seconds or 0, MAX_SESSION_SECONDS)
+
 
 class RecapService:
     """Service for handling weekly recap collection and synthesis"""
@@ -547,7 +559,7 @@ class RecapJourneyService:
         for log in article_time_logs:
             if log.context_id:
                 engaged_context_ids.add(log.context_id)
-            total_time_seconds += log.duration_seconds or 0
+            total_time_seconds += _capped_seconds(log)
             if log.industry:
                 industries_seen.add(log.industry)
             if log.specialization:
@@ -654,7 +666,7 @@ class RecapJourneyService:
                 # Still track day totals for peak day calc, skip article aggregation
                 if log.started_at:
                     day_name = log.started_at.strftime("%A")
-                    day_totals[day_name] = day_totals.get(day_name, 0) + (log.duration_seconds or 0)
+                    day_totals[day_name] = day_totals.get(day_name, 0) + _capped_seconds(log)
                 continue
 
             if ctx not in article_engagement:
@@ -664,14 +676,14 @@ class RecapJourneyService:
                     "specialization": log.specialization,
                     "activity_types": set(),
                 }
-            article_engagement[ctx]["total_seconds"] += log.duration_seconds or 0
+            article_engagement[ctx]["total_seconds"] += _capped_seconds(log)
             if log.activity_type:
                 article_engagement[ctx]["activity_types"].add(log.activity_type)
 
             # Track per-day totals for peak day calculation
             if log.started_at:
                 day_name = log.started_at.strftime("%A")
-                day_totals[day_name] = day_totals.get(day_name, 0) + (log.duration_seconds or 0)
+                day_totals[day_name] = day_totals.get(day_name, 0) + _capped_seconds(log)
 
         # Also discover articles from annotations, QA, and interactions
         # (catches articles the user engaged with even without a TimeLog context_id)
