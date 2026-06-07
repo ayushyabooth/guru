@@ -273,6 +273,20 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           </View>
         )}
 
+        {/* In-progress fallback (GUR-217): show a clear state instead of a blank
+            body when the recap isn't completed (no commitment/insights/script yet). */}
+        {!commitment && insights.length === 0 && script.length === 0 && (
+          <View style={[GM.cardLight, styles.commitmentCard, { backgroundColor: 'rgba(251,146,60,0.06)', borderColor: 'rgba(251,146,60,0.15)' }]}>
+            <View style={styles.sectionHeader}>
+              <Icon name="book-open-page-variant" size={16} color={RingColors.recap.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recap in progress</Text>
+            </View>
+            <Text style={[styles.podcastSubtitle, { color: colors.textSecondary, marginTop: 4 }]}>
+              {`You've engaged with ${Number(activity.articles_read) || 0} article${(Number(activity.articles_read) || 0) === 1 ? '' : 's'} this week. Finish your Recap journey to unlock your insights, commitment, and weekly synthesis.`}
+            </Text>
+          </View>
+        )}
+
         {/* Bottom padding */}
         <View style={{ height: 40 }} />
       </ScrollView>
