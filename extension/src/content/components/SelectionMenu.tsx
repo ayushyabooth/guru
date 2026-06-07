@@ -12,6 +12,52 @@ interface SelectionInfo {
 const MENU_WIDTH = 280;
 const MENU_HEIGHT = 44;
 
+// GUR-213: wrap a selection Range in <mark> elements so highlights are visible
+// on the article itself. Handles multi-node ranges by wrapping each intersecting
+// text node (surroundContents throws on ranges that cross element boundaries).
+function paintHighlight(range: Range) {
+  const styleMark = (m: HTMLElement) => {
+    m.className = 'guru-highlight-mark';
+    m.style.backgroundColor = 'rgba(245, 158, 11, 0.32)';
+    m.style.color = 'inherit';
+    m.style.borderRadius = '2px';
+    m.style.padding = '0';
+  };
+  try {
+    const mark = document.createElement('mark');
+    styleMark(mark);
+    range.surroundContents(mark);
+    return;
+  } catch {
+    // Range spans multiple nodes — fall through to per-text-node wrapping.
+  }
+  try {
+    const ancestor = range.commonAncestorContainer;
+    const rootEl = (ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode : ancestor) as Node | null;
+    if (!rootEl) return;
+    const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, null);
+    const textNodes: Text[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (range.intersectsNode(node) && (node.textContent || '').trim()) {
+        textNodes.push(node as Text);
+      }
+    }
+    textNodes.forEach((tn) => {
+      const r = document.createRange();
+      r.selectNodeContents(tn);
+      if (tn === range.startContainer) r.setStart(tn, range.startOffset);
+      if (tn === range.endContainer) r.setEnd(tn, range.endOffset);
+      if (r.collapsed) return;
+      const mark = document.createElement('mark');
+      styleMark(mark);
+      try { r.surroundContents(mark); } catch { /* skip nodes that can't be cleanly wrapped */ }
+    });
+  } catch (e) {
+    console.warn('[Guru] paintHighlight failed', e);
+  }
+}
+
 export default function SelectionMenu() {
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [showNoteInput, setShowNoteInput] = useState(false);
@@ -19,6 +65,8 @@ export default function SelectionMenu() {
   const noteInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingTextRef = useRef('');
+  // GUR-213: keep the live Range so we can paint the highlight onto the page.
+  const rangeRef = useRef<Range | null>(null);
 
   // Store handlers as refs so native event listeners can access current state
   const selectionRef = useRef<SelectionInfo | null>(null);
@@ -46,6 +94,7 @@ export default function SelectionMenu() {
       if (text.length < 3) return;
 
       const range = sel.getRangeAt(0);
+      rangeRef.current = range.cloneRange();
       const rect = range.getBoundingClientRect();
 
       let x = rect.left + rect.width / 2 - MENU_WIDTH / 2;
@@ -182,7 +231,9 @@ export default function SelectionMenu() {
       ...highlights.value,
       { text, timestamp: new Date().toLocaleTimeString() },
     ];
-    // Don't modify publisher's DOM — highlights only shown in Notes tab
+    // GUR-213: paint the highlight onto the page so there's an on-article indicator
+    // (previously highlights were only listed in the Notes tab).
+    if (rangeRef.current) paintHighlight(rangeRef.current);
     setSelection(null);
     window.getSelection()?.removeAllRanges();
 
@@ -204,6 +255,8 @@ export default function SelectionMenu() {
       ...highlights.value,
       { text, note, timestamp: new Date().toLocaleTimeString() },
     ];
+    // GUR-213: paint the note's anchor text too (a note is an annotated highlight).
+    if (rangeRef.current) paintHighlight(rangeRef.current);
     setSelection(null);
     setShowNoteInput(false);
     setNoteText('');
