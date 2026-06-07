@@ -55,7 +55,13 @@ import { Car } from 'phosphor-react-native';
 import { Star } from 'phosphor-react-native';
 import { StarFour } from 'phosphor-react-native';
 import { ArrowLeft } from 'phosphor-react-native';
-import { Circle } from 'phosphor-react-native';
+// NOTE: phosphor-react-native 3.0.4 ships Circle's component ONLY under the
+// `CircleIcon` alias — the plain `Circle` named export is undefined (a bug in
+// that icon's generated module). Importing `Circle` directly yields undefined,
+// which makes Icon's fallback render an invalid element (React #130) for ANY
+// unmapped icon name (e.g. "arrow-up", "open-in-new" in the article reader).
+// Import the working alias and re-bind it to the local `Circle` name.
+import { CircleIcon as Circle } from 'phosphor-react-native';
 import { ChatCircleDots } from 'phosphor-react-native';
 import { ChatTeardropDots } from 'phosphor-react-native';
 import { NoteBlank } from 'phosphor-react-native';
