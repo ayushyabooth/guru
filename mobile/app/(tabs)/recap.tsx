@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { setTabBarHidden } from './_layout';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
 import GlassButton from '../../components/ui/GlassButton';
@@ -163,6 +164,31 @@ export default function RecapScreen() {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   const weekLabel = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+  // ── GUR-211: Immersive full-screen stages hide the floating tab bar ──
+  // The Recap journey stages must be full-screen per BRD F.2. The floating
+  // glass tab bar (position:absolute, bottom:12 in _layout) otherwise overlaps
+  // the stage CTAs (e.g. "Continue to Questions →") and intercepts taps,
+  // navigating to another tab instead of advancing the journey.
+  //
+  // Immersive = any active stage view. NOT the entry/landing screen, NOT the
+  // archive/journal, NOT the transient loading spinner.
+  const isImmersiveStage =
+    viewState === 'snapshot' ||
+    viewState === 'questions' ||
+    viewState === 'socratic' ||
+    viewState === 'commitment' ||
+    viewState === 'celebration' ||
+    viewState === 'audio';
+
+  useEffect(() => {
+    // Flip the shared signal owned by _layout. _layout keeps the full themed
+    // glass-island tabBarStyle and only toggles `display`, so restoring the bar
+    // returns it IDENTICAL to before.
+    setTabBarHidden(isImmersiveStage);
+    // Always restore on unmount (e.g. leaving the Recap tab mid-journey).
+    return () => setTabBarHidden(false);
+  }, [isImmersiveStage]);
 
   // ── Probe for existing in-progress journey on mount ──────────────
   // Only probe if metrics indicate an in-progress recap (avoids

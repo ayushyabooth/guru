@@ -14,6 +14,42 @@ import AnimatedTabPill from '../../components/shared/AnimatedTabPill';
 const TAB_INACTIVE_OPACITY = 0.35;
 
 /**
+ * GUR-211: Shared signal so a tab screen can request the floating glass tab
+ * bar be hidden (e.g. the Recap immersive journey stages, which must be
+ * full-screen per BRD F.2). Ownership of the actual tabBarStyle stays in this
+ * file — screens only flip a boolean, so when the bar is restored it returns
+ * IDENTICAL to the original themed glass-island style (we never reconstruct it
+ * from a screen).
+ *
+ * Implemented as a tiny external store consumed via useSyncExternalStore so any
+ * screen (outside the Tabs render tree) can drive it without prop-drilling or a
+ * provider wrapper.
+ */
+let tabBarHiddenValue = false;
+const tabBarHiddenListeners = new Set<() => void>();
+
+export function setTabBarHidden(hidden: boolean) {
+  if (tabBarHiddenValue === hidden) return;
+  tabBarHiddenValue = hidden;
+  tabBarHiddenListeners.forEach((l) => l());
+}
+
+function subscribeTabBarHidden(listener: () => void) {
+  tabBarHiddenListeners.add(listener);
+  return () => {
+    tabBarHiddenListeners.delete(listener);
+  };
+}
+
+function useTabBarHidden() {
+  return React.useSyncExternalStore(
+    subscribeTabBarHidden,
+    () => tabBarHiddenValue,
+    () => tabBarHiddenValue,
+  );
+}
+
+/**
  * Tab ring icon. The focus affordance is now the sliding glass pill rendered
  * behind all tabs (see AnimatedTabPill); this component only handles the
  * ring's opacity and breathing scale. No per-icon glow disc — that was the
@@ -96,6 +132,10 @@ function TabsWithMetrics() {
   const { isDark, colors } = useTheme();
   const { state } = useMetrics();
   const m = state.metrics;
+  // GUR-211: when a screen requests immersive mode, hide the bar via `display`
+  // only — every other glass-island property stays exactly as built below, so
+  // the bar reappears identical when `display` flips back to 'flex'.
+  const tabBarHidden = useTabBarHidden();
 
   // Compute progress (0-1) for each ring
   const catchupProgress = Math.min(
@@ -111,6 +151,7 @@ function TabsWithMetrics() {
 
   // Floating glass island tab bar
   const tabBarStyle: any = {
+    display: tabBarHidden ? 'none' : 'flex',
     position: 'absolute',
     bottom: 12,
     left: 16,
