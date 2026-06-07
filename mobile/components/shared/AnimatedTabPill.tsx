@@ -117,11 +117,11 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
             // Base fill is the accent at ~28%/22% — the vertical gradient on
             // web stacks an extra highlight on top for the 3D read.
             backgroundColor: isDark
-              ? `${accent}47`
-              : `${accent}38`,
+              ? `${accent}66`
+              : `${accent}4D`,
             borderColor: isDark
-              ? `${accent}7A`
-              : `${accent}52`,
+              ? `${accent}A3`
+              : `${accent}80`,
             // Web gets the full glass recipe: vertical gradient (bright top,
             // faded bottom) layered over the fill, strong inset highlight,
             // bottom inset shadow, outer glow, and a drop shadow underneath
@@ -139,7 +139,7 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
                   boxShadow: [
                     // Outer drop shadow for lift (kept tight so the glow does
                     // not spill below the glass island)
-                    `0 3px 10px ${accent}3D`,
+                    `0 3px 12px ${accent}5C`,
                     `0 2px 6px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.18)'}`,
                     // Inner top highlight (specular edge)
                     `inset 0 1.5px 0 ${isDark ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.95)'}`,
