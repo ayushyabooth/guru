@@ -58,6 +58,53 @@ function paintHighlight(range: Range) {
   }
 }
 
+// GUR-213 follow-up: stored highlights live in the backend (shown in the FAB
+// sheet) but the on-page <mark> styling was lost on every page reload because it
+// was only applied at selection time. Re-find each stored highlight's text in
+// the article DOM on load and re-paint it, so highlights persist visually across
+// refreshes. Matches the first un-marked occurrence of each highlight's text.
+function findTextRange(text: string): Range | null {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node: Node) {
+      const p = (node as Text).parentElement;
+      if (!p) return NodeFilter.FILTER_REJECT;
+      const tag = p.tagName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'MARK') {
+        return NodeFilter.FILTER_REJECT;
+      }
+      // Skip our own injected UI and anything already highlighted.
+      if (p.closest('#guru-root, .guru-panel, .guru-fab, .guru-highlight-mark')) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return (node.textContent || '').includes(text)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_SKIP;
+    },
+  } as any);
+  const node = walker.nextNode() as Text | null;
+  if (!node || !node.textContent) return null;
+  const idx = node.textContent.indexOf(text);
+  if (idx < 0) return null;
+  const range = document.createRange();
+  range.setStart(node, idx);
+  range.setEnd(node, idx + text.length);
+  return range;
+}
+
+export function repaintStoredHighlights(texts: Array<string | null | undefined>) {
+  const seen = new Set<string>();
+  for (const raw of texts) {
+    const text = (raw || '').trim();
+    // Too-short strings match noise; skip and de-dupe identical highlights.
+    if (text.length < 4 || seen.has(text)) continue;
+    seen.add(text);
+    try {
+      const range = findTextRange(text);
+      if (range) paintHighlight(range);
+    } catch { /* graceful: a highlight whose text can't be located is just not repainted */ }
+  }
+}
+
 export default function SelectionMenu() {
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [showNoteInput, setShowNoteInput] = useState(false);

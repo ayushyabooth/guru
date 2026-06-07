@@ -3,6 +3,7 @@ import { Z_INDEX } from '../shared/constants';
 import { isActivated, isLoading, overlayData, scrollProgress, error, chatMessages, conversationId, highlights } from './state';
 import { fetchOverlayData, fetchChatHistory, fetchAnnotations } from './api-client';
 import App from './components/App';
+import { repaintStoredHighlights } from './components/SelectionMenu';
 
 let shadowRoot: ShadowRoot | null = null;
 let hostElement: HTMLDivElement | null = null;
@@ -93,6 +94,11 @@ async function activate(articleId: string) {
           note: a.note_text || undefined,
           timestamp: new Date(a.created_at).toLocaleTimeString(),
         }));
+        // Re-paint on-page <mark> highlights so they survive reloads (they were
+        // only applied at selection time before). Defer a frame so the article
+        // DOM is settled before we walk it.
+        const texts = userAnnotations.map((a: any) => a.highlighted_text);
+        requestAnimationFrame(() => repaintStoredHighlights(texts));
       }
     } catch (e) {
       console.error('[Guru] Could not load history:', e);
