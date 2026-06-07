@@ -114,6 +114,11 @@ function applyHtmlDataTheme(mode: ResolvedMode): void {
       document.head.appendChild(meta);
     }
     meta.content = mode === 'dark' ? '#0A0E17' : '#F8FAFC';
+    // GUR-203: fill the FULL viewport (html+body) so desktop web doesn't show a
+    // pure-black letterbox seam beside the centered mobile-width column.
+    const bg = mode === 'dark' ? '#0A0E17' : '#F8FAFC';
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
   } catch {
     /* no-op in SSR / non-DOM environments */
   }

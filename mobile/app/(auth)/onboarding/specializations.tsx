@@ -121,8 +121,20 @@ export default function SpecializationsScreen() {
       consumer: 'Consumer',
       technology: 'Technology',
       finance: 'Finance',
+      healthcare: 'Healthcare',
+      manufacturing: 'Manufacturing',
+      energy: 'Energy',
+      real_estate: 'Real Estate',
+      education: 'Education',
+      government: 'Government',
+      non_profit: 'Non-Profit',
+      nonprofit: 'Non-Profit',
     };
-    return industryMap[state.coreIndustry || ''] || state.coreIndustry || 'your industry';
+    const id = state.coreIndustry || '';
+    if (industryMap[id]) return industryMap[id];
+    if (!id) return 'your industry';
+    // Title-case fallback: "real_estate" → "Real Estate"
+    return id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   return (

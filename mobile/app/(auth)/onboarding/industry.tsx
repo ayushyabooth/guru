@@ -167,6 +167,77 @@ const IndustryIcon = ({ type, size = 48 }: { type: string; size?: number }) => {
             <Path d="M28 8V14" stroke="url(#fbGrad)" strokeWidth="2" strokeLinecap="round" />
           </Svg>
         );
+      case 'manufacturing':
+        return (
+          <Svg width={size} height={size} viewBox="0 0 48 48">
+            <Defs>
+              <LinearGradient id="mfgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#A5B4FC" />
+                <Stop offset="100%" stopColor="#6366F1" />
+              </LinearGradient>
+            </Defs>
+            <Path d="M8 40V20L18 26V20L28 26V20L38 26V40H8Z" stroke="url(#mfgGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M14 40V34H20V40M28 40V34H34V40" stroke="url(#mfgGrad)" strokeWidth="2" fill="none" />
+          </Svg>
+        );
+      case 'real estate':
+      case 'real_estate':
+        return (
+          <Svg width={size} height={size} viewBox="0 0 48 48">
+            <Defs>
+              <LinearGradient id="reGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#FCD34D" />
+                <Stop offset="100%" stopColor="#F59E0B" />
+              </LinearGradient>
+            </Defs>
+            <Path d="M12 40V12L28 6V40" stroke="url(#reGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M28 40V18H38V40" stroke="url(#reGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M17 16H22M17 22H22M17 28H22M33 24H34M33 30H34" stroke="url(#reGrad)" strokeWidth="2" strokeLinecap="round" />
+          </Svg>
+        );
+      case 'education':
+        return (
+          <Svg width={size} height={size} viewBox="0 0 48 48">
+            <Defs>
+              <LinearGradient id="eduGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#67E8F9" />
+                <Stop offset="100%" stopColor="#06B6D4" />
+              </LinearGradient>
+            </Defs>
+            <Path d="M24 12L6 20L24 28L42 20L24 12Z" stroke="url(#eduGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M14 24V32C14 32 18 36 24 36C30 36 34 32 34 32V24" stroke="url(#eduGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M42 20V28" stroke="url(#eduGrad)" strokeWidth="2" strokeLinecap="round" />
+          </Svg>
+        );
+      case 'government':
+        return (
+          <Svg width={size} height={size} viewBox="0 0 48 48">
+            <Defs>
+              <LinearGradient id="govGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#7DD3FC" />
+                <Stop offset="100%" stopColor="#0EA5E9" />
+              </LinearGradient>
+            </Defs>
+            <Path d="M24 8L40 18H8L24 8Z" stroke="url(#govGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+            <Path d="M12 18V36M20 18V36M28 18V36M36 18V36" stroke="url(#govGrad)" strokeWidth="2.5" strokeLinecap="round" />
+            <Path d="M8 40H40" stroke="url(#govGrad)" strokeWidth="2.5" strokeLinecap="round" />
+          </Svg>
+        );
+      case 'non-profit':
+      case 'non profit':
+      case 'nonprofit':
+      case 'non_profit':
+        return (
+          <Svg width={size} height={size} viewBox="0 0 48 48">
+            <Defs>
+              <LinearGradient id="npGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#6EE7B7" />
+                <Stop offset="100%" stopColor="#10B981" />
+              </LinearGradient>
+            </Defs>
+            <Path d="M24 40C24 40 10 31 10 20C10 15 14 11 18.5 11C21 11 23 12.5 24 14.5C25 12.5 27 11 29.5 11C34 11 38 15 38 20C38 31 24 40 24 40Z" stroke="url(#npGrad)" strokeWidth="2.5" strokeLinejoin="round" fill="none" />
+          </Svg>
+        );
       default:
         // Default icon for any other industry
         return (
