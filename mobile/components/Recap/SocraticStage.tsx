@@ -121,6 +121,11 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
     }
   };
 
+  // GUR-212: let the user advance to Commitment after a couple of genuine
+  // exchanges even if the backend never sets is_concluded — otherwise the
+  // Socratic stage can get stuck in an endless loop at 75% with no way out.
+  const userExchangeCount = messages.filter((m) => m.role === 'user').length;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -221,24 +226,38 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
           />
         </View>
       ) : (
-        <View style={[styles.inputArea, { backgroundColor: GM.card.backgroundColor }]}>
-          <TextInput
-            style={[GM.input, styles.chatInput, { color: colors.textPrimary }]}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Share your thoughts..."
-            placeholderTextColor={colors.textTertiary}
-            multiline
-            editable={!isLoading}
-            maxLength={1000}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={!inputText.trim() || isLoading}
-          >
-            <Text style={styles.sendButtonText}>↑</Text>
-          </TouchableOpacity>
+        <View style={[styles.composer, { backgroundColor: GM.card.backgroundColor }]}>
+          {/* GUR-212: manual advance to Commitment once there are >=2 user
+              exchanges, so the journey is never stuck if is_concluded never fires. */}
+          {userExchangeCount >= 2 && (
+            <View style={styles.advanceRow}>
+              <GlassButton
+                title="Continue to Commitment →"
+                onPress={onComplete}
+                accentColor="#FB923C"
+                size="md"
+              />
+            </View>
+          )}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[GM.input, styles.chatInput, { color: colors.textPrimary }]}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Share your thoughts..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              editable={!isLoading}
+              maxLength={1000}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!inputText.trim() || isLoading}
+            >
+              <Text style={styles.sendButtonText}>↑</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -321,6 +340,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     ...getBackdropBlur(20),
+    gap: Spacing.sm,
+  },
+  // GUR-212: composer wraps an optional "Continue to Commitment" advance row
+  // above the reply input row.
+  composer: {
+    paddingBottom: 100,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    ...getBackdropBlur(20),
+  },
+  advanceRow: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
   chatInput: {

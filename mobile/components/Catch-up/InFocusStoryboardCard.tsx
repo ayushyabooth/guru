@@ -359,6 +359,13 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           </Text>
         </TouchableOpacity>
 
+        {/* GUR-68: contextual "personal prompt" question under the headline */}
+        {!!storyboard.personal_prompt?.trim() && (
+          <Text style={[styles.personalPrompt, { color: colors.textSecondary }]}>
+            {storyboard.personal_prompt.trim()}
+          </Text>
+        )}
+
         {/* Metadata Row */}
         <View style={styles.metadata}>
           <TouchableOpacity onPress={() => Linking.openURL(inFocusArticle.url)} activeOpacity={0.7}>
@@ -426,6 +433,13 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
         articleTitle={inFocusArticle.title}
         isDark={isDark}
       />
+
+      {/* GUR-68: cluster narrative ("Also in this story") above the carousel */}
+      {carouselArticles.length > 0 && !!storyboard.cluster_narrative?.replace(/Also in this story:?\s*/i, '').trim() && (
+        <Text style={[styles.clusterNarrative, { color: colors.textSecondary }]}>
+          Also in this story: {storyboard.cluster_narrative.replace(/Also in this story:?\s*/i, '').trim()}
+        </Text>
+      )}
 
       {/* RELATED ARTICLES CAROUSEL */}
       {carouselArticles.length > 0 && (
@@ -546,6 +560,19 @@ const styles = StyleSheet.create({
   },
   paywalledIcon: {
     fontSize: 12,
+  },
+  // GUR-68: contextual prompt + cluster narrative
+  personalPrompt: {
+    ...Typography.bodyMedium,
+    fontStyle: 'italic',
+    paddingHorizontal: Spacing.md,
+    paddingTop: 6,
+  },
+  clusterNarrative: {
+    ...Typography.labelMedium,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: 4,
   },
 });
 
