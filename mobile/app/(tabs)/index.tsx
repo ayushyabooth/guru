@@ -360,6 +360,7 @@ function HomeContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showGoalEditor, setShowGoalEditor] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); // GUR-200: settings modal hosts logout
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
   // GUR-13: this week's One Commitment for the reminder card
   const [commitment, setCommitment] = useState<string | null>(null);
@@ -510,13 +511,14 @@ function HomeContent() {
                   <Text style={styles.themeToggleText} accessibilityElementsHidden importantForAccessibility="no">{isDark ? '☀️' : '🌙'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.logoutButton, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]}
-                  onPress={handleLogout}
+                  style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]}
+                  onPress={() => setShowSettings(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Log out"
-                  accessibilityHint="Signs you out and returns to the login screen"
+                  accessibilityLabel="Open settings"
+                  accessibilityHint="Opens settings including appearance and logout"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={[styles.logoutText, !isDark && { color: COLORS.textSecondary }]}>Logout</Text>
+                  <Text style={styles.themeToggleText} accessibilityElementsHidden importantForAccessibility="no">⚙️</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -724,6 +726,31 @@ function HomeContent() {
           </View>
         )}
       </ScrollView>
+
+      {/* GUR-200: Settings modal — relocates logout out of the Home header */}
+      <Modal
+        visible={showSettings}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowSettings(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, borderRadius: 20, padding: 20, ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px)' } as any) : {}) }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 12 }}>Settings</Text>
+            <TouchableOpacity onPress={toggleTheme} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }} accessibilityRole="button" accessibilityLabel="Toggle appearance">
+              <Text style={{ fontSize: 15, color: COLORS.textPrimary }}>{isDark ? '☀️  Switch to light' : '🌙  Switch to dark'}</Text>
+              <Text style={{ fontSize: 13, color: COLORS.textSecondary }}>{isDark ? 'Dark' : 'Light'}</Text>
+            </TouchableOpacity>
+            <View style={{ height: 1, backgroundColor: COLORS.glassBorder, marginVertical: 4 }} />
+            <TouchableOpacity onPress={() => { setShowSettings(false); handleLogout(); }} style={{ paddingVertical: 12 }} accessibilityRole="button" accessibilityLabel="Log out" accessibilityHint="Signs you out and returns to the login screen">
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Log out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowSettings(false)} style={{ paddingVertical: 10, alignItems: 'center', marginTop: 4 }} accessibilityRole="button" accessibilityLabel="Close settings">
+              <Text style={{ fontSize: 14, color: COLORS.textSecondary }}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Goal Editor Modal */}
       <Modal
