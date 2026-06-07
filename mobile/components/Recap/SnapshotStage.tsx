@@ -50,7 +50,7 @@ function getFilterBorder(filterContext: string): string {
 export default function SnapshotStage({ snapshot, onContinue }: SnapshotStageProps) {
   const { colors, isDark } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
-  const { articles_engaged, qa_highlights, reading_pattern, topic_clusters } = snapshot;
+  const { articles_engaged, qa_highlights, reading_pattern, topic_clusters, user_highlights = [] } = snapshot;
   const hasActivity = articles_engaged.length > 0;
   const isWidened = (snapshot as any).widened_window === true;
 
@@ -155,6 +155,27 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
                   <Text style={[styles.qaQuestion, { flex: 1, color: colors.textPrimary }]}>{qa.question}</Text>
                 </View>
                 <Text style={[styles.qaArticle, { color: colors.textTertiary }]}>from "{qa.article_title}"</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Highlights & notes the user captured (annotations) */}
+        {user_highlights.length > 0 && (
+          <View style={styles.qaSection}>
+            <Text style={[styles.qaSectionTitle, { color: colors.textPrimary }]}>Highlights & Notes</Text>
+            {user_highlights.map((h, idx) => (
+              <View key={idx} style={[GM.cardLight, styles.qaCard, { borderLeftWidth: 3, borderLeftColor: RingColors.recap.primary }]}>
+                {!!h.highlighted_text && (
+                  <Text style={[styles.quoteText, { color: colors.textPrimary }]}>"{h.highlighted_text}"</Text>
+                )}
+                {!!h.note && (
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 6 }}>
+                    <Icon name="note-text-outline" size={14} color={colors.textSecondary} style={{ marginTop: 2 }} />
+                    <Text style={[styles.qaQuestion, { flex: 1, color: colors.textSecondary }]}>{h.note}</Text>
+                  </View>
+                )}
+                <Text style={[styles.qaArticle, { color: colors.textTertiary }]}>from "{h.article_title}"</Text>
               </View>
             ))}
           </View>

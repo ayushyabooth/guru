@@ -23,6 +23,12 @@ export interface QAHighlight {
   answer_snippet: string;
 }
 
+export interface UserHighlight {
+  highlighted_text: string;
+  note?: string | null;
+  article_title: string;
+}
+
 export interface TopicCluster {
   theme: string;
   article_count: number;
@@ -42,6 +48,7 @@ export interface SnapshotData {
   articles_engaged: RecapArticle[];
   filters_explored: string[];
   qa_highlights: QAHighlight[];
+  user_highlights?: UserHighlight[];
   topic_clusters: TopicCluster[];
   reading_pattern: ReadingPattern;
 }
