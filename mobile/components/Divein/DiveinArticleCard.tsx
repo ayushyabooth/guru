@@ -21,6 +21,7 @@ import {
 import Icon from '../ui/Icon';
 import { HeroGradientFallback } from '../ui/HeroGradientFallback';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CatchupService } from '../../services/article-service';
 
 const { width } = Dimensions.get('window');
 
@@ -65,6 +66,24 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 }) => {
   const router = useRouter();
   const { isDark, colors } = useTheme();
+
+  // R5A: wire the save/bookmark action (was a no-op placeholder).
+  const [saved, setSaved] = React.useState(article.isSaved);
+  const [savePending, setSavePending] = React.useState(false);
+  const handleToggleSave = async () => {
+    if (savePending) return;
+    const next = !saved;
+    setSaved(next); // optimistic
+    setSavePending(true);
+    try {
+      if (next) await CatchupService.saveArticle(article.id);
+      else await CatchupService.unsaveArticle(article.id);
+    } catch {
+      setSaved(!next); // revert on failure
+    } finally {
+      setSavePending(false);
+    }
+  };
 
   // Use centralized color config from theme.ts
   const categoryColors = getFilterColors(article.industry);
@@ -213,18 +232,16 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => {
-                // TODO(R5A): wire to save mutation; for now this is a no-op placeholder.
-              }}
+              onPress={handleToggleSave}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel={article.isSaved ? 'Unsave' : 'Save for later'}
+              accessibilityLabel={saved ? 'Unsave' : 'Save for later'}
               style={styles.bookmarkButton}
             >
               <Icon
-                name={article.isSaved ? 'bookmark' : 'bookmark-outline'}
+                name={saved ? 'bookmark' : 'bookmark-outline'}
                 size={16}
-                color={article.isSaved ? '#F59E0B' : (isDark ? colors.textTertiary : colors.textSecondary)}
+                color={saved ? '#F59E0B' : (isDark ? colors.textTertiary : colors.textSecondary)}
               />
             </TouchableOpacity>
 
