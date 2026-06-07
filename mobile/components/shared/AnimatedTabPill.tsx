@@ -66,7 +66,9 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
   // native), which made the fixed top-anchored pill protrude ABOVE the glass
   // island ("off-axis"). Size it to a clear inset and vertically center it so it
   // always sits cleanly inside the bar regardless of the real height.
-  const pillHeight = bar.h > 0 ? Math.min(52, Math.max(40, bar.h - 14)) : PILL_HEIGHT;
+  // Envelope the icon+label stack (ring icon sits high in the tab) so the active
+  // ring doesn't poke above the pill ("exposed"), while staying inset within the bar.
+  const pillHeight = bar.h > 0 ? Math.min(58, Math.max(46, bar.h - 8)) : PILL_HEIGHT;
   const pillTop = bar.h > 0 ? Math.max(0, (bar.h - pillHeight) / 2) : PILL_TOP;
 
   // Center the pill on the active tab: pill.left = tab.center - PILL_WIDTH/2
