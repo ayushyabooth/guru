@@ -1,10 +1,11 @@
 import { h } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   isActivated, isLoading, overlayData, panelVisible,
-  annotations, annotationCount, activePeekCard, scrollProgress,
+  annotations, annotationCount,
   unseenPeekCards,
 } from '../state';
+import type { Annotation } from '../../shared/types';
 import GuruFAB from './GuruFAB';
 import AnnotationRail from './AnnotationRail';
 import OverlayPanel from './OverlayPanel';
@@ -16,25 +17,73 @@ export default function App() {
   const loading = isLoading.value;
   const data = overlayData.value;
   const panel = panelVisible.value;
-  const peek = activePeekCard.value;
   const anns = annotations.value;
   const count = annotationCount.value;
 
-  // Auto-show peek cards as user scrolls past annotation positions
-  // Only shows each annotation once per session (tracked in unseenPeekCards)
-  const peekTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  // ---- Peek card lifecycle (GUR-51) ---------------------------------------
+  // One card visible at a time. When a new annotation comes into range while a
+  // card is showing, the current card slides OUT before the next slides IN
+  // (out-then-in swap). 8s auto-dismiss per BRD E.2. Each annotation shown once
+  // per session (unseenPeekCards). Refs back the async callbacks so the scroll
+  // listener never reads stale state and never needs to re-subscribe.
+  const [peekAnn, setPeekAnn] = useState<Annotation | null>(null);
+  const [peekVisible, setPeekVisible] = useState(false);
+  const peekAnnRef = useRef<Annotation | null>(null);
+  const peekVisibleRef = useRef(false);
+  peekAnnRef.current = peekAnn;
+  peekVisibleRef.current = peekVisible;
 
+  const dismissTimer = useRef<ReturnType<typeof setTimeout>>();
+  const swapTimer = useRef<ReturnType<typeof setTimeout>>();
+  const clearPeekTimers = () => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+  };
+
+  const hidePeek = () => {
+    clearPeekTimers();
+    setPeekVisible(false);
+    swapTimer.current = setTimeout(() => setPeekAnn(null), 350); // after slide-out
+  };
+
+  const mountPeek = (ann: Annotation) => {
+    setPeekAnn(ann);
+    // Double-rAF so the card paints at translateX(80px)/opacity:0 before we flip
+    // to .visible — otherwise the enter transition is skipped (same-frame snap).
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => setPeekVisible(true)),
+    );
+    dismissTimer.current = setTimeout(hidePeek, 8000); // BRD E.2: 8s
+  };
+
+  const requestPeek = (ann: Annotation) => {
+    if (peekAnnRef.current?.id === ann.id) return; // already showing this one
+    clearPeekTimers();
+    if (peekAnnRef.current && peekVisibleRef.current) {
+      // Slide the current card out, then bring the new one in.
+      setPeekVisible(false);
+      swapTimer.current = setTimeout(() => mountPeek(ann), 380);
+    } else {
+      mountPeek(ann);
+    }
+  };
+  // Stable handles so the scroll effect doesn't re-subscribe on every render.
+  const requestPeekRef = useRef(requestPeek);
+  const hidePeekRef = useRef(hidePeek);
+  requestPeekRef.current = requestPeek;
+  hidePeekRef.current = hidePeek;
+
+  // Auto-show peek cards as the user scrolls past annotation positions.
   useEffect(() => {
     if (!activated || !data || anns.length === 0) return;
 
-    // Initialize unseen set with all annotation IDs on first load
     if (unseenPeekCards.value.size === 0) {
       unseenPeekCards.value = new Set(anns.map(a => a.id));
     }
 
     let ticking = false;
     const checkScroll = () => {
-      if (ticking || panel) return;
+      if (ticking) return;
       ticking = true;
 
       requestAnimationFrame(() => {
@@ -43,31 +92,29 @@ export default function App() {
         const progress = scrollHeight > clientHeight
           ? scrollTop / (scrollHeight - clientHeight)
           : 0;
-
         const totalSections = data.total_sections || 1;
-        const unseen = unseenPeekCards.value;
 
+        // Dismiss the active card once the user scrolls clear of its anchor.
+        const current = peekAnnRef.current;
+        if (current && peekVisibleRef.current) {
+          const curPos = current.position_after_section / totalSections;
+          if (Math.abs(progress - curPos) > 0.15) hidePeekRef.current();
+        }
+
+        // Don't pop new cards while the panel is open.
+        if (panelVisible.value) return;
+
+        const unseen = unseenPeekCards.value;
         for (const ann of anns) {
           if (!unseen.has(ann.id)) continue;
-
-          // Annotation position as a ratio (0-1)
           const annPosition = ann.position_after_section / totalSections;
-
-          // Trigger when user scrolls within 5% of the annotation position
+          // Trigger within 5% of the annotation position.
           if (Math.abs(progress - annPosition) < 0.05 && progress > 0.02) {
-            // Remove from unseen
             const next = new Set(unseen);
             next.delete(ann.id);
             unseenPeekCards.value = next;
-
-            // Show peek card after a brief delay (feels natural)
-            // If one is already showing, replace it smoothly
-            if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
-            peekTimerRef.current = setTimeout(() => {
-              activePeekCard.value = ann;
-            }, peek ? 100 : 400);
-
-            break; // Only one at a time
+            requestPeekRef.current(ann);
+            break; // one at a time
           }
         }
       });
@@ -76,9 +123,9 @@ export default function App() {
     window.addEventListener('scroll', checkScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', checkScroll);
-      if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+      clearPeekTimers();
     };
-  }, [activated, data, anns, panel, peek]);
+  }, [activated, data, anns]);
 
   if (!activated) return null;
 
@@ -107,17 +154,19 @@ export default function App() {
           const next = new Set(unseenPeekCards.value);
           next.delete(ann.id);
           unseenPeekCards.value = next;
-          activePeekCard.value = ann;
+          requestPeek(ann);
         }}
       />
-      {peek && (
+      {peekAnn && (
         <PeekCard
-          annotation={peek}
+          annotation={peekAnn}
+          visible={peekVisible}
           onTap={() => {
+            clearPeekTimers();
+            setPeekVisible(false);
+            swapTimer.current = setTimeout(() => setPeekAnn(null), 350);
             panelVisible.value = true;
-            activePeekCard.value = null;
           }}
-          onDismiss={() => { activePeekCard.value = null; }}
         />
       )}
       {panel && (
