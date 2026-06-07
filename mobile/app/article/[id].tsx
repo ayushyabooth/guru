@@ -145,6 +145,9 @@ export default function ArticleDetailScreen() {
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [savedNotes, setSavedNotes] = useState<{text: string; time: string}[]>([]);
+  // Declared here (early) because loadUserAnnotations below depends on it — a
+  // later `const articleId` would be in the temporal dead zone and crash render.
+  const articleId = typeof id === 'string' ? id : undefined;
   // Persisted user annotations (highlights + notes) for this article — loaded
   // from the backend so they survive close/reopen (GUR-222/persistence) and can
   // be cleanly split into Highlights vs Notes.
@@ -214,7 +217,6 @@ export default function ArticleDetailScreen() {
     return getSourceTab();
   });
 
-  const articleId = typeof id === 'string' ? id : undefined;
   const { logTime } = useTimeTracking(sourceTab || 'divein', {
     interval: 60000,
     contextId: articleId,
