@@ -128,7 +128,9 @@ function PlasmaBlobRingCanvas({
       ctx.save();
       ctx.beginPath();
       ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-      ctx.strokeStyle = rgba(c, p > 0 ? 0.06 : 0.09);
+      // GUR-24: stronger track in minimal (tab-icon) mode so low-progress
+      // icons read as a full ring, not a stray crescent.
+      ctx.strokeStyle = rgba(c, minimal ? 0.22 : (p > 0 ? 0.06 : 0.09));
       ctx.lineWidth = sw;
       ctx.lineCap = 'round';
       ctx.stroke();
@@ -308,7 +310,7 @@ function PlasmaBlobRingSvg({
         cx={centerX}
         cy={centerY}
         r={r}
-        stroke={rgba(c, p > 0 ? 0.07 : 0.12)}
+        stroke={rgba(c, minimal ? 0.22 : (p > 0 ? 0.07 : 0.12))}
         strokeWidth={sw}
         fill="none"
       />
