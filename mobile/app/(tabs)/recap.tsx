@@ -841,20 +841,55 @@ export default function RecapScreen() {
               </View>
             </View>
           ) : !hasMinimumActivity && !isInProgress ? (
+            // Low-activity / first-week empty state (GUR-197 + GUR-191): instead
+            // of a silent disabled "Begin Journey", explain what a Recap is, show
+            // progress toward the unlock threshold, and link straight to reading.
             <View style={styles.ctaSection}>
-              <Text style={[styles.ctaText, { fontSize: 14, fontWeight: '500', color: colors.textSecondary }]}>
-                Read some articles in Catch-up or Dive-in first to unlock your weekly recap.
-              </Text>
-              <GlassButton
-                title="Begin Journey"
-                onPress={() => {}}
-                accentColor="#FB923C"
-                icon="play-circle"
-                disabled
-                fullWidth={false}
-                size="lg"
-                style={{ paddingHorizontal: 32 }}
-              />
+              <View style={[styles.unlockCard, glassCard, { borderColor: isDark ? 'rgba(251,146,60,0.25)' : 'rgba(251,146,60,0.18)' }]}>
+                <View style={styles.unlockHeader}>
+                  <Icon name="sparkle" size={18} color="#FB923C" />
+                  <Text style={[styles.unlockTitle, { color: colors.textPrimary }]}>Unlock your first Recap</Text>
+                </View>
+                <Text style={[styles.unlockBody, { color: colors.textSecondary }]}>
+                  Your Recap turns this week's reading into a personalized reflection — key insights, guided Socratic questions, and a commitment for next week. The more you read, highlight, and ask, the richer it gets.
+                </Text>
+
+                {/* Progress toward the 5-min unlock threshold */}
+                <View style={styles.unlockProgressRow}>
+                  <View style={[styles.unlockTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.08)' }]}>
+                    <View style={[styles.unlockFill, { width: `${Math.min(100, Math.max(4, (weeklyReadMinutes / 5) * 100))}%` }]} />
+                  </View>
+                  <Text style={[styles.unlockProgressLabel, { color: colors.textSecondary }]}>
+                    {Math.round(weeklyReadMinutes)} / 5 min
+                  </Text>
+                </View>
+                <Text style={[styles.unlockHint, { color: colors.textTertiary }]}>
+                  {weeklyReadMinutes <= 0
+                    ? 'Read about 5 minutes this week to unlock your Recap.'
+                    : `About ${Math.max(1, Math.ceil(5 - weeklyReadMinutes))} more min of reading to unlock.`}
+                </Text>
+
+                <View style={styles.unlockCtaRow}>
+                  <TouchableOpacity
+                    style={[styles.unlockCta, { borderColor: 'rgba(56,189,248,0.4)' }]}
+                    onPress={() => router.push('/catchup')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to Catch-up to read articles"
+                  >
+                    <Icon name="lightning-bolt" size={14} color="#38BDF8" />
+                    <Text style={[styles.unlockCtaText, { color: '#38BDF8' }]}>Catch-up</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.unlockCta, { borderColor: 'rgba(236,72,153,0.4)' }]}
+                    onPress={() => router.push('/divein')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go to Dive-in to read articles"
+                  >
+                    <Icon name="book-open-variant" size={14} color="#EC4899" />
+                    <Text style={[styles.unlockCtaText, { color: '#EC4899' }]}>Dive-in</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           ) : (
             <View style={styles.ctaSection}>
@@ -1088,6 +1123,79 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.lg,
     maxWidth: 280,
+  },
+  unlockCard: {
+    width: '100%',
+    maxWidth: 360,
+    padding: Spacing.lg,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  unlockHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: Spacing.sm,
+  },
+  unlockTitle: {
+    ...Typography.headlineSmall,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  unlockBody: {
+    ...Typography.bodySmall,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  unlockProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    marginBottom: 6,
+  },
+  unlockTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  unlockFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#FB923C',
+  },
+  unlockProgressLabel: {
+    ...Typography.labelSmall,
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
+  },
+  unlockHint: {
+    ...Typography.labelSmall,
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  unlockCtaRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  unlockCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  unlockCtaText: {
+    ...Typography.labelMedium,
+    fontSize: 13,
+    fontWeight: '700',
   },
   beginButton: {
     // Opaque recap-orange for AA white-text contrast in both themes
