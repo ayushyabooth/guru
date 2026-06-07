@@ -30,6 +30,7 @@ export interface MetricsResponse {
       weeklyProgress: number;
       weeklyGoal: number;
     };
+    streak: number;
     lastUpdated: string;
   };
   profile: {
@@ -116,6 +117,7 @@ class MetricService {
             weeklyProgress: metricsData.week?.filter((day: any) => day.recap_completed).length * 60 || 0,
             weeklyGoal: profileData.recap_weekly_goal_minutes || 60,
           },
+          streak: metricsData.current_streak || 0,
           lastUpdated: new Date().toISOString(),
         },
         profile: {
@@ -166,6 +168,7 @@ class MetricService {
         catchup: { dailyProgress: 0, dailyGoal: 30, weeklyTotal: 0 },
         divein: { dailyProgress: 0, dailyGoal: 30, weeklyProgress: 0, weeklyGoal: 120 },
         recap: { status: 'not_started', weeklyProgress: 0, weeklyGoal: 60 },
+        streak: 0,
         lastUpdated: new Date().toISOString(),
       },
       profile: {

@@ -570,7 +570,15 @@ function HomeContent() {
 
         {/* Weekly Goals Progress (migrated from Recap) */}
         <View style={styles.goalsSection}>
-          <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Your Week</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Your Week</Text>
+            {/* GUR-13: reading streak (data from /me/metrics current_streak) */}
+            {displayMetrics.streak > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#FB923C' }}>🔥 {displayMetrics.streak} day{displayMetrics.streak === 1 ? '' : 's'}</Text>
+              </View>
+            )}
+          </View>
           <View style={[styles.goalsCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
             {(() => {
               const catchupGoal = displayMetrics.catchup.dailyGoal * 7;
