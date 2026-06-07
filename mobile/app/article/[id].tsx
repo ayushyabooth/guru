@@ -20,6 +20,7 @@ import {
   getBackdropBlur,
   getGlassStyle,
   GlassTier,
+  liquidGlassPill,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../../components/ui/Icon';
@@ -477,7 +478,7 @@ export default function ArticleDetailScreen() {
               styles.webTab,
               activeTab === i && [
                 styles.webTabActive,
-                { backgroundColor: `${ACCENT}22`, borderColor: `${ACCENT}55` },
+                liquidGlassPill(ACCENT, isDark),
               ],
             ]}
             onPress={() => {

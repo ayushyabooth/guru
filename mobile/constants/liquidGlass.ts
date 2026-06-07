@@ -614,6 +614,48 @@ export const getGlassStyle = (
   return base;
 };
 
+/**
+ * Liquid-glass "active pill" recipe — the single source of truth for SELECTED
+ * tab / segment pills across the app (EDL · Figma "Glass Pills v3", node 95:2).
+ * Matches the main bottom-tab slider (AnimatedTabPill) so the reader tabs,
+ * filter tabs, feed tabs etc. all read as the same liquid glass. Pass the tab's
+ * accent hex (e.g. '#EC4899') and dark mode.
+ */
+export const liquidGlassPill = (accent: string, isDark: boolean): ViewStyle => {
+  const base: ViewStyle = {
+    backgroundColor: isDark ? `${accent}66` : `${accent}4D`,
+    borderWidth: 1,
+    borderColor: isDark ? `${accent}A3` : `${accent}80`,
+  };
+  if (Platform.OS === 'web') {
+    return {
+      ...base,
+      // @ts-ignore web-only glass properties
+      backdropFilter: 'blur(20px) saturate(190%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(190%)',
+      backgroundImage: isDark
+        ? 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 35%, rgba(255,255,255,0) 70%, rgba(0,0,0,0.10) 100%)'
+        : 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 40%, rgba(255,255,255,0.10) 75%, rgba(15,23,42,0.04) 100%)',
+      boxShadow: [
+        `0 3px 12px ${accent}5C`,
+        `0 2px 6px ${isDark ? 'rgba(0,0,0,0.45)' : 'rgba(15,23,42,0.18)'}`,
+        `inset 0 1.5px 0 ${isDark ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.95)'}`,
+        `inset 0 -1.5px 2px ${isDark ? 'rgba(0,0,0,0.20)' : 'rgba(15,23,42,0.10)'}`,
+        `inset 1px 0 0 ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.45)'}`,
+        `inset -1px 0 0 ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.45)'}`,
+      ].join(', '),
+    } as ViewStyle;
+  }
+  return {
+    ...base,
+    shadowColor: accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  };
+};
+
 // ============================================================================
 // FILTER PILL GLASS TOKENS (GUR-132)
 // Source of truth: Figma "Glass Pills v3 — True Translucency" (node 95:2)

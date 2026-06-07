@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import Icon from '../ui/Icon';
 import { useTheme } from '../../contexts/ThemeContext';
+import { liquidGlassPill } from '../../constants/liquidGlass';
 
 // Unified tab interface that supports both simple and rich modes
 export interface TabItem {
@@ -106,24 +107,10 @@ export const UnifiedTabBar: React.FC<UnifiedTabBarProps> = ({
             },
           ];
 
-          // Active pill: glass treatment with accent glow + specular highlight
+          // Active pill: canonical liquid-glass recipe (shared with the main
+          // tab slider + reader tabs) so every selected pill matches the EDL.
           if (isActive) {
-            pillStyle.push({
-              shadowColor: colors.accent,
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: isDark ? 0.35 : 0.18,
-              shadowRadius: isDark ? 12 : 8,
-            });
-
-            if (Platform.OS === 'web') {
-              pillStyle.push({
-                backdropFilter: 'blur(24px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                boxShadow: isDark
-                  ? `0 0 20px ${hexToRgba(colors.accent, 0.25)}, 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)`
-                  : `0 0 12px ${hexToRgba(colors.accent, 0.15)}, 0 2px 8px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9)`,
-              } as any);
-            }
+            pillStyle.push(liquidGlassPill(colors.accent, isDark));
           } else {
             // Inactive: subtle ghost glass
             if (Platform.OS === 'web') {
