@@ -78,26 +78,19 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
   );
 
   const translateX = useRef(new Animated.Value(targetX)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade in once we know the bar width; skip the animation on first paint
-    // so the pill starts at the right slot instead of sliding from 0.
+    // Slide the pill to the active tab once the bar width is known. The opacity
+    // fade was removed: useNativeDriver opacity isn't reliable on react-native-web
+    // and left the pill stuck near-transparent (~0.08), so the active ring looked
+    // "exposed". Opacity is now a static value gated on barWidth (below).
     if (barWidth === 0) return;
-    Animated.parallel([
-      Animated.spring(translateX, {
-        toValue: targetX,
-        tension: SPRING_TENSION,
-        friction: SPRING_FRICTION,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(translateX, {
+      toValue: targetX,
+      tension: SPRING_TENSION,
+      friction: SPRING_FRICTION,
+      useNativeDriver: true,
+    }).start();
   }, [targetX, barWidth]);
 
   return (
@@ -110,7 +103,7 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
         style={[
           styles.pill,
           {
-            opacity,
+            opacity: barWidth > 0 ? 1 : 0,
             top: pillTop,
             height: pillHeight,
             transform: [{ translateX }],
