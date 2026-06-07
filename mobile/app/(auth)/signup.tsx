@@ -35,11 +35,32 @@ import { useTheme } from '../../contexts/ThemeContext';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(380, width - 48);
 
+/**
+ * Coerce an API error `detail` into a single display string. FastAPI returns a
+ * string for our own HTTPExceptions, but a 422 returns an array of Pydantic
+ * error objects ({ type, loc, msg, input }). Rendering that object/array as a
+ * React child throws React error #31 and takes down the whole screen, so we
+ * always flatten it to a string here.
+ */
+function extractErrorMessage(detail: unknown): string {
+  if (!detail) return 'Failed to create account';
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (d && typeof d === 'object' && 'msg' in d ? String((d as any).msg) : ''))
+      .filter(Boolean);
+    return msgs.join('. ') || 'Please check your details and try again.';
+  }
+  if (typeof detail === 'object' && detail !== null && 'msg' in detail) {
+    return String((detail as any).msg);
+  }
+  return 'Failed to create account';
+}
+
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -50,7 +71,6 @@ export default function SignupScreen() {
     setEmail('');
     setPassword('');
     setConfirmPassword('');
-    setInviteCode('');
     setStatus('idle');
     setErrorMessage('');
   }, []);
@@ -59,7 +79,7 @@ export default function SignupScreen() {
     setStatus('idle');
     setErrorMessage('');
 
-    if (!email || !password || !confirmPassword || !inviteCode) {
+    if (!email || !password || !confirmPassword) {
       setStatus('error');
       setErrorMessage('Please fill in all fields');
       return;
@@ -71,9 +91,9 @@ export default function SignupScreen() {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setStatus('error');
-      setErrorMessage('Password must be at least 6 characters');
+      setErrorMessage('Password must be at least 8 characters');
       return;
     }
 
@@ -89,7 +109,7 @@ export default function SignupScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, invite_code: inviteCode }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {
@@ -115,11 +135,14 @@ export default function SignupScreen() {
           const errorData = JSON.parse(responseText);
           setStatus('error');
 
-          if (errorData.detail === 'Email already registered') {
-            setErrorMessage('This email is already registered');
-          } else {
-            setErrorMessage(errorData.detail || 'Failed to create account');
-          }
+          // `detail` may be a string (our own errors) OR, on a 422, a Pydantic
+          // array of { type, loc, msg, input } objects. Always coerce to a
+          // string — setting state to an object/array crashes the whole app
+          // with React error #31 ("objects are not valid as a React child").
+          const msg = extractErrorMessage(errorData.detail);
+          setErrorMessage(
+            msg === 'Email already registered' ? 'This email is already registered' : msg,
+          );
         } catch {
           setStatus('error');
           setErrorMessage('Something went wrong. Please try again.');
@@ -238,21 +261,6 @@ export default function SignupScreen() {
               icon="lock"
               accessibilityLabel="Confirm password"
               textContentType="newPassword"
-            />
-
-            {/* Invite Code Input */}
-            <GlassInput
-              placeholder="Invite Code"
-              value={inviteCode}
-              onChangeText={(text) => {
-                setInviteCode(text);
-                if (status === 'error') setStatus('idle');
-              }}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              autoComplete="one-time-code"
-              icon="key"
-              accessibilityLabel="Invite code"
             />
 
             {/* Signup Button */}

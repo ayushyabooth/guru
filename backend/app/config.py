@@ -60,9 +60,6 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
-    # Signup gating
-    SIGNUP_INVITE_CODES: str = "GURU2026"  # comma-separated invite codes
-
     # Article filtering
     ARTICLE_TIME_WINDOW_DAYS: int = 14  # 2 weeks - articles older than this are excluded from feeds
 
