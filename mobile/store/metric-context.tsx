@@ -78,7 +78,7 @@ const initialState: MetricState = {
   profile: null,
   loading: false,
   error: null,
-  activeFilter: 'core',
+  activeFilter: 'all',
 };
 
 // Reducer
@@ -144,12 +144,17 @@ export function MetricProvider({
 }: MetricProviderProps) {
   const [state, dispatch] = useReducer(metricReducer, initialState);
 
-  // Fetch metrics function
-  const fetchMetrics = async () => {
+  // Always-current active filter, so the polling interval (which captures an
+  // older fetchMetrics closure) still fetches for the latest selected filter.
+  const activeFilterRef = useRef(state.activeFilter);
+  activeFilterRef.current = state.activeFilter;
+
+  // Fetch metrics function — scoped to the active Home content filter.
+  const fetchMetrics = async (filterOverride?: string) => {
     dispatch({ type: 'FETCH_START' });
-    
+
     try {
-      const data = await metricService.getMetricsWithFallback();
+      const data = await metricService.getMetricsWithFallback(filterOverride ?? activeFilterRef.current);
       dispatch({ 
         type: 'FETCH_SUCCESS', 
         payload: {
@@ -177,8 +182,16 @@ export function MetricProvider({
   // Generate filter tabs based on user profile
   const getFilterTabs = () => {
     const tabs = [];
-    
+
     if (state.profile) {
+      // "All" — aggregate view across every filter (dashboard default).
+      tabs.push({
+        id: 'all',
+        label: 'All',
+        type: 'all' as const,
+        value: 'all',
+      });
+
       // Core industry tab
       tabs.push({
         id: 'core',
@@ -210,6 +223,14 @@ export function MetricProvider({
 
     return tabs;
   };
+
+  // Re-scope the dashboard whenever the active Home filter changes. Skips the
+  // first run — the mount effect below already does the initial fetch.
+  const didMountFilter = useRef(false);
+  useEffect(() => {
+    if (!didMountFilter.current) { didMountFilter.current = true; return; }
+    fetchMetrics(state.activeFilter);
+  }, [state.activeFilter]);
 
   // Smart polling: only when app is in foreground (or document visible on web)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

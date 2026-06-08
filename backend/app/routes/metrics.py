@@ -4,7 +4,7 @@ Metrics API routes for tracking user activity and rings progress.
 import uuid
 from datetime import datetime, date, timedelta
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, Integer
@@ -161,15 +161,65 @@ async def log_time(
 
 @router.get("/me/metrics", response_model=MetricsSummaryResponse)
 async def get_metrics_summary(
+    filter: str | None = Query(
+        None,
+        description="Scope the dashboard to a Home content filter: None/'all' = aggregate, 'core', 'specialization:<name>', or 'interest:<name>'",
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Get comprehensive metrics summary for the current user.
     Includes today's metrics, weekly history, and totals.
+
+    When `filter` selects a specific Home content filter, the rings (today +
+    week catch-up/dive-in minutes) and activity stats are scoped to TimeLogs
+    tagged with that industry/specialization. Recap status, streak and all-time
+    totals stay cross-filter (they are habit/weekly concepts, not per-filter).
     """
     today = date.today()
     week_ago = today - timedelta(days=6)
+
+    # ── Resolve the Home content filter to a TimeLog column + value ──────
+    # Returns (column, value) or None for the aggregate ("all") view.
+    def _resolve_filter():
+        if not filter or filter == "all":
+            return None
+        if filter == "core":
+            core = getattr(getattr(current_user, "profile", None), "core_industry", None)
+            return (TimeLog.industry, core) if core else None
+        if filter.startswith("specialization:"):
+            return (TimeLog.specialization, filter.split(":", 1)[1])
+        if filter.startswith("interest:"):
+            return (TimeLog.industry, filter.split(":", 1)[1])
+        return None
+
+    filter_match = _resolve_filter()
+
+    # Per-day catch-up/dive-in minutes for the active filter, computed straight
+    # from TimeLogs (the DailyMetric rollup is aggregate-only). {date: {ring: min}}
+    filtered_day_minutes: dict = {}
+    if filter_match is not None:
+        col, val = filter_match
+        rows = db.query(
+            func.date(TimeLog.started_at).label("d"),
+            TimeLog.ring_type,
+            func.sum(TimeLog.duration_seconds).label("secs"),
+        ).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.started_at) >= week_ago,
+            func.date(TimeLog.started_at) <= today,
+            col == val,
+        ).group_by(func.date(TimeLog.started_at), TimeLog.ring_type).all()
+        for r in rows:
+            day = filtered_day_minutes.setdefault(str(r.d), {})
+            day[r.ring_type] = (r.secs or 0) // 60
+
+    def _scoped(metric_date, ring: str, fallback: int) -> int:
+        """Filtered minutes for a day/ring, or the aggregate fallback."""
+        if filter_match is None:
+            return fallback
+        return filtered_day_minutes.get(str(metric_date), {}).get(ring, 0)
     
     # Get or create today's metric
     today_metric = db.query(DailyMetric).filter(
@@ -244,12 +294,15 @@ async def get_metrics_summary(
     top_topics: list[dict] = []
     try:
         from app.models.interaction import UserSavedArticle
-        articles_read = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
+        read_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
             TimeLog.user_id == current_user.id,
             func.date(TimeLog.created_at) >= week_ago,
             TimeLog.context_id.isnot(None),
             TimeLog.ring_type.in_(["catchup", "divein"]),
-        ).scalar() or 0
+        )
+        if filter_match is not None:
+            read_q = read_q.filter(filter_match[0] == filter_match[1])
+        articles_read = read_q.scalar() or 0
 
         articles_saved = db.query(func.count(UserSavedArticle.id)).filter(
             UserSavedArticle.user_id == current_user.id,
@@ -261,13 +314,16 @@ async def get_metrics_summary(
             TimeLog.industry.isnot(None),
         ).scalar() or 0
 
-        topic_rows = db.query(
+        topic_q = db.query(
             TimeLog.specialization, func.count(TimeLog.id).label("cnt")
         ).filter(
             TimeLog.user_id == current_user.id,
             func.date(TimeLog.created_at) >= week_ago,
             TimeLog.specialization.isnot(None),
-        ).group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
+        )
+        if filter_match is not None:
+            topic_q = topic_q.filter(filter_match[0] == filter_match[1])
+        topic_rows = topic_q.group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
         top_topics = [{"name": r[0], "count": int(r[1])} for r in topic_rows if r[0]]
     except Exception:
         # Never let stats computation break the metrics endpoint
@@ -276,17 +332,17 @@ async def get_metrics_summary(
     return MetricsSummaryResponse(
         today=DailyMetricResponse(
             metric_date=today_metric.metric_date,
-            catchup_minutes=today_metric.catchup_minutes or 0,
-            catchup_goal_met=today_metric.catchup_goal_met or False,
-            divein_minutes=today_metric.divein_minutes or 0,
+            catchup_minutes=_scoped(today_metric.metric_date, "catchup", today_metric.catchup_minutes or 0),
+            catchup_goal_met=(_scoped(today_metric.metric_date, "catchup", 0) >= 20) if filter_match is not None else (today_metric.catchup_goal_met or False),
+            divein_minutes=_scoped(today_metric.metric_date, "divein", today_metric.divein_minutes or 0),
             recap_completed=today_metric.recap_completed or False,
         ),
         week=[
             DailyMetricResponse(
                 metric_date=m.metric_date,
-                catchup_minutes=m.catchup_minutes or 0,
-                catchup_goal_met=m.catchup_goal_met or False,
-                divein_minutes=m.divein_minutes or 0,
+                catchup_minutes=_scoped(m.metric_date, "catchup", m.catchup_minutes or 0),
+                catchup_goal_met=(_scoped(m.metric_date, "catchup", 0) >= 20) if filter_match is not None else (m.catchup_goal_met or False),
+                divein_minutes=_scoped(m.metric_date, "divein", m.divein_minutes or 0),
                 recap_completed=m.recap_completed or False,
             )
             for m in week_metrics

@@ -62,13 +62,18 @@ class MetricService {
     };
   }
 
-  async getMetrics(): Promise<MetricsResponse> {
+  async getMetrics(filter?: string): Promise<MetricsResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      
+
+      // Scope the dashboard to the selected Home content filter (omit for 'all').
+      const metricsUrl = filter && filter !== 'all'
+        ? `${this.baseUrl}/me/metrics?filter=${encodeURIComponent(filter)}`
+        : `${this.baseUrl}/me/metrics`;
+
       // Fetch metrics and profile in parallel
       const [metricsResponse, profileResponse] = await Promise.all([
-        fetch(`${this.baseUrl}/me/metrics`, {
+        fetch(metricsUrl, {
           method: 'GET',
           headers,
         }),
@@ -193,9 +198,9 @@ class MetricService {
   }
 
   // Fetch metrics with graceful fallback: real API → last-known-good cache → static defaults
-  async getMetricsWithFallback(): Promise<MetricsResponse> {
+  async getMetricsWithFallback(filter?: string): Promise<MetricsResponse> {
     try {
-      return await this.getMetrics();
+      return await this.getMetrics(filter);
     } catch (error) {
       // Propagate auth errors so the UI can redirect to login
       if (error instanceof Error && error.message.includes('Authentication failed')) {

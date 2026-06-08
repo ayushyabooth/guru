@@ -450,6 +450,12 @@ function HomeContent() {
   }, [fetchMetrics]);
 
   const filterTabs = getFilterTabs();
+  // Reflect the active filter in the header so it's clear the dashboard is
+  // scoped (e.g. "Education Progress" vs the all-up "Your Progress").
+  const activeFilterTab = filterTabs.find((t: any) => t.value === state.activeFilter);
+  const progressTitle = (!state.activeFilter || state.activeFilter === 'all' || !activeFilterTab)
+    ? 'Your Progress'
+    : `${activeFilterTab.label} Progress`;
 
   if (state.loading && !displayMetrics.lastUpdated) {
     return (
@@ -523,7 +529,7 @@ function HomeContent() {
               </View>
             </View>
             <Text style={[styles.greeting, { color: COLORS.textSecondary }]}>Welcome back</Text>
-            <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>Your Progress</Text>
+            <Text accessibilityRole="header" style={[styles.title, { color: COLORS.textPrimary }]}>{progressTitle}</Text>
             {state.error && <Text role="alert" style={styles.errorText}>{state.error}</Text>}
           </View>
         </View>
