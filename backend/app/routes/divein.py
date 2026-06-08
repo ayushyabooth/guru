@@ -3,7 +3,7 @@ Dive-in feed API routes for saved and essential articles
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, desc, cast, Text
+from sqlalchemy import or_, and_, exists, desc, cast, Text
 from typing import List, Optional
 import uuid
 import logging
@@ -162,7 +162,17 @@ async def get_divein_feed(
                 Article.title != 'Untitled',
             )
             if filter_conditions:
-                saved_query = saved_query.filter(or_(*filter_conditions))
+                # An article's filter tags live on its ExpertNote(s) (the chip uses
+                # expert_industry). Show a saved article only if it has a note that
+                # matches the active filter — via a correlated EXISTS so we don't
+                # inner-join (which would duplicate rows and drop note-less saves).
+                # Articles with NO ExpertNote have no filter info, so keep them
+                # visible everywhere rather than hiding them entirely.
+                matches_filter = exists().where(
+                    and_(ExpertNote.article_id == Article.id, or_(*filter_conditions))
+                )
+                has_any_note = exists().where(ExpertNote.article_id == Article.id)
+                saved_query = saved_query.filter(or_(matches_filter, ~has_any_note))
             saved_articles = saved_query.order_by(desc(Article.created_at)).all()
 
         # ── Section 2: Expert Picks (filter-specific, exclude saved) ──
