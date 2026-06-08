@@ -260,11 +260,17 @@ function TriskelionCanvas({
   // cleanly inside the bar.
   const PAD = minimal ? 4 : Math.round(size * 0.35);
   const canvasSize = size + PAD * 2;
-  const R = size * 0.32;       // ring radius
-  const offset = size * 0.175; // center-to-ring-center distance
+  // At tab (minimal) size the triskelion is rendered a touch smaller AND shifted
+  // DOWN inside its canvas. The canvas top sits flush with the active pill's top
+  // edge, so a full-size, top-anchored top ring (Catch-up) spilled its glow out
+  // of the pill — flagged repeatedly. Compacting + nudging down gives the top
+  // ring clear margin below the pill edge while keeping the cluster centred.
+  const R = size * (minimal ? 0.30 : 0.32);       // ring radius
+  const offset = size * (minimal ? 0.16 : 0.175); // center-to-ring-center distance
+  const yShift = minimal ? size * 0.12 : 0;       // push cluster down inside canvas
   const SW = Math.max(2.5, R * 0.2); // 16px at 200px size
   const CX = canvasSize / 2;
-  const CY = canvasSize / 2;
+  const CY = canvasSize / 2 + yShift;
 
   useEffect(() => {
     const canvas = canvasRef.current;
