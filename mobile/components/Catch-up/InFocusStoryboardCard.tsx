@@ -178,12 +178,16 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
   const [selectedQuestion, setSelectedQuestion] = useState('');
 
   const handleStartReading = (articleId: string) => {
-    // Open the source tab FIRST, synchronously in the click gesture. Then DEFER
-    // the in-app navigation to a separate task — a same-task pushState was
-    // cancelling the just-opened tab (popup-blocked), forcing the user to hit
-    // "Reopen". The setTimeout lets the new tab settle before we navigate.
-    const article = getCarouselArticles().find(a => a.id === articleId);
-    openExternalTab(article?.url);
+    // Resolve the source URL. The "Dive In" button lives on the IN-FOCUS article,
+    // but getCarouselArticles() filters that id OUT — so the old lookup returned
+    // undefined and openExternalTab() silently no-op'd (the real reason Dive In
+    // never opened a tab). Use the in-focus article's url directly for its own id.
+    const url = articleId === inFocusArticle?.id
+      ? inFocusArticle?.url
+      : getCarouselArticles().find(a => a.id === articleId)?.url;
+    // Open synchronously in the gesture; defer the SPA nav a task so it can't
+    // cancel the just-opened tab.
+    openExternalTab(url);
     setTimeout(() => router.push(`/article/${articleId}?source=catchup`), 0);
   };
 
