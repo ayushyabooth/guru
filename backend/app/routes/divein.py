@@ -67,7 +67,7 @@ class ArticleSummary(BaseModel):
 
 class DiveinFeedResponse(BaseModel):
     """Response model for dive-in feed with three-section architecture"""
-    saved_articles: List[ArticleSummary]      # Section 1: user's saved articles (cross-filter)
+    saved_articles: List[ArticleSummary]      # Section 1: user's saved articles (scoped to the active filter)
     essential_articles: List[ArticleSummary]   # Section 2: expert picks (filter-specific)
     discovery_articles: List[ArticleSummary]   # Section 3: more to explore (filter-specific)
     total_saved: int
@@ -148,15 +148,22 @@ async def get_divein_feed(
             filter_type, filter_value, user_profile
         )
 
-        # ── Section 1: Saved articles (CROSS-FILTER — always shown) ───
+        # ── Section 1: Saved articles (FILTER-SCOPED) ─────────────────
+        # Saved articles only appear under filters they actually match — e.g.
+        # an Education-tagged saved article must NOT show up while the user is on
+        # the Consumer filter. Apply the same filter_conditions as the discovery
+        # pools so "Saved for Later" stays consistent with the active filter.
         saved_articles = []
         if user_saved_ids:
-            saved_articles = db.query(Article).filter(
+            saved_query = db.query(Article).filter(
                 Article.id.in_(user_saved_ids),
                 Article.created_at >= cutoff_date,
                 Article.title.isnot(None),
                 Article.title != 'Untitled',
-            ).order_by(desc(Article.created_at)).all()
+            )
+            if filter_conditions:
+                saved_query = saved_query.filter(or_(*filter_conditions))
+            saved_articles = saved_query.order_by(desc(Article.created_at)).all()
 
         # ── Section 2: Expert Picks (filter-specific, exclude saved) ──
         essential_only_ids = essential_ids - user_saved_ids
