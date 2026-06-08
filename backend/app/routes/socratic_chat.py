@@ -202,8 +202,18 @@ followups must contain exactly 3 short (<60 char) follow-up questions that deepe
             messages=messages
         )
 
-        # Re-add the prefilled "{" that the model continued from.
-        raw_text = ("{" + response.content[0].text).strip()
+        # Reconstruct the JSON the model produced. Normally it continues the
+        # prefilled "{" (its output starts with `"response": ...`), so we re-add
+        # the "{". But the model sometimes IGNORES the prefill and emits its own
+        # ```json fence or a bare object — re-adding "{" then would make malformed
+        # "{```json..." that fails to parse and leaks raw JSON into the chat. So
+        # only prepend "{" when the model actually continued it.
+        _cont = response.content[0].text
+        _stripped = _cont.lstrip()
+        if _stripped.startswith("```") or _stripped.startswith("{"):
+            raw_text = _stripped
+        else:
+            raw_text = ("{" + _cont).strip()
 
         # Parse JSON; fall back gracefully if the model returns plain text.
         import json as _json

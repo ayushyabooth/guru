@@ -8,10 +8,10 @@ export function cleanGuruResponse(raw: string): string {
   if (!raw) return '';
   let t = String(raw).trim();
 
-  const fence = t.match(/^```(?:json|markdown|md)?\s*([\s\S]*?)\s*```$/i);
+  const fence = t.match(/```(?:json|markdown|md)?\s*([\s\S]*?)\s*```/i);
   if (fence) t = fence[1].trim();
 
-  if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('"') && t.endsWith('"'))) {
+  if ((t.startsWith('{') && t.includes('"response"')) || (t.startsWith('"') && t.endsWith('"'))) {
     try {
       const parsed = JSON.parse(t);
       if (typeof parsed === 'string') t = parsed;
@@ -19,7 +19,11 @@ export function cleanGuruResponse(raw: string): string {
         t = parsed.response || parsed.answer || parsed.text || parsed.content ||
             parsed.message || parsed.reply || t;
       }
-    } catch { /* leave as-is */ }
+    } catch {
+      // Malformed/truncated JSON — extract the "response" value directly.
+      const m = t.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (m) t = m[1];
+    }
   }
 
   t = t.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"');

@@ -12,12 +12,12 @@ export function cleanGuruResponse(raw: string): string {
   if (!raw) return '';
   let t = String(raw).trim();
 
-  // Unwrap a ```json … ``` or ``` … ``` code fence.
-  const fence = t.match(/^```(?:json|markdown|md)?\s*([\s\S]*?)\s*```$/i);
+  // Unwrap a ```json … ``` code fence anywhere in the text.
+  const fence = t.match(/```(?:json|markdown|md)?\s*([\s\S]*?)\s*```/i);
   if (fence) t = fence[1].trim();
 
-  // If the whole payload is JSON, parse and pull out the human-readable field.
-  if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('"') && t.endsWith('"'))) {
+  // If it looks like a JSON wrapper, pull out the human-readable field.
+  if ((t.startsWith('{') && t.includes('"response"')) || (t.startsWith('"') && t.endsWith('"'))) {
     try {
       const parsed = JSON.parse(t);
       if (typeof parsed === 'string') {
@@ -27,7 +27,10 @@ export function cleanGuruResponse(raw: string): string {
             parsed.message || parsed.reply || t;
       }
     } catch {
-      /* not valid JSON — leave as-is */
+      // Malformed JSON (e.g. truncated, or a stray "{" before a fence) — grab
+      // the "response" string value directly so raw JSON never reaches the user.
+      const m = t.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (m) t = m[1];
     }
   }
 
