@@ -139,24 +139,24 @@ How to respond:
 1. Jump straight into the insight - no labels, no headers, no "here's what I think"
 2. Be conversational, like a brilliant colleague at coffee who gets excited about ideas
 3. Connect the article to their world with specific, actionable angles
-4. If it feels natural, end with ONE curious question that pulls them deeper (but don't force it)
+4. BE BRIEF: 2-4 short sentences, ~70 words MAX. Punchy and concrete - respect their time.
 
 Voice:
 - Confident but not preachy
 - Specific beats generic (use numbers, examples, comparisons from the article)
-- Short paragraphs - let ideas breathe
+- Short and tight - one idea, well made
 - Match their energy - if they ask something technical, go technical
 
 NEVER DO THIS:
 - Don't use headers like "Key insight:" or "Question:" - just write naturally
 - Don't announce what you're doing ("Let me explain..." "Here's a question...")
-- Don't lecture - this is a dialogue, not a TED talk
-- Don't ask multiple questions in your response - one max, and only if it sparks curiosity
+- Don't lecture or pad - this is a quick dialogue, not a TED talk
+- Don't put ANY question in the "response" field - ALL questions belong in "followups" only
 
 OUTPUT FORMAT (STRICT):
 Return ONLY a valid JSON object with exactly these two keys:
 {
-  "response": "<your Socratic answer here, natural prose, no headers>",
+  "response": "<2-4 sentence Socratic answer, ~70 words max, natural prose, NO headers, NO questions>",
   "followups": ["<q1>", "<q2>", "<q3>"]
 }
 followups must contain exactly 3 short (<60 char) follow-up questions that deepen understanding, connect to the user's work, or challenge assumptions. Start each with action words like "How might...", "What if...", "Why does...". Return NOTHING outside the JSON."""
@@ -184,11 +184,17 @@ followups must contain exactly 3 short (<60 char) follow-up questions that deepe
             "content": request.question
         })
 
+        # Prefill the assistant turn with "{" so the model is forced to continue
+        # as JSON (it was otherwise returning plain verbose prose, which broke the
+        # response/followups split — answers ran long and the pills fell back to
+        # generic questions).
+        messages.append({"role": "assistant", "content": "{"})
+
         # Single merged call: returns both the response and follow-up prompts as JSON.
         # Cache the large article context block — stable across turns in the same chat.
         response = claude_client.client.messages.create(
             model=settings.CLAUDE_SONNET_MODEL,
-            max_tokens=700,  # 500 response + ~150 followups + JSON scaffolding
+            max_tokens=400,  # concise answer (~70 words) + 3 short followups + JSON scaffolding
             system=[
                 {"type": "text", "text": system_instructions},
                 {"type": "text", "text": article_block, "cache_control": {"type": "ephemeral"}},
@@ -196,7 +202,8 @@ followups must contain exactly 3 short (<60 char) follow-up questions that deepe
             messages=messages
         )
 
-        raw_text = response.content[0].text.strip()
+        # Re-add the prefilled "{" that the model continued from.
+        raw_text = ("{" + response.content[0].text).strip()
 
         # Parse JSON; fall back gracefully if the model returns plain text.
         import json as _json

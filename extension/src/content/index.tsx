@@ -516,19 +516,25 @@ function getBaseStyles(): string {
     }
 
     .guru-follow-up-chip {
-      padding: 6px 12px;
-      background: rgba(99,102,241,0.18);
-      border: 1px solid rgba(99,102,241,0.35);
-      color: #A5B4FC;
-      border-radius: 16px;
-      font-size: 12px;
+      padding: 8px 14px;
+      background: rgba(99,102,241,0.16);
+      backdrop-filter: blur(12px) saturate(160%);
+      -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border: 1px solid rgba(129,140,248,0.40);
+      box-shadow: 0 2px 8px rgba(99,102,241,0.18), inset 0 1px 0 rgba(255,255,255,0.12);
+      color: #C7D2FE;
+      border-radius: 18px;
+      font-size: 12.5px;
+      font-weight: 500;
+      line-height: 1.3;
       cursor: pointer;
       pointer-events: auto;
-      transition: background 0.2s;
+      transition: background 0.2s, transform 0.1s;
     }
 
     .guru-follow-up-chip:hover {
-      background: rgba(99,102,241,0.28);
+      background: rgba(99,102,241,0.30);
+      transform: translateY(-1px);
     }
 
     .guru-quotes-scroll {
