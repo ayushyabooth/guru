@@ -17,6 +17,7 @@ import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
+import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken, getAuthToken } from '../../utils/auth';
 import { API_BASE_URL } from '../../constants/config';
@@ -405,6 +406,7 @@ function HomeContent() {
   };
 
   const handleRingPress = (section: 'catchup' | 'divein' | 'recap') => {
+    router.push(`/${section}`);
   };
 
   const handleLogout = async () => {
@@ -534,6 +536,12 @@ function HomeContent() {
           </View>
         </View>
 
+        {/* GUR-227: onboarding prompt to install the browser extension
+            (web + Chromium + not installed + not dismissed; renders null otherwise) */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.sm }}>
+          <ExtensionInstallBanner />
+        </View>
+
         {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec) */}
         <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
           {(() => {
@@ -551,6 +559,7 @@ function HomeContent() {
                 progress={{ c, d, r }}
                 volumetric
                 celebrate={celebrate}
+                onRingPress={handleRingPress}
               />
             );
           })()}

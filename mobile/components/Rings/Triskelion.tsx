@@ -14,7 +14,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, Pressable } from 'react-native';
 import { PlasmaBlobRing } from './PlasmaBlobRing';
 import { NexusSphere } from './NexusSphere';
 
@@ -32,6 +32,8 @@ export interface TriskelionProps {
   celebrate?: boolean;
   reducedMotion?: boolean;
   colors?: { catchup?: string; divein?: string; recap?: string };
+  /** Tap a ring to navigate to its section. Zones: top→catchup, bottom-left→recap, bottom-right→divein. */
+  onRingPress?: (section: 'catchup' | 'divein' | 'recap') => void;
 }
 
 const DEFAULT_COLORS = { catchup: '#38BDF8', divein: '#EC4899', recap: '#FB923C' };
@@ -236,6 +238,7 @@ function TriskelionCanvas({
   progress,
   celebrate = false,
   colors,
+  onRingPress,
 }: TriskelionProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cc = { ...DEFAULT_COLORS, ...(colors ?? {}) };
@@ -318,8 +321,26 @@ function TriskelionCanvas({
     }
   }, [progress.c, progress.d, progress.r, size, celebrate, colors]);
 
+  // The rendered ring cluster is centred in the size×size box (canvas is
+  // PAD-offset). Map a tap to its ring by zone: top→catchup, bottom-left→recap,
+  // bottom-right→divein. Tolerant by design — the rings overlap in the centre.
+  const handlePress = onRingPress
+    ? (e: any) => {
+        const { locationX = 0, locationY = 0 } = e?.nativeEvent ?? {};
+        const fx = locationX / size;
+        const fy = locationY / size;
+        onRingPress(fy < 0.45 ? 'catchup' : fx < 0.5 ? 'recap' : 'divein');
+      }
+    : undefined;
+
   return (
-    <View style={{ width: size, height: size, overflow: 'visible' } as any}>
+    <Pressable
+      onPress={handlePress}
+      disabled={!onRingPress}
+      accessibilityRole={onRingPress ? 'button' : undefined}
+      accessibilityLabel={onRingPress ? 'Activity rings — tap a ring to open its section' : undefined}
+      style={{ width: size, height: size, overflow: 'visible' } as any}
+    >
       <canvas
         ref={canvasRef}
         width={canvasSize}
@@ -332,7 +353,7 @@ function TriskelionCanvas({
           pointerEvents: 'none',
         } as any}
       />
-    </View>
+    </Pressable>
   );
 }
 

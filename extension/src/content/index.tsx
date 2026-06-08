@@ -113,6 +113,18 @@ async function activate(articleId: string) {
 
 console.log('[Guru] Content script loaded on:', window.location.href);
 
+// ── Broadcast extension presence ─────────────────────────────────────────
+// Runs on every page (incl. the Guru web app). Sets a marker on <html> and
+// fires an event so the web app can detect whether the extension is installed
+// and decide whether to show the install/onboarding prompt. Cheap + idempotent.
+try {
+  const __guruVer = (chrome?.runtime?.getManifest?.() || {}).version || '0';
+  document.documentElement.dataset.guruExtension = __guruVer;
+  window.dispatchEvent(new CustomEvent('guru:extension-ready', { detail: { version: __guruVer } }));
+} catch (e) {
+  /* not in extension context */
+}
+
 // Auto-sync auth token from web app's localStorage when on the web app origin
 // This enables zero-friction auth: user logs into web app, extension picks up the token
 const isGuruWebApp = (window.location.hostname === 'localhost' && window.location.port === '8081') ||
