@@ -139,12 +139,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
                   "{quote}"
                 </Text>
                 {onQuotePress && (
-                  <Text style={styles.quoteHint}>Tap to find in article →</Text>
-                )}
-                {onQuotePress && (
-                  <TouchableOpacity onPress={() => onQuotePress(quote)} activeOpacity={0.7} style={{ marginTop: 6 }}>
-                    <Text style={{ color: '#6366F1', fontSize: 12, fontWeight: '600' }}>Ask Guru about this →</Text>
-                  </TouchableOpacity>
+                  <Text style={[styles.quoteHint, { color: categoryAccent }]}>Ask Guru about this →</Text>
                 )}
               </TouchableOpacity>
             ))}

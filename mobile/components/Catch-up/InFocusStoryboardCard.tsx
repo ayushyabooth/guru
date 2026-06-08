@@ -213,8 +213,9 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
       content: quote,
       metadata: { storyboard_id: storyboard.id, industry: storyboard.industry },
     });
-    // Navigate to article reader with quote to highlight/scroll to
-    router.push(`/article/${inFocusArticle?.id}?highlightQuote=${encodeURIComponent(quote)}&source=catchup`);
+    // Open the reader and ask Guru about this quote (single, clear action — the
+    // old dual CTAs both just dumped you on the reader and did nothing).
+    router.push(`/article/${inFocusArticle?.id}?askQuote=${encodeURIComponent(quote)}&source=catchup`);
   };
 
   if (!inFocusArticle) {

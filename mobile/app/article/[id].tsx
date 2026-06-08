@@ -91,7 +91,7 @@ function buildGlass(tier: GlassTier, isDark: boolean) {
 }
 
 export default function ArticleDetailScreen() {
-  const { id, highlightQuote, source } = useLocalSearchParams();
+  const { id, highlightQuote, askQuote, source } = useLocalSearchParams();
   const router = useRouter();
   const { isDark, colors: themeColors } = useTheme();
 
@@ -175,9 +175,9 @@ export default function ArticleDetailScreen() {
   const [guruConversationId, setGuruConversationId] = useState<string | null>(null);
   const guruInputRef = useRef<TextInput>(null);
 
-  const sendGuruMessage = async () => {
-    if (!guruInput.trim() || guruLoading) return;
-    const question = guruInput.trim();
+  const sendGuruMessage = async (overrideQuestion?: string) => {
+    const question = (typeof overrideQuestion === 'string' ? overrideQuestion : guruInput).trim();
+    if (!question || guruLoading) return;
     setGuruMessages(prev => [...prev, { role: 'user', text: question }]);
     setGuruInput('');
     setGuruLoading(true);
@@ -206,6 +206,24 @@ export default function ArticleDetailScreen() {
       setGuruLoading(false);
     }
   };
+
+  // Spotlight quote → jump to the Ask Guru tab and ask about that quote. The
+  // single, clear action for a quote (replaces the confusing dual CTAs).
+  const askAboutQuote = (quote: string) => {
+    handleTabChange(3);
+    setTimeout(() => sendGuruMessage(`What's the significance of this quote, and why does it matter for me? "${quote.trim()}"`), 120);
+  };
+
+  // Arriving from a Catch-up Spotlight quote (?askQuote=...) → auto-open Ask Guru
+  // about it, once, after the reader has loaded.
+  const askedQuoteRef = useRef(false);
+  useEffect(() => {
+    const q = typeof askQuote === 'string' ? askQuote : undefined;
+    if (q && articleId && !askedQuoteRef.current) {
+      askedQuoteRef.current = true;
+      setTimeout(() => askAboutQuote(q), 500);
+    }
+  }, [askQuote, articleId]);
 
   // Track which feed tab opened this article
   const [sourceTab] = useState<string>(() => {
@@ -569,9 +587,17 @@ export default function ArticleDetailScreen() {
                   <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Spotlight Quotes</Text>
                 </View>
                 {rc.spotlight_quotes.map((q: string, i: number) => (
-                  <View key={i} style={[styles.webQuoteCard, GM.cardLight, { borderLeftWidth: 3, borderLeftColor: ACCENT }]}>
-                    <Text style={[styles.webQuoteText, { color: TC.textSecondary }]}>{q}</Text>
-                  </View>
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.webQuoteCard, GM.cardLight, { borderLeftWidth: 3, borderLeftColor: ACCENT }]}
+                    onPress={() => askAboutQuote(q)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ask Guru about this quote"
+                  >
+                    <Text style={[styles.webQuoteText, { color: TC.textSecondary }]}>"{q}"</Text>
+                    <Text style={{ color: ACCENT, fontSize: 12, fontWeight: '700', marginTop: 6 }}>Ask Guru about this →</Text>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -776,7 +802,7 @@ export default function ArticleDetailScreen() {
             placeholderTextColor={TC.textTertiary}
             value={guruInput}
             onChangeText={setGuruInput}
-            onSubmitEditing={sendGuruMessage}
+            onSubmitEditing={() => sendGuruMessage()}
             returnKeyType="send"
             onFocus={() => {
               // Switch to Ask Guru tab when input is focused from another tab
@@ -788,7 +814,7 @@ export default function ArticleDetailScreen() {
               styles.askGuruSendBtn,
               { backgroundColor: guruInput.trim() && !guruLoading ? ACCENT : TC.textTertiary },
             ]}
-            onPress={sendGuruMessage}
+            onPress={() => sendGuruMessage()}
             disabled={!guruInput.trim() || guruLoading}
             accessibilityRole="button"
             accessibilityLabel="Send message to Guru"
