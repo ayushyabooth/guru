@@ -185,6 +185,20 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
         </View>
       );
 
+    case 'recap_step':
+      return (
+        <View style={[glass, { marginBottom: 12, backgroundColor: 'rgba(251,146,60,0.08)', borderColor: 'rgba(251,146,60,0.30)' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ backgroundColor: 'rgba(251,146,60,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8 }}>
+              <Text style={{ color: '#FB923C', fontSize: 10, fontWeight: '700' }}>RECAP · STAGE {block.stage ?? '?'}</Text>
+            </View>
+            {!!block.title && <Text style={{ color: tSec, fontSize: 11, fontWeight: '600' }}>{block.title}</Text>}
+          </View>
+          <Text style={{ color: tPrim, fontSize: 14.5, lineHeight: 21, fontWeight: '500' }}>{block.prompt}</Text>
+          <Text style={{ color: tSec, fontSize: 11, marginTop: 8 }}>Answer in the bar below ↓</Text>
+        </View>
+      );
+
     case 'outcome_summary':
       return (
         <View style={[glass, { marginBottom: 12, backgroundColor: 'rgba(52,211,153,0.08)', borderColor: 'rgba(52,211,153,0.30)' }]}>

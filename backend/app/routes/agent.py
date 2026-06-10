@@ -42,7 +42,10 @@ MAX_HISTORY_MSGS = 40  # keep sessions bounded
 
 # ── Tools (thin wrappers over existing endpoints) ────────────────────────────
 
-WRITE_TOOLS = {"save_article", "mark_not_relevant"}
+# Writes that mutate user data outside an explicitly-requested flow get an
+# approval gate. Recap progression (start/answer/socratic/advance) acts on the
+# user's direct instruction — the message itself is the consent.
+WRITE_TOOLS = {"save_article", "mark_not_relevant", "add_note", "set_commitment"}
 
 TOOLS = [
     {
@@ -101,6 +104,93 @@ TOOLS = [
             "required": ["storyboard_id", "title"],
         },
     },
+    {
+        "name": "get_article_deep",
+        "description": "Get an article's full deep-read content (text + rich insights). Use for deep-dive goals so you can discuss specifics, pull takeaways, and propose notes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"article_id": {"type": "string"}},
+            "required": ["article_id"],
+        },
+    },
+    {
+        "name": "add_note",
+        "description": "Save a note onto an article (appears in the user's Notes alongside their highlights, feeds the weekly recap). WRITE: requires user approval. Use after a deep-dive exchange to capture the key takeaway in the user's terms.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "article_id": {"type": "string"},
+                "note": {"type": "string", "description": "The note text — concise, in the user's voice"},
+                "title": {"type": "string", "description": "Article title, shown on the approval card"},
+            },
+            "required": ["article_id", "note", "title"],
+        },
+    },
+    {
+        "name": "get_recap_state",
+        "description": "Get the user's recap journeys (latest first): journey_id, status, current stage. Call before starting or resuming a weekly recap.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "start_recap",
+        "description": "Start (or resume) this week's recap journey. Returns journey_id, stage, and the Stage-1 week snapshot. Call when the user asks to run their weekly recap.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_recap_questions",
+        "description": "Get the Stage-2 guided active-recall questions for a recap journey.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"journey_id": {"type": "string"}},
+            "required": ["journey_id"],
+        },
+    },
+    {
+        "name": "submit_recap_answer",
+        "description": "Submit the user's answer (their own typed words) to a Stage-2 question. No approval needed — the user's message is the consent.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "journey_id": {"type": "string"},
+                "question_index": {"type": "integer"},
+                "response": {"type": "string", "description": "The user's answer, verbatim or lightly cleaned"},
+            },
+            "required": ["journey_id", "question_index", "response"],
+        },
+    },
+    {
+        "name": "recap_socratic",
+        "description": "Stage-3 Socratic dialogue inside the recap: send the user's reflection and get the mentor's probing response.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "journey_id": {"type": "string"},
+                "message": {"type": "string"},
+            },
+            "required": ["journey_id", "message"],
+        },
+    },
+    {
+        "name": "get_recap_insights",
+        "description": "Get the Stage-4 extracted insights for a recap journey (themes + takeaways for the week).",
+        "input_schema": {
+            "type": "object",
+            "properties": {"journey_id": {"type": "string"}},
+            "required": ["journey_id"],
+        },
+    },
+    {
+        "name": "set_commitment",
+        "description": "Set the user's One Commitment for next week on a recap journey. WRITE: requires user approval. This commitment then biases next week's reading.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "journey_id": {"type": "string"},
+                "text": {"type": "string", "description": "The commitment, one sentence, actionable"},
+            },
+            "required": ["journey_id", "text"],
+        },
+    },
 ]
 
 STATUS_TEXT = {
@@ -109,6 +199,13 @@ STATUS_TEXT = {
     "get_metrics": "checking your rings…",
     "get_commitment": "recalling your commitment…",
     "ask_guru": "thinking it through…",
+    "get_article_deep": "reading the article closely…",
+    "get_recap_state": "checking your recap…",
+    "start_recap": "preparing your week's snapshot…",
+    "get_recap_questions": "writing your recall questions…",
+    "submit_recap_answer": "weighing your answer…",
+    "recap_socratic": "reflecting with you…",
+    "get_recap_insights": "extracting your insights…",
 }
 
 # ── System prompt (static → cached; dynamic context appended per session) ────
@@ -124,6 +221,15 @@ PROTOCOL (Journey Pipeline):
 
 COMMITMENT WEAVING: if the user has a commitment, bias article choices toward it and set commitment_flag=true on qualifying article cards. Mention it naturally, don't preach.
 
+DEEP DIVE (goal mentions an article / "deep dive" / "go deeper"): call get_article_deep, then discuss the substance in a `text` block (specifics, not summary fluff) + a `quote` block for the line worth keeping + the article_card with the "open" action so they can read in full (their reader has highlighting/notes). After a meaningful exchange, OFFER to capture the takeaway via add_note — phrase the note in their words. Use ask_guru for their follow-up questions.
+
+WEEKLY RECAP ("run my recap" / "what did I learn"): call get_recap_state, then start_recap if none active this week. Walk the stages conversationally, ONE question per turn:
+- Stage 1: present the week snapshot as `stats` + `text`.
+- Stage 2: present each question as a `recap_step` block {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<the question>","journey_id":"...","question_index":0} — the user answers in the input bar; submit their answer with submit_recap_answer, give brief feedback, move to the next.
+- Stage 3: one reflective exchange via recap_socratic.
+- Stage 4: get_recap_insights → present as `text` + `quote`; then propose ONE commitment for next week and call set_commitment (it gets approval-gated automatically).
+End with `outcome_summary`. If the user has too little activity for a meaningful recap, say so and suggest a catch-up instead.
+
 OUTPUT FORMAT (STRICT): your final text in every turn must be ONLY a JSON object:
 {"blocks": [ ... ]}
 No prose outside the JSON. Block types (v1):
@@ -135,6 +241,7 @@ No prose outside the JSON. Block types (v1):
 - {"type":"stats","items":[{"label":"read","value":"4"}]}
 - {"type":"quote","text":"...","article_id":"..."}
 - {"type":"prompt_pills","prompts":["...","..."]}
+- {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<question for the user>","journey_id":"...","question_index":0}
 - {"type":"outcome_summary","lines":["+14m Catch-up","2 saved"],"commitment_line":"1 article advanced it" ,"rings":{"c":0.86,"d":0.4,"r":0},"followups":["Start my weekly recap"]}
 Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the content, the text block carries the voice (sharp, encouraging mentor — never corporate)."""
 
@@ -196,6 +303,32 @@ def _slim_tool_result(name: str, status: int, data) -> str:
                 "answer": (data.get("response") or "")[:900],
                 "follow_ups": data.get("follow_up_prompts", [])[:3],
             })
+        if name == "get_article_deep":
+            content = data.get("content") or data.get("full_text") or data.get("text") or ""
+            return json.dumps({
+                "title": data.get("title"),
+                "source": data.get("source"),
+                "content_excerpt": content[:2400],
+                "summary": (data.get("summary") or "")[:400],
+            })
+        if name == "get_recap_state":
+            sessions = data if isinstance(data, list) else data.get("sessions") or data.get("journeys") or []
+            slim = [{"journey_id": s.get("id") or s.get("journey_id"), "status": s.get("status"),
+                     "stage": s.get("current_stage") or s.get("stage"), "week_start": s.get("week_start")}
+                    for s in sessions[:3]]
+            return json.dumps({"journeys": slim})
+        if name == "get_recap_questions":
+            qs = data.get("questions") if isinstance(data, dict) else data
+            slim_q = []
+            for i, q in enumerate((qs or [])[:6]):
+                if isinstance(q, dict):
+                    slim_q.append({"index": q.get("index", i), "question": (q.get("question") or q.get("text") or "")[:300],
+                                   "type": q.get("type") or q.get("question_type")})
+                else:
+                    slim_q.append({"index": i, "question": str(q)[:300]})
+            return json.dumps({"questions": slim_q})
+        if name in ("start_recap", "submit_recap_answer", "recap_socratic", "get_recap_insights", "set_commitment"):
+            return json.dumps(data)[:2200]
         return json.dumps(data)[:1500]
     except Exception:
         return str(data)[:800]
@@ -229,6 +362,30 @@ async def _execute_tool(app, token: str, name: str, tool_input: dict) -> str:
         status, data = await _call_api(app, token, "POST", f"/api/v1/articles/{tool_input['article_id']}/save")
     elif name == "mark_not_relevant":
         status, data = await _call_api(app, token, "POST", f"/api/v1/storyboards/{tool_input['storyboard_id']}/not-relevant")
+    elif name == "get_article_deep":
+        status, data = await _call_api(app, token, "GET", f"/api/v1/articles/{tool_input['article_id']}/deep")
+    elif name == "add_note":
+        status, data = await _call_api(app, token, "POST", f"/api/v1/articles/{tool_input['article_id']}/annotations",
+                                       json_body={"highlighted_text": "Note", "note_text": tool_input["note"],
+                                                  "color": "gold", "start_offset": 0, "end_offset": 0})
+    elif name == "get_recap_state":
+        status, data = await _call_api(app, token, "GET", "/api/v1/recap/sessions")
+    elif name == "start_recap":
+        status, data = await _call_api(app, token, "POST", "/api/v1/recap/start", json_body={"force_new": False})
+    elif name == "get_recap_questions":
+        status, data = await _call_api(app, token, "GET", f"/api/v1/recap/{tool_input['journey_id']}/questions")
+    elif name == "submit_recap_answer":
+        status, data = await _call_api(app, token, "POST", f"/api/v1/recap/{tool_input['journey_id']}/answer",
+                                       json_body={"question_index": int(tool_input["question_index"]),
+                                                  "response": tool_input["response"]})
+    elif name == "recap_socratic":
+        status, data = await _call_api(app, token, "POST", f"/api/v1/recap/{tool_input['journey_id']}/socratic",
+                                       json_body={"message": tool_input["message"]})
+    elif name == "get_recap_insights":
+        status, data = await _call_api(app, token, "GET", f"/api/v1/recap/{tool_input['journey_id']}/insights")
+    elif name == "set_commitment":
+        status, data = await _call_api(app, token, "POST", f"/api/v1/recap/{tool_input['journey_id']}/commitment",
+                                       json_body={"text": tool_input["text"]})
     else:
         return json.dumps({"error": f"unknown tool {name}"})
     return _slim_tool_result(name, status, data)
@@ -269,14 +426,22 @@ def _serialize_content(content) -> list:
 
 def _approval_block(name: str, tool_input: dict, approval_id: str) -> dict:
     if name == "save_article":
-        title, detail = "Save this article?", [tool_input.get("title", "")]
-        confirm = "Save"
+        title, detail, confirm, cancel = "Save this article?", [tool_input.get("title", "")], "Save", "Keep as is"
+    elif name == "mark_not_relevant":
+        title, detail, confirm, cancel = "Remove from your feed?", [tool_input.get("title", "")], "Remove", "Keep as is"
+    elif name == "add_note":
+        title = "Add this note to the article?"
+        detail = [f'"{(tool_input.get("note") or "")[:160]}"', tool_input.get("title", "")]
+        confirm, cancel = "Add note", "Discard"
+    elif name == "set_commitment":
+        title = "Set as next week's commitment?"
+        detail = [f'"{(tool_input.get("text") or "")[:180]}"', "This will shape next week's reading."]
+        confirm, cancel = "Commit", "Not yet"
     else:
-        title, detail = "Remove from your feed?", [tool_input.get("title", "")]
-        confirm = "Remove"
+        title, detail, confirm, cancel = "Proceed?", [], "Yes", "No"
     return {
         "type": "approval", "approval_id": approval_id, "title": title,
-        "detail_lines": [d for d in detail if d], "confirm_label": confirm, "cancel_label": "Keep as is",
+        "detail_lines": [d for d in detail if d], "confirm_label": confirm, "cancel_label": cancel,
     }
 
 
