@@ -249,28 +249,35 @@ Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the cont
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _slim_article(a: dict) -> dict:
+    rich = a.get("rich_summary") or {}
+    wc = a.get("word_count")
     return {
         "article_id": a.get("id") or a.get("article_id"),
         "title": a.get("title"),
         "source": a.get("source"),
-        "reading_time": a.get("reading_time"),
-        "summary": (a.get("summary") or a.get("expert_takeaway") or "")[:220],
+        "reading_time": a.get("reading_time") or (max(1, round(wc / 200)) if wc else None),
+        "summary": (a.get("summary") or rich.get("whats_in_article") or a.get("expert_takeaway") or "")[:220],
         "industry": a.get("industry") or a.get("context"),
         "is_saved": a.get("is_saved", False),
     }
 
 
 def _slim_storyboard(s: dict) -> dict:
-    rich = s.get("rich_summary") or {}
+    # Real /catchup-feed shape: theme/summary/cluster_narrative/personal_prompt
+    # + headline_article (the in-focus article) + related_articles.
+    art = s.get("headline_article") or s.get("in_focus_article") or s.get("article") or {}
+    rich = art.get("rich_summary") or {}
     return {
         "storyboard_id": s.get("id") or s.get("storyboard_id"),
-        "headline": s.get("headline") or s.get("title"),
+        "theme": s.get("theme") or s.get("headline") or s.get("title"),
         "industry": s.get("industry"),
-        "in_focus_article": _slim_article(s.get("in_focus_article") or s.get("article") or {}),
-        "whats_in": (rich.get("whats_in_article") or s.get("summary_whats_in") or "")[:260],
+        "summary": (s.get("summary") or "")[:260],
+        "narrative": (s.get("cluster_narrative") or "")[:220],
+        "personal_prompt": (s.get("personal_prompt") or "")[:160],
+        "in_focus_article": _slim_article(art),
         "why_matters": (rich.get("why_it_matters") or "")[:200],
         "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:2],
-        "more_articles": [_slim_article(a) for a in (s.get("carousel_articles") or s.get("articles") or [])[:4]],
+        "more_articles": [_slim_article(a) for a in (s.get("related_articles") or s.get("carousel_articles") or [])[:4]],
     }
 
 
