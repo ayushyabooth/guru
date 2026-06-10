@@ -98,12 +98,12 @@ Enforced via structured outputs (`output_config.format`, strict JSON schema). En
 
 | type | payload | renders as |
 |---|---|---|
-| `text` | `md` | GuruFormattedText |
-| `plan` | `goal, eta_min, steps:[{n,title,eta,status}]` | plan card w/ step dots |
-| `article_card` | `article_id, title, source, reading_time, summary, commitment_flag, actions:[save\|skip\|ask\|open]` | storyboard-style card |
+| `text` | `md` | GuruFormattedText (≤2 sentences by contract) |
+| `plan` | `goal, eta_min, steps:[{n,title,eta,status}]` | plan card; pending/active steps tappable → "Jump to step N" |
+| `article_card` | `variant(hero\|standard\|mini), article_id, title, source, url, image_url, reading_time, summary, why_matters, commitment_flag, actions:[save\|skip\|ask\|open]` | **hero**: full-bleed image card (one per turn max); **standard**: side-thumb card + pink-dot why_matters; **mini**: compact tappable triage row |
 | `carousel` | `items:[article_card]` | horizontal scroll |
 | `rings` | `c,d,r (0-1), caption` | Triskelion mini |
-| `stats` | `items:[{label,value}]` | stat pills row |
+| `stats` | `items:[{label,value,big}]` | stat pills; `big:true` → stat-hero (26px number card) |
 | `quote` | `text, article_id` | amber quote card |
 | `prompt_pills` | `prompts:[string]` | glass pills (tap → message) |
 | `approval` | `approval_id, title, detail_lines, confirm_label, cancel_label` | indigo approval gate |
@@ -111,6 +111,17 @@ Enforced via structured outputs (`output_config.format`, strict JSON schema). En
 | `outcome_summary` | `lines:[], commitment_line, rings:{c,d,r}, followups:[]` | green tally card |
 
 Unknown types are ignored by the client (forward compatibility).
+
+**Presentation intelligence (EDL v2, Figma "Agentic Blocks EDL v2").** The agent
+has layout autonomy *within* rules: one hero max per turn (the single thing
+deserving attention, image-led); standard only for the actively-worked item;
+mini rows for anything plural; ≥2 distinct block shapes per turn; emphasis
+matches context (draw attention → hero/big-stat; go deep → standard+quote+
+why_matters; recede → minis+pills); every turn closes with next-best-action
+pills + a persistent client-side mode switcher (Catch up / Dive in / Recap /
+Progress). A text-only turn or a wall of same-shaped cards is a contract
+violation. Images: storyboard `visual_url` feeds catch-up heroes; article
+thumbnails feed standard/mini.
 
 ## 3. Frontend
 

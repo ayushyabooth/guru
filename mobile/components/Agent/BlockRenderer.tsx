@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import GuruFormattedText from '../ui/GuruFormattedText';
 import { Triskelion } from '../Rings/Triskelion';
 
@@ -84,14 +84,49 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
 
     case 'article_card': {
       const acts: string[] = block.actions || ['save', 'skip', 'ask', 'open'];
+      const variant: string = block.variant || 'standard';
+
+      // MINI — triage row: image chip, title, meta, chevron. Tap = make active.
+      if (variant === 'mini') {
+        return (
+          <TouchableOpacity
+            onPress={() => onSend(`Let's look at "${block.title}" (article ${block.article_id})`)}
+            accessibilityRole="button"
+            style={[glass, { marginBottom: 8, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', borderRadius: 13 }]}
+          >
+            {block.image_url ? (
+              <Image source={{ uri: block.image_url }} style={{ width: 36, height: 36, borderRadius: 8, marginRight: 11 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: 36, height: 36, borderRadius: 8, marginRight: 11, backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)' }} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: tPrim, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>{block.title}</Text>
+              <Text style={{ color: tSec, fontSize: 10.5, marginTop: 2 }} numberOfLines={1}>
+                {[block.source, block.reading_time ? `${block.reading_time} min` : null].filter(Boolean).join(' · ')}
+                {block.commitment_flag ? '  ⚑' : ''}
+              </Text>
+            </View>
+            <Text style={{ color: '#818CF8', fontSize: 15, marginLeft: 8 }}>›</Text>
+          </TouchableOpacity>
+        );
+      }
+
+      const isHero = variant === 'hero';
       return (
-        <View style={[glass, { marginBottom: 12 }]}>
+        <View style={[glass, { marginBottom: 12, ...(isHero ? { padding: 10, paddingBottom: 14 } : {}) }]}>
+          {isHero && !!block.image_url && (
+            <Image source={{ uri: block.image_url }} style={{ width: '100%', height: 150, borderRadius: 12, marginBottom: 11 }} resizeMode="cover" />
+          )}
+          <View style={isHero ? { paddingHorizontal: 6 } : undefined}>
+          {!isHero && !!block.image_url && (
+            <Image source={{ uri: block.image_url }} style={{ position: 'absolute', right: 0, top: 2, width: 56, height: 56, borderRadius: 10 }} resizeMode="cover" />
+          )}
           {!!block.commitment_flag && (
             <View style={{ alignSelf: 'flex-start', backgroundColor: 'rgba(251,146,60,0.15)', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 3, marginBottom: 7 }}>
               <Text style={{ color: '#FB923C', fontSize: 10, fontWeight: '700' }}>⚑ advances your commitment</Text>
             </View>
           )}
-          <Text style={{ color: tPrim, fontSize: 15, fontWeight: '700', marginBottom: 3 }}>{block.title}</Text>
+          <Text style={{ color: tPrim, fontSize: isHero ? 16.5 : 15, fontWeight: '700', marginBottom: 3, paddingRight: !isHero && block.image_url ? 64 : 0 }}>{block.title}</Text>
           <Text style={{ color: tSec, fontSize: 11, marginBottom: 7 }}>
             {block.source}{block.reading_time ? ` · ${block.reading_time} min` : ''}
           </Text>
@@ -124,6 +159,7 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
               </TouchableOpacity>
             )}
           </View>
+          </View>
         </View>
       );
     }
@@ -151,9 +187,17 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
           {(block.items || []).map((it: any, i: number) => (
-            <View key={i} style={[glass, { paddingVertical: 8, paddingHorizontal: 12, marginRight: 8, marginBottom: 8, borderRadius: 12 }]}>
-              <Text style={{ color: tPrim, fontWeight: '700', fontSize: 14 }}>{String(it.value)}<Text style={{ color: tSec, fontWeight: '400', fontSize: 11 }}>  {it.label}</Text></Text>
-            </View>
+            it.big ? (
+              // Stat-hero: one number worth feeling (EDL v2)
+              <View key={i} style={{ backgroundColor: 'rgba(56,189,248,0.10)', borderColor: 'rgba(56,189,248,0.25)', borderWidth: 1, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 18, marginRight: 8, marginBottom: 8, minWidth: 130 }}>
+                <Text style={{ color: '#7DD3FC', fontWeight: '800', fontSize: 26 }}>{String(it.value)}</Text>
+                <Text style={{ color: tSec, fontSize: 11, marginTop: 2 }}>{it.label}</Text>
+              </View>
+            ) : (
+              <View key={i} style={[glass, { paddingVertical: 8, paddingHorizontal: 12, marginRight: 8, marginBottom: 8, borderRadius: 12 }]}>
+                <Text style={{ color: tPrim, fontWeight: '700', fontSize: 14 }}>{String(it.value)}<Text style={{ color: tSec, fontWeight: '400', fontSize: 11 }}>  {it.label}</Text></Text>
+              </View>
+            )
           ))}
         </View>
       );

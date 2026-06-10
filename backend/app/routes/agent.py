@@ -235,18 +235,25 @@ OUTPUT FORMAT (STRICT): your final text in every turn must be ONLY a JSON object
 No prose outside the JSON. Block types (v1):
 - {"type":"text","md":"markdown string — keep it short and warm"}
 - {"type":"plan","goal":"...","eta_min":12,"steps":[{"n":1,"title":"...","eta":"6 min","status":"pending|active|done|skipped"}]}
-- {"type":"article_card","article_id":"...","title":"...","source":"...","url":"https://...","reading_time":3,"summary":"1-2 sentences","why_matters":"1 sentence — the personal stake","commitment_flag":false,"actions":["save","skip","ask","open"]}
-  (ALWAYS include url and why_matters when you have them — why_matters appears subtly under the summary; url lets "Read" open the original source.)
+- {"type":"article_card","variant":"hero|standard|mini","article_id":"...","title":"...","source":"...","url":"https://...","image_url":"https://...","reading_time":3,"summary":"1-2 sentences","why_matters":"1 sentence — the personal stake","commitment_flag":false,"actions":["save","skip","ask","open"]}
+  (ALWAYS include url, image_url and why_matters when you have them. hero = full-bleed image card; standard = side-thumb card; mini = compact tappable row, summary/actions omitted.)
 - {"type":"carousel","items":[<article_card>, ...]}  (max 3 items)
 - {"type":"rings","c":0.8,"d":0.4,"r":0.0,"caption":"..."}
-- {"type":"stats","items":[{"label":"read","value":"4"}]}
+- {"type":"stats","items":[{"label":"read","value":"4","big":false}]}  (big=true → stat-hero: one number worth feeling)
 - {"type":"quote","text":"...","article_id":"..."}
 - {"type":"prompt_pills","prompts":["...","..."]}
 - {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<question for the user>","journey_id":"...","question_index":0}
 - {"type":"outcome_summary","lines":["+14m Catch-up","2 saved"],"commitment_line":"1 article advanced it" ,"rings":{"c":0.86,"d":0.4,"r":0},"followups":["Start my weekly recap"]}
 Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the content, the text block carries the voice (sharp, encouraging mentor — never corporate).
 
-ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text."""
+ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text.
+
+PRESENTATION INTELLIGENCE — you choose HOW to present, within these rules:
+1. ONE hero max per turn: the single thing deserving attention right now (the new in-focus story, a commitment match, the journey finale). Heroes always carry image_url when available (use the storyboard's image_url for its in-focus article).
+2. STANDARD for the one item actively being worked. MINI rows for anything plural — queues, what's left, skipped items, recap lists. NEVER stack 3+ standard/hero cards.
+3. Vary shapes every turn: mix at least two of {card, mini rows, stat/quote, rings, pills}. Text blocks ≤2 sentences — the blocks carry content, text carries voice.
+4. Match emphasis to context: draw attention (hero, big stat) when stakes are high; go deep (standard + quote + why_matters) when focused; recede (minis + pills) when the user is triaging.
+A text-only turn is a failure. A wall of same-shaped cards is a failure."""
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -259,6 +266,7 @@ def _slim_article(a: dict) -> dict:
         "title": a.get("title"),
         "source": a.get("source"),
         "url": a.get("url"),
+        "image_url": a.get("article_image_url") or a.get("thumbnail_url") or a.get("image_url"),
         "reading_time": a.get("reading_time") or (max(1, round(wc / 200)) if wc else None),
         "summary": (a.get("summary") or rich.get("whats_in_article") or a.get("expert_takeaway") or "")[:220],
         "why_matters": (rich.get("why_it_matters") or "")[:200],
@@ -276,6 +284,7 @@ def _slim_storyboard(s: dict) -> dict:
     return {
         "storyboard_id": s.get("id") or s.get("storyboard_id"),
         "theme": s.get("theme") or s.get("headline") or s.get("title"),
+        "image_url": s.get("visual_url"),  # hero image for the in-focus card
         "industry": s.get("industry"),
         "summary": (s.get("summary") or "")[:260],
         "narrative": (s.get("cluster_narrative") or "")[:220],
