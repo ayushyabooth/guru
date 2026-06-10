@@ -9,6 +9,7 @@ import { MetricProvider, useMetrics } from '../../store/metric-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import { Triskelion } from '../../components/Rings/Triskelion';
+import GuruBlob from '../../components/ui/GuruBlob';
 import AnimatedTabPill from '../../components/shared/AnimatedTabPill';
 
 const TAB_INACTIVE_OPACITY = 0.35;
@@ -216,6 +217,18 @@ function TabsWithMetrics() {
           title: 'Catch-up',
           tabBarIcon: ({ color, focused }) => (
             <TabRingIcon color="#38BDF8" progress={catchupProgress} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="guru"
+        options={{
+          title: 'Guru',
+          // The living blob IS the icon — alive even in the tab bar (GUR-228).
+          tabBarIcon: ({ focused }) => (
+            <Animated.View style={{ opacity: focused ? 1 : TAB_INACTIVE_OPACITY }}>
+              <GuruBlob size={24} state="idle" />
+            </Animated.View>
           ),
         }}
       />

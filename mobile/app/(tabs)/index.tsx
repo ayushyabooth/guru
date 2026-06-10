@@ -17,6 +17,7 @@ import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
 import { Triskelion } from '../../components/Rings/Triskelion';
+import GuruBlob from '../../components/ui/GuruBlob';
 import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken, getAuthToken } from '../../utils/auth';
@@ -504,10 +505,17 @@ function HomeContent() {
         <View style={styles.header}>
           <View style={[styles.headerGlass, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle]}>
             <View style={styles.headerTop}>
-              <View style={styles.headerBrandRow}>
-                <GuruRings size="logo" dimensions={36} accessibilityLabel="Guru logo" />
+              {/* GUR-228: the living blob logo — tapping it opens the agentic tab */}
+              <TouchableOpacity
+                style={styles.headerBrandRow}
+                onPress={() => router.push('/guru')}
+                accessibilityRole="button"
+                accessibilityLabel="Open Guru agent"
+                accessibilityHint="Opens the agentic Guru tab"
+              >
+                <GuruBlob size={36} state="idle" />
                 <Text style={[styles.headerBrandName, { color: COLORS.textPrimary }]}>GURU</Text>
-              </View>
+              </TouchableOpacity>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity
                   style={[styles.themeToggle, !isDark && { backgroundColor: 'rgba(15,23,42,0.04)', borderColor: 'rgba(15,23,42,0.08)' }]}
