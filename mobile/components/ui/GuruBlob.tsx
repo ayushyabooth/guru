@@ -9,22 +9,24 @@ interface Props {
 }
 
 /**
- * GuruBlob — the living logo (Epic H / GUR-228, Figma "Living Blob — states spec").
+ * GuruBlob v2 — the living logo (Epic H / GUR-228).
  *
- * An organic plasma blob that looks alive: radius(θ) = R · (1 + Σ sin(kθ + φt)·a)
- * over 3 octaves, filled with the brand sky→indigo→pink radial. States:
- *  - idle:      slow 3s breathe, gentle ±8% morph
- *  - thinking:  fast agitation, deeper morph, indigo brightens
- *  - celebrate: a single 1.25× pulse, then settles back to idle motion
- * Honors prefers-reduced-motion (renders one static frame). Canvas is padded
- * 25% so the morph never clips; the View keeps the layout footprint at `size`.
+ * Brand DNA: the triskelion's three rings (sky #38BDF8 / pink #EC4899 /
+ * orange #FB923C) melted into ONE living organism — three plasma cores slowly
+ * orbiting inside an organic morphing blob on a deep-indigo base. The static
+ * logo is the three rings; the agent is those rings fused alive.
+ *
+ * Blending: a soft ambient halo + a blurred under-glow pass feather the blob
+ * into dark backgrounds (no hard "sticker" edge). States: idle (slow breathe,
+ * lazy orbit) / thinking (fast morph + orbit, brighter cores) / celebrate
+ * (single 1.25× pulse). Honors prefers-reduced-motion (one static frame).
  */
 export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<BlobState>(state);
   stateRef.current = state;
 
-  const PAD = Math.ceil(size * 0.25);
+  const PAD = Math.ceil(size * 0.55); // room for halo + morph
   const W = size + PAD * 2;
 
   useEffect(() => {
@@ -47,16 +49,41 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
     let celebrateT0 = -1;
     let prevState: BlobState = stateRef.current;
 
+    const CORES = [
+      { hex: '#38BDF8', phase: 0 },                  // catch-up sky
+      { hex: '#EC4899', phase: (Math.PI * 2) / 3 },  // dive-in pink
+      { hex: '#FB923C', phase: (Math.PI * 4) / 3 },  // recap orange
+    ];
+
+    const blobPath = (cx: number, cy: number, R: number, t: number, amp: number, speed: number) => {
+      ctx.beginPath();
+      const N = 64;
+      for (let i = 0; i <= N; i++) {
+        const th = (i / N) * Math.PI * 2;
+        const w =
+          amp * Math.sin(3 * th + t * 1.5 * speed) +
+          amp * 0.55 * Math.sin(5 * th - t * 2.1 * speed) +
+          amp * 0.3 * Math.sin(8 * th + t * 2.9 * speed);
+        const r = R * (1 + w);
+        const x = cx + r * Math.cos(th);
+        const y = cy + r * Math.sin(th);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    };
+
     const draw = (now: number) => {
       const t = now / 1000;
       const st = stateRef.current;
       if (st === 'celebrate' && prevState !== 'celebrate') celebrateT0 = now;
       prevState = st;
 
-      const speed = st === 'thinking' ? 3.2 : 1.0;
-      const amp = reduced ? 0 : st === 'thinking' ? 0.15 : 0.08;
+      const speed = st === 'thinking' ? 3.0 : 1.0;
+      const amp = reduced ? 0.04 : st === 'thinking' ? 0.13 : 0.075;
+      const orbit = t * (st === 'thinking' ? 1.6 : 0.45);
 
-      let scale = 1 + (st === 'thinking' ? 0.02 * Math.sin(t * 6) : 0.05 * Math.sin((t * 2 * Math.PI) / 3));
+      let scale = 1 + (reduced ? 0 : st === 'thinking' ? 0.02 * Math.sin(t * 6) : 0.045 * Math.sin((t * 2 * Math.PI) / 3));
       if (celebrateT0 >= 0) {
         const dt = (now - celebrateT0) / 650;
         if (dt < 1) scale *= 1 + 0.25 * Math.sin(Math.PI * dt);
@@ -66,36 +93,57 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
       ctx.clearRect(0, 0, W, W);
       const cx = W / 2;
       const cy = W / 2;
-      const R = (size / 2) * 0.9 * scale;
+      const R = (size / 2) * 0.88 * scale;
 
-      ctx.beginPath();
-      const N = 60;
-      for (let i = 0; i <= N; i++) {
-        const th = (i / N) * Math.PI * 2;
-        const w =
-          amp * Math.sin(3 * th + t * 1.7 * speed) +
-          amp * 0.6 * Math.sin(5 * th - t * 2.3 * speed) +
-          amp * 0.35 * Math.sin(8 * th + t * 3.1 * speed);
-        const r = R * (1 + w);
-        const x = cx + r * Math.cos(th);
-        const y = cy + r * Math.sin(th);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
+      // 1) Ambient halo — eases the blob into the dark, no hard cutoff.
+      const halo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 2.1);
+      halo.addColorStop(0, 'rgba(99,102,241,0.20)');
+      halo.addColorStop(0.55, 'rgba(99,102,241,0.07)');
+      halo.addColorStop(1, 'rgba(99,102,241,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, W, W);
 
-      const mid = st === 'thinking' ? '#818CF8' : '#6366F1';
-      const g = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R * 1.3);
-      g.addColorStop(0, '#7DD3FC');
-      g.addColorStop(0.55, mid);
-      g.addColorStop(1, 'rgba(236,72,153,0.92)');
-      ctx.fillStyle = g;
+      // 2) Blurred under-glow of the blob shape — feathers the silhouette.
+      ctx.save();
+      (ctx as any).filter = `blur(${Math.max(2, size * 0.07)}px)`;
+      blobPath(cx, cy, R * 1.02, t, amp, speed);
+      ctx.fillStyle = 'rgba(79,70,229,0.55)';
+      ctx.fill();
+      ctx.restore();
+      (ctx as any).filter = 'none';
+
+      // 3) The blob body — deep indigo base, slightly translucent at the rim.
+      blobPath(cx, cy, R, t, amp, speed);
+      const base = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.15);
+      base.addColorStop(0, '#4F46E5');
+      base.addColorStop(0.75, '#3B3690');
+      base.addColorStop(1, 'rgba(35,32,90,0.85)');
+      ctx.fillStyle = base;
       ctx.fill();
 
-      // specular highlight — the "wet glass" life in the eye
+      // 4) The three ring-colors as plasma cores orbiting inside (clipped).
+      ctx.save();
+      ctx.clip();
+      ctx.globalCompositeOperation = 'lighter';
+      const coreAlpha = st === 'thinking' ? 0.5 : 0.38;
+      for (const c of CORES) {
+        const a = orbit + c.phase;
+        const ox = cx + Math.cos(a) * R * 0.42;
+        const oy = cy + Math.sin(a) * R * 0.42;
+        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, R * 0.85);
+        const n = parseInt(c.hex.slice(1), 16);
+        const rr = (n >> 16) & 255, gg = (n >> 8) & 255, bb = n & 255;
+        g.addColorStop(0, `rgba(${rr},${gg},${bb},${coreAlpha})`);
+        g.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      }
+      ctx.restore();
+
+      // 5) Small specular — life in the eye, kept subtle.
       ctx.beginPath();
-      ctx.ellipse(cx - R * 0.32, cy - R * 0.38, R * 0.26, R * 0.16, -0.6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.ellipse(cx - R * 0.3, cy - R * 0.36, R * 0.2, R * 0.12, -0.6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.fill();
 
       if (!reduced) raf = requestAnimationFrame(draw);
@@ -106,8 +154,7 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
   }, [size, W]);
 
   if (Platform.OS !== 'web') {
-    // Native fallback: static brand dot (web is the deployed target).
-    return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#6366F1' }} />;
+    return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#4F46E5' }} />;
   }
 
   return (

@@ -8,6 +8,7 @@ import { getAuthToken } from '../../utils/auth';
 import { useTheme } from '../../contexts/ThemeContext';
 import GuruBlob, { BlobState } from '../../components/ui/GuruBlob';
 import BlockRenderer, { AgentBlock } from '../../components/Agent/BlockRenderer';
+import { openExternalTab } from '../../utils/openExternalTab';
 
 /**
  * Agentic Guru tab — Journey Pipeline (Epic H, GUR-228).
@@ -18,9 +19,18 @@ import BlockRenderer, { AgentBlock } from '../../components/Agent/BlockRenderer'
 
 const GOALS = [
   { label: 'Catch me up', text: 'Catch me up on my feed', color: '#38BDF8' },
-  { label: 'Clear my saved queue', text: 'Help me work through my saved-for-later queue', color: '#EC4899' },
-  { label: 'How am I tracking this week?', text: 'How am I tracking against my goals this week?', color: '#FB923C' },
+  { label: 'Dive into saved & expert picks', text: 'Dive-in mode: walk me through my saved-for-later queue and expert picks, deep-read style', color: '#EC4899' },
+  { label: 'Run my weekly recap', text: 'Run my weekly recap', color: '#FB923C' },
+  { label: 'How am I tracking this week?', text: 'How am I tracking against my goals this week?', color: '#34D399' },
   { label: 'What did I learn this week?', text: 'Synthesize what I learned this week from my reading', color: '#6366F1' },
+];
+
+// Persistent mode switcher — always one tap from any mode, never chat-trapped.
+const MODES = [
+  { label: 'Catch up', text: 'Switch modes: catch me up on my feed' },
+  { label: 'Dive in', text: 'Switch modes: dive into my saved articles and expert picks' },
+  { label: 'Recap', text: 'Switch modes: run my weekly recap' },
+  { label: 'Progress', text: 'Switch modes: show my progress and rings' },
 ];
 
 type TurnInput =
@@ -124,7 +134,20 @@ export default function GuruAgentScreen() {
     sendTurn({ type: 'decision', approval_id: approvalId, approved });
   };
 
-  const onOpenArticle = (id: string) => router.push(`/article/${id}?source=guru`);
+  // "Read →" opens the SOURCE in a new tab immediately (same lesson as GUR-221:
+  // never strand the user on an intermediary), then the in-app reader for
+  // notes/highlights/Q&A via deferred navigation so the popup isn't cancelled.
+  const onOpenArticle = (id: string, url?: string) => {
+    if (url) openExternalTab(url);
+    setTimeout(() => router.push(`/article/${id}?source=guru`), 0);
+  };
+
+  const onNewGoal = () => {
+    sessionIdRef.current = null;
+    setBlocks([]);
+    setStatus(null);
+    setBlobState('idle');
+  };
 
   const intentBar = (
     <View style={{
@@ -201,6 +224,15 @@ export default function GuruAgentScreen() {
         <GuruBlob size={26} state={blobState} />
         <Text style={{ color: tPrim, fontSize: 16, fontWeight: '700' }}>Guru</Text>
         {!!status && <Text style={{ color: tSec, fontSize: 11, flex: 1 }} numberOfLines={1}>⏺ {status}</Text>}
+        {!status && <View style={{ flex: 1 }} />}
+        <TouchableOpacity
+          onPress={onNewGoal}
+          accessibilityRole="button"
+          accessibilityLabel="Start a new goal"
+          style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 12, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+        >
+          <Text style={{ color: tSec, fontSize: 11, fontWeight: '600' }}>↺ New goal</Text>
+        </TouchableOpacity>
       </View>
       <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
         {blocks.map(b => (
@@ -210,6 +242,20 @@ export default function GuruAgentScreen() {
           <Text style={{ color: tSec, fontSize: 12, marginBottom: 10 }}>⏺ {status || 'working…'}</Text>
         )}
       </ScrollView>
+      {/* Persistent mode switcher — escape hatch from any journey, one tap */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 7 }}>
+        {MODES.map((m, i) => (
+          <TouchableOpacity
+            key={i}
+            onPress={() => onSend(m.text)}
+            disabled={busy}
+            accessibilityRole="button"
+            style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 13, backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)', borderWidth: 1, borderColor: isDark ? 'rgba(129,140,248,0.22)' : 'rgba(99,102,241,0.18)', opacity: busy ? 0.5 : 1 }}
+          >
+            <Text style={{ color: isDark ? '#A5B4FC' : '#6366F1', fontSize: 11, fontWeight: '600' }}>{m.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       {intentBar}
     </KeyboardAvoidingView>
   );

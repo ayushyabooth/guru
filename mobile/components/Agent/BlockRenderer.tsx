@@ -20,7 +20,7 @@ interface Props {
   isDark: boolean;
   onSend: (text: string) => void;
   onDecision: (approvalId: string, approved: boolean) => void;
-  onOpenArticle: (id: string) => void;
+  onOpenArticle: (id: string, url?: string) => void;
 }
 
 export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpenArticle }: Props) {
@@ -61,13 +61,23 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
         <View style={[glass, { marginBottom: 12, backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.06)', borderColor: 'rgba(129,140,248,0.30)' }]}>
           <Text style={{ color: tPrim, fontWeight: '700', fontSize: 14, marginBottom: 2 }}>{block.goal}</Text>
           {!!block.eta_min && <Text style={{ color: tSec, fontSize: 11, marginBottom: 8 }}>~{block.eta_min} min</Text>}
-          {(block.steps || []).map((s: any, i: number) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={{ color: ic(s.status), width: 20, fontSize: 13, fontWeight: '700' }}>{icon(s.status)}</Text>
-              <Text style={{ color: s.status === 'done' ? tSec : tPrim, fontSize: 13, flex: 1, textDecorationLine: s.status === 'skipped' ? 'line-through' : 'none' }}>{s.title}</Text>
-              {!!s.eta && <Text style={{ color: tSec, fontSize: 11 }}>{s.eta}</Text>}
-            </View>
-          ))}
+          {(block.steps || []).map((s: any, i: number) => {
+            const actionable = s.status !== 'done' && s.status !== 'skipped';
+            return (
+              <TouchableOpacity
+                key={i}
+                disabled={!actionable}
+                onPress={() => onSend(`Jump to step ${s.n ?? i + 1}: ${s.title}`)}
+                accessibilityRole={actionable ? 'button' : undefined}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, paddingVertical: 2 }}
+              >
+                <Text style={{ color: ic(s.status), width: 20, fontSize: 13, fontWeight: '700' }}>{icon(s.status)}</Text>
+                <Text style={{ color: s.status === 'done' ? tSec : tPrim, fontSize: 13, flex: 1, textDecorationLine: s.status === 'skipped' ? 'line-through' : 'none' }}>{s.title}</Text>
+                {!!s.eta && <Text style={{ color: tSec, fontSize: 11 }}>{s.eta}</Text>}
+                {actionable && <Text style={{ color: '#818CF8', fontSize: 12, marginLeft: 8 }}>›</Text>}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       );
     }
@@ -85,7 +95,13 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
           <Text style={{ color: tSec, fontSize: 11, marginBottom: 7 }}>
             {block.source}{block.reading_time ? ` · ${block.reading_time} min` : ''}
           </Text>
-          {!!block.summary && <Text style={{ color: tSec, fontSize: 13, lineHeight: 19, marginBottom: 11 }}>{block.summary}</Text>}
+          {!!block.summary && <Text style={{ color: tSec, fontSize: 13, lineHeight: 19, marginBottom: block.why_matters ? 7 : 11 }}>{block.summary}</Text>}
+          {!!block.why_matters && (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 11 }}>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EC4899', marginTop: 6, marginRight: 7 }} />
+              <Text style={{ color: isDark ? '#CBD5E1' : '#334155', fontSize: 12, lineHeight: 17, fontStyle: 'italic', flex: 1 }}>{block.why_matters}</Text>
+            </View>
+          )}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {acts.includes('save') && (
               <TouchableOpacity style={pill('rgba(52,211,153,0.18)', '#34D399')} onPress={() => onSend(`Save "${block.title}" (article ${block.article_id})`)} accessibilityRole="button">
@@ -103,7 +119,7 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
               </TouchableOpacity>
             )}
             {acts.includes('open') && !!block.article_id && (
-              <TouchableOpacity style={pill('rgba(56,189,248,0.16)', '#38BDF8')} onPress={() => onOpenArticle(block.article_id)} accessibilityRole="button">
+              <TouchableOpacity style={pill('rgba(56,189,248,0.16)', '#38BDF8')} onPress={() => onOpenArticle(block.article_id, block.url)} accessibilityRole="button">
                 <Text style={pillTxt('#38BDF8')}>Read →</Text>
               </TouchableOpacity>
             )}

@@ -235,7 +235,8 @@ OUTPUT FORMAT (STRICT): your final text in every turn must be ONLY a JSON object
 No prose outside the JSON. Block types (v1):
 - {"type":"text","md":"markdown string — keep it short and warm"}
 - {"type":"plan","goal":"...","eta_min":12,"steps":[{"n":1,"title":"...","eta":"6 min","status":"pending|active|done|skipped"}]}
-- {"type":"article_card","article_id":"...","title":"...","source":"...","reading_time":3,"summary":"1-2 sentences","commitment_flag":false,"actions":["save","skip","ask","open"]}
+- {"type":"article_card","article_id":"...","title":"...","source":"...","url":"https://...","reading_time":3,"summary":"1-2 sentences","why_matters":"1 sentence — the personal stake","commitment_flag":false,"actions":["save","skip","ask","open"]}
+  (ALWAYS include url and why_matters when you have them — why_matters appears subtly under the summary; url lets "Read" open the original source.)
 - {"type":"carousel","items":[<article_card>, ...]}  (max 3 items)
 - {"type":"rings","c":0.8,"d":0.4,"r":0.0,"caption":"..."}
 - {"type":"stats","items":[{"label":"read","value":"4"}]}
@@ -243,7 +244,9 @@ No prose outside the JSON. Block types (v1):
 - {"type":"prompt_pills","prompts":["...","..."]}
 - {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<question for the user>","journey_id":"...","question_index":0}
 - {"type":"outcome_summary","lines":["+14m Catch-up","2 saved"],"commitment_line":"1 article advanced it" ,"rings":{"c":0.86,"d":0.4,"r":0},"followups":["Start my weekly recap"]}
-Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the content, the text block carries the voice (sharp, encouraging mentor — never corporate)."""
+Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the content, the text block carries the voice (sharp, encouraging mentor — never corporate).
+
+ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text."""
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -255,8 +258,11 @@ def _slim_article(a: dict) -> dict:
         "article_id": a.get("id") or a.get("article_id"),
         "title": a.get("title"),
         "source": a.get("source"),
+        "url": a.get("url"),
         "reading_time": a.get("reading_time") or (max(1, round(wc / 200)) if wc else None),
         "summary": (a.get("summary") or rich.get("whats_in_article") or a.get("expert_takeaway") or "")[:220],
+        "why_matters": (rich.get("why_it_matters") or "")[:200],
+        "spotlight_quote": ((rich.get("spotlight_quotes") or [None])[0] or "")[:240],
         "industry": a.get("industry") or a.get("context"),
         "is_saved": a.get("is_saved", False),
     }
