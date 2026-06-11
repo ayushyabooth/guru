@@ -16,7 +16,7 @@ import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
 import GuruRings from '../../components/ui/GuruRings';
-import { Triskelion } from '../../components/Rings/Triskelion';
+import GuruConstellation from '../../components/Rings/GuruConstellation';
 import GuruBlob from '../../components/ui/GuruBlob';
 import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 import FeedTabBar from '../../components/Home/FeedTabBar';
@@ -562,12 +562,11 @@ function HomeContent() {
             const r = displayMetrics.recap.status === 'completed' ? 1 : displayMetrics.recap.status === 'in_progress' ? 0.5 : 0;
             const celebrate = c >= 1 && d >= 1 && r >= 1;
             return (
-              <Triskelion
+              <GuruConstellation
                 size={240}
                 progress={{ c, d, r }}
-                volumetric
-                celebrate={celebrate}
-                onRingPress={handleRingPress}
+                onStarPress={handleRingPress}
+                onCenterPress={() => router.push('/guru')}
               />
             );
           })()}

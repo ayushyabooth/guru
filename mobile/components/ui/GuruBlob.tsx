@@ -9,24 +9,24 @@ interface Props {
 }
 
 /**
- * GuruBlob v2 — the living logo (Epic H / GUR-228).
+ * GuruBlob v3 — "Fusion goo" (final identity, founder-approved Round 6).
  *
- * Brand DNA: the triskelion's three rings (sky #38BDF8 / pink #EC4899 /
- * orange #FB923C) melted into ONE living organism — three plasma cores slowly
- * orbiting inside an organic morphing blob on a deep-indigo base. The static
- * logo is the three rings; the agent is those rings fused alive.
+ * A metaball organism: four invisible bodies drift on lissajous paths and the
+ * rendered silhouette is the level-set of their summed field — so lobes fuse,
+ * stretch, nearly split and snap back like alien protoplasm. The triskelion's
+ * three ring colors live inside as plasma cores (the brand's three pillars).
  *
- * Blending: a soft ambient halo + a blurred under-glow pass feather the blob
- * into dark backgrounds (no hard "sticker" edge). States: idle (slow breathe,
- * lazy orbit) / thinking (fast morph + orbit, brighter cores) / celebrate
- * (single 1.25× pulse). Honors prefers-reduced-motion (one static frame).
+ * States: idle (slow drift, compact) · thinking (fast, wide — the organism
+ * pulls toward division; cores gather centrally to "concentrate") · celebrate
+ * (single 1.25× pulse). Ambient halo + blurred under-glow feather it into
+ * dark backgrounds. Honors prefers-reduced-motion (one static frame).
  */
 export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<BlobState>(state);
   stateRef.current = state;
 
-  const PAD = Math.ceil(size * 0.55); // room for halo + morph
+  const PAD = Math.ceil(size * 0.6); // goo lobes + halo need generous margin
   const W = size + PAD * 2;
 
   useEffect(() => {
@@ -45,106 +45,124 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
       typeof window !== 'undefined' &&
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
+    const COLS = ['#38BDF8', '#EC4899', '#FB923C'];
+    const sc = size / 100;                 // base geometry authored at ~100px
+    const N = size >= 80 ? 88 : size >= 40 ? 64 : 44; // silhouette resolution
+    const STEPS = size >= 40 ? 16 : 12;    // binary-search depth per ray
+
     let raf = 0;
     let celebrateT0 = -1;
     let prevState: BlobState = stateRef.current;
-
-    const CORES = [
-      { hex: '#38BDF8', phase: 0 },                  // catch-up sky
-      { hex: '#EC4899', phase: (Math.PI * 2) / 3 },  // dive-in pink
-      { hex: '#FB923C', phase: (Math.PI * 4) / 3 },  // recap orange
-    ];
-
-    const blobPath = (cx: number, cy: number, R: number, t: number, amp: number, speed: number) => {
-      ctx.beginPath();
-      const N = 64;
-      for (let i = 0; i <= N; i++) {
-        const th = (i / N) * Math.PI * 2;
-        const w =
-          amp * Math.sin(3 * th + t * 1.5 * speed) +
-          amp * 0.55 * Math.sin(5 * th - t * 2.1 * speed) +
-          amp * 0.3 * Math.sin(8 * th + t * 2.9 * speed);
-        const r = R * (1 + w);
-        const x = cx + r * Math.cos(th);
-        const y = cy + r * Math.sin(th);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-    };
 
     const draw = (now: number) => {
       const t = now / 1000;
       const st = stateRef.current;
       if (st === 'celebrate' && prevState !== 'celebrate') celebrateT0 = now;
       prevState = st;
+      const th = st === 'thinking';
 
-      const speed = st === 'thinking' ? 3.0 : 1.0;
-      const amp = reduced ? 0.04 : st === 'thinking' ? 0.13 : 0.075;
-      const orbit = t * (st === 'thinking' ? 1.6 : 0.45);
-
-      let scale = 1 + (reduced ? 0 : st === 'thinking' ? 0.02 * Math.sin(t * 6) : 0.045 * Math.sin((t * 2 * Math.PI) / 3));
+      let pulse = 1;
       if (celebrateT0 >= 0) {
         const dt = (now - celebrateT0) / 650;
-        if (dt < 1) scale *= 1 + 0.25 * Math.sin(Math.PI * dt);
+        if (dt < 1) pulse = 1 + 0.25 * Math.sin(Math.PI * dt);
         else celebrateT0 = -1;
       }
 
-      ctx.clearRect(0, 0, W, W);
-      const cx = W / 2;
-      const cy = W / 2;
-      const R = (size / 2) * 0.88 * scale;
+      const cx0 = W / 2;
+      const cy0 = W / 2;
+      const sp = reduced ? 0.001 : th ? 2.0 : 0.8;
+      const spread = (th ? 17 : 9) * sc * pulse;
 
-      // 1) Ambient halo — eases the blob into the dark, no hard cutoff.
-      const halo = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R * 2.1);
-      halo.addColorStop(0, 'rgba(99,102,241,0.20)');
-      halo.addColorStop(0.55, 'rgba(99,102,241,0.07)');
+      const balls = [
+        [cx0 + Math.cos(t * 0.9 * sp) * spread, cy0 + Math.sin(t * 0.7 * sp) * spread * 0.8, 15 * sc * pulse],
+        [cx0 + Math.cos(t * 0.6 * sp + 2.1) * spread * 1.15, cy0 + Math.sin(t * 1.1 * sp + 1.2) * spread, 12 * sc * pulse],
+        [cx0 + Math.cos(t * 1.3 * sp + 4.2) * spread * 0.9, cy0 + Math.sin(t * 0.5 * sp + 3.3) * spread * 1.1, 10.5 * sc * pulse],
+        [cx0 + Math.cos(t * 0.45 * sp + 1.0) * spread * 1.3, cy0 + Math.sin(t * 0.85 * sp + 4.8) * spread * 0.7, 8.5 * sc * pulse],
+      ];
+      const field = (x: number, y: number) => {
+        let f = 0;
+        for (let b = 0; b < 4; b++) {
+          const dx = x - balls[b][0];
+          const dy = y - balls[b][1];
+          f += (balls[b][2] * balls[b][2]) / (dx * dx + dy * dy + 1);
+        }
+        return f;
+      };
+      // weighted centroid = ray origin (keeps the silhouette star-convex enough)
+      let mx = 0, my = 0, tw = 0;
+      for (let b = 0; b < 4; b++) { mx += balls[b][0] * balls[b][2]; my += balls[b][1] * balls[b][2]; tw += balls[b][2]; }
+      mx /= tw; my /= tw;
+
+      const tracePath = (scale: number) => {
+        ctx.beginPath();
+        const hiMax = W * 0.48;
+        for (let i = 0; i <= N; i++) {
+          const a = (i / N) * Math.PI * 2;
+          let lo = 1, hi = hiMax;
+          for (let s = 0; s < STEPS; s++) {
+            const mid = (lo + hi) / 2;
+            if (field(mx + Math.cos(a) * mid, my + Math.sin(a) * mid) > 1.35) lo = mid;
+            else hi = mid;
+          }
+          const r = lo * scale;
+          const x = mx + r * Math.cos(a);
+          const y = my + r * Math.sin(a);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+      };
+
+      ctx.clearRect(0, 0, W, W);
+
+      // ambient halo — feathers the organism into dark backgrounds
+      const halo = ctx.createRadialGradient(mx, my, size * 0.18, mx, my, W * 0.55);
+      halo.addColorStop(0, `rgba(99,102,241,${th ? 0.18 : 0.13})`);
       halo.addColorStop(1, 'rgba(99,102,241,0)');
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, W, W);
 
-      // 2) Blurred under-glow of the blob shape — feathers the silhouette.
-      ctx.save();
-      (ctx as any).filter = `blur(${Math.max(2, size * 0.07)}px)`;
-      blobPath(cx, cy, R * 1.02, t, amp, speed);
-      ctx.fillStyle = 'rgba(79,70,229,0.55)';
-      ctx.fill();
-      ctx.restore();
-      (ctx as any).filter = 'none';
+      // blurred under-glow of the silhouette (skip at tiny sizes for perf)
+      if (size >= 26) {
+        ctx.save();
+        (ctx as any).filter = `blur(${Math.max(2, size * 0.06)}px)`;
+        tracePath(1.05);
+        ctx.fillStyle = 'rgba(79,70,229,0.5)';
+        ctx.fill();
+        ctx.restore();
+        (ctx as any).filter = 'none';
+      }
 
-      // 3) The blob body — deep indigo base, slightly translucent at the rim.
-      blobPath(cx, cy, R, t, amp, speed);
-      const base = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 1.15);
-      base.addColorStop(0, '#4F46E5');
-      base.addColorStop(0.75, '#3B3690');
-      base.addColorStop(1, 'rgba(35,32,90,0.85)');
-      ctx.fillStyle = base;
+      // the body
+      tracePath(1);
+      const body = ctx.createRadialGradient(mx - 7 * sc, my - 8 * sc, 2, mx, my, 42 * sc);
+      body.addColorStop(0, 'rgba(129,140,248,0.46)');
+      body.addColorStop(0.6, 'rgba(67,56,202,0.42)');
+      body.addColorStop(1, 'rgba(30,27,75,0.44)');
+      ctx.fillStyle = body;
       ctx.fill();
+      ctx.strokeStyle = 'rgba(165,180,252,0.5)';
+      ctx.lineWidth = Math.max(0.8, 1.4 * sc);
+      ctx.stroke();
 
-      // 4) The three ring-colors as plasma cores orbiting inside (clipped).
+      // the three pillar-cores, clipped inside; they gather when thinking
       ctx.save();
+      tracePath(1);
       ctx.clip();
-      ctx.globalCompositeOperation = 'lighter';
-      const coreAlpha = st === 'thinking' ? 0.5 : 0.38;
-      for (const c of CORES) {
-        const a = orbit + c.phase;
-        const ox = cx + Math.cos(a) * R * 0.42;
-        const oy = cy + Math.sin(a) * R * 0.42;
-        const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, R * 0.85);
-        const n = parseInt(c.hex.slice(1), 16);
-        const rr = (n >> 16) & 255, gg = (n >> 8) & 255, bb = n & 255;
-        g.addColorStop(0, `rgba(${rr},${gg},${bb},${coreAlpha})`);
-        g.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
-        ctx.fillStyle = g;
-        ctx.fillRect(cx - R * 1.3, cy - R * 1.3, R * 2.6, R * 2.6);
+      const gather = th ? 0.3 : 0.9;
+      for (let k = 0; k < 3; k++) {
+        const ox = mx + Math.cos(t * (th ? 1.6 : 0.5) + k * 2.09) * 13 * sc * gather;
+        const oy = my + Math.sin(t * (th ? 1.3 : 0.42) + k * 2.7) * 12 * sc * gather;
+        const rr = (th ? 10 : 8) * sc;
+        const og = ctx.createRadialGradient(ox, oy, 0, ox, oy, rr);
+        og.addColorStop(0, COLS[k] + (th ? 'EE' : 'BB'));
+        og.addColorStop(1, COLS[k] + '00');
+        ctx.fillStyle = og;
+        ctx.beginPath();
+        ctx.arc(ox, oy, rr, 0, 7);
+        ctx.fill();
       }
       ctx.restore();
-
-      // 5) Small specular — life in the eye, kept subtle.
-      ctx.beginPath();
-      ctx.ellipse(cx - R * 0.3, cy - R * 0.36, R * 0.2, R * 0.12, -0.6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.22)';
-      ctx.fill();
 
       if (!reduced) raf = requestAnimationFrame(draw);
     };
