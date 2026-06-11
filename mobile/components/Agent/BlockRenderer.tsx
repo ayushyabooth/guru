@@ -1,7 +1,28 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import GuruFormattedText from '../ui/GuruFormattedText';
-import { Triskelion } from '../Rings/Triskelion';
+import { StarIcon } from '../Rings/StarIcon';
+
+const PILLARS: Array<{ key: 'c' | 'd' | 'r'; label: string; color: string }> = [
+  { key: 'c', label: 'Catch-up', color: '#38BDF8' },
+  { key: 'd', label: 'Dive-in', color: '#EC4899' },
+  { key: 'r', label: 'Recap', color: '#FB923C' },
+];
+
+/** Identity-aligned progress trio: each pillar's star wearing its arc (no
+ *  legacy triskelion canvas — that overflowed its card; GUR-228 R9). */
+function StarTrio({ rings, size = 44, tSec }: { rings: any; size?: number; tSec: string }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 18, paddingVertical: 4 }}>
+      {PILLARS.map(p => (
+        <View key={p.key} style={{ alignItems: 'center', gap: 5 }}>
+          <StarIcon color={p.color} progress={Math.max(0, Math.min(1, rings?.[p.key] || 0))} size={size} />
+          <Text style={{ color: tSec, fontSize: 10 }}>{p.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 /**
  * Renders the agent's generative UI blocks (schema v1 — see
@@ -177,9 +198,9 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
 
     case 'rings':
       return (
-        <View style={[glass, { marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }]}>
-          <Triskelion size={84} progress={{ c: block.c || 0, d: block.d || 0, r: block.r || 0 }} />
-          {!!block.caption && <Text style={{ color: tSec, fontSize: 13, flex: 1 }}>{block.caption}</Text>}
+        <View style={[glass, { marginBottom: 12 }]}>
+          <StarTrio rings={block} size={44} tSec={tSec} />
+          {!!block.caption && <Text style={{ color: tSec, fontSize: 12.5, marginTop: 8 }}>{block.caption}</Text>}
         </View>
       );
 
@@ -268,8 +289,8 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
           ))}
           {!!block.commitment_line && <Text style={{ color: '#FB923C', fontSize: 12, marginTop: 4 }}>⚑ {block.commitment_line}</Text>}
           {!!block.rings && (
-            <View style={{ marginTop: 10, alignItems: 'flex-start' }}>
-              <Triskelion size={72} progress={{ c: block.rings.c || 0, d: block.rings.d || 0, r: block.rings.r || 0 }} />
+            <View style={{ marginTop: 10 }}>
+              <StarTrio rings={block.rings} size={36} tSec={tSec} />
             </View>
           )}
           {!!(block.followups || []).length && (

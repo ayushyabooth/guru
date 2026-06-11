@@ -220,11 +220,12 @@ export default function GuruAgentScreen() {
   // ── Journey state ──
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: bg }}>
+      {/* R9: header is identity-only — the working status lives solely in the
+          thread's thinking row, never duplicated up here. */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 58, paddingHorizontal: 20, paddingBottom: 12 }}>
         <GuruBlob size={26} state={blobState} />
         <Text style={{ color: tPrim, fontSize: 16, fontWeight: '700' }}>Guru</Text>
-        {!!status && <Text style={{ color: tSec, fontSize: 11, flex: 1 }} numberOfLines={1}>⏺ {status}</Text>}
-        {!status && <View style={{ flex: 1 }} />}
+        <View style={{ flex: 1 }} />
         <TouchableOpacity
           onPress={onNewGoal}
           accessibilityRole="button"

@@ -6,6 +6,7 @@ import SummaryTab from './tabs/SummaryTab';
 import InsightsTab from './tabs/InsightsTab';
 import NotesTab from './tabs/NotesTab';
 import AskGuruTab from './tabs/AskGuruTab';
+import Goo from './Goo';
 
 const TAB_NAMES = ['Summary', 'Insights', 'Notes', 'Ask Guru'];
 
@@ -66,6 +67,11 @@ export default function OverlayPanel({ onClose }: OverlayPanelProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
+        {/* The organism anchors the panel header (GUR-228 identity R9) */}
+        <div style={{ position: 'absolute', left: '16px', top: '10px', display: 'flex', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
+          <Goo size={22} />
+          <span style={{ fontSize: '13px', fontWeight: 600, color: '#F1F5F9' }}>Guru</span>
+        </div>
         <div class="guru-panel-handle-bar" />
         <button
           class="guru-panel-close"

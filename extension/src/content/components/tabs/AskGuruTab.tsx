@@ -4,6 +4,7 @@ import { chatMessages, conversationId, isChatLoading, overlayData, pendingPrompt
 import { sendChatMessage } from '../../api-client';
 import { richContent } from '../../state';
 import { guruMarkdownToHtml } from '../../format';
+import Goo from '../Goo';
 
 export default function AskGuruTab() {
   const [input, setInput] = useState('');
@@ -65,6 +66,10 @@ export default function AskGuruTab() {
       <div class="guru-chat-messages">
         {chatMessages.value.length === 0 && prompts.length > 0 && (
           <div style={{ marginBottom: '12px' }}>
+            {/* The organism greets you on every Ask Guru surface (GUR-228 R9) */}
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 12px' }}>
+              <Goo size={40} />
+            </div>
             <div style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '8px' }}>
               Think about:
             </div>
@@ -95,8 +100,9 @@ export default function AskGuruTab() {
         ))}
 
         {isChatLoading.value && (
-          <div class="guru-chat-message assistant" style={{ opacity: 0.6 }}>
-            Thinking...
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
+            <Goo size={22} speed={2.2} />
+            <span style={{ fontSize: '13px', color: '#94A3B8' }}>thinking…</span>
           </div>
         )}
 
