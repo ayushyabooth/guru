@@ -149,7 +149,12 @@ thumbnails feed standard/mini.
   energy only); the hero nucleus is 0.36× in a widened dark clearing; the
   agent thread's working state shows the organism agitating (GuruBlob 34,
   thinking) beside the status text; the extension FAB renders the same goo
-  via a Preact canvas port (`extension/src/content/components/GuruFAB.tsx`).
+  via a Preact canvas port (`extension/src/content/components/Goo.tsx`).
+- **R9 laws**: the agent header is identity-only — working status appears ONLY
+  in the thread's thinking row (no duplication); the in-thread `rings` block
+  renders as **StarTrio** (three StarIcons + labels — the legacy triskelion
+  canvas overflowed its card and is retired from blocks); the extension panel
+  header and Ask Guru tab carry the organism (shared `Goo.tsx`).
 - **AgentProvider / useAgentTurn**: POSTs to `/agent/turn`, parses the SSE stream via
   `fetch` + ReadableStream (EventSource can't carry the bearer header), appends blocks to
   session state, exposes `status` for ticker + blob state.
