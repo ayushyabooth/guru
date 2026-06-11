@@ -7,8 +7,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { MetricProvider, useMetrics } from '../../store/metric-context';
 import { useTheme } from '../../contexts/ThemeContext';
-import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
-import { Triskelion } from '../../components/Rings/Triskelion';
+import { StarIcon, ConstellationIcon } from '../../components/Rings/StarIcon';
 import GuruBlob from '../../components/ui/GuruBlob';
 import AnimatedTabPill from '../../components/shared/AnimatedTabPill';
 
@@ -86,7 +85,7 @@ function TabRingIcon({ color, progress, focused, size = 26 }: {
   return (
     <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <PlasmaBlobRing progress={progress} color={color} size={size} stroke={2.5} minimal />
+        <StarIcon color={color} progress={progress} size={size - 2} />
       </Animated.View>
     </Animated.View>
   );
@@ -122,7 +121,7 @@ function TabHomeIcon({ focused, size = 26, catchupProgress, diveinProgress, reca
   return (
     <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <Triskelion size={size} progress={{ c: catchupProgress, d: diveinProgress, r: recapProgress }} />
+        <ConstellationIcon size={size} />
       </Animated.View>
     </Animated.View>
   );

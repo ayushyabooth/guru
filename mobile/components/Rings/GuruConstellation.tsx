@@ -81,6 +81,28 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
 
       const pts = [0, 1, 2].map(k => starPos(k, t));
 
+      // dark "clearing" behind the nucleus so the goo organism pops out of the
+      // nebula instead of drowning in it (founder R7: nucleus visibility)
+      const clearing = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.19);
+      clearing.addColorStop(0, 'rgba(7,10,20,0.72)');
+      clearing.addColorStop(0.7, 'rgba(7,10,20,0.38)');
+      clearing.addColorStop(1, 'rgba(7,10,20,0)');
+      ctx.fillStyle = clearing;
+      ctx.beginPath(); ctx.arc(cx, cy, size * 0.19, 0, 7); ctx.fill();
+
+      // drifting twinkle particles — finesse layer
+      if (!reduced) {
+        for (let s = 0; s < 7; s++) {
+          const sa = s * 0.9 + t * 0.12 * (s % 2 ? 1 : -1);
+          const sr = size * (0.18 + 0.26 * ((s * 0.37) % 1));
+          const alpha = 0.12 + 0.18 * Math.max(0, Math.sin(t * 1.3 + s * 1.7));
+          ctx.fillStyle = `rgba(199,210,254,${alpha})`;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(sa) * sr, cy + Math.sin(sa) * sr, Math.max(0.8, size * 0.005), 0, 7);
+          ctx.fill();
+        }
+      }
+
       // synapses: star↔star + star↔nucleus, with traveling firing dots
       ctx.lineWidth = Math.max(1, size * 0.005);
       for (let i = 0; i < 3; i++) {
@@ -104,22 +126,36 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
       // stars + progress arcs
       for (let k = 0; k < 3; k++) {
         const [sx, sy] = pts[k];
-        const starR = size * (0.055 + 0.02 * p[k]);
-        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, starR * 3.2);
+        const tw = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 1.5 + k * 2.1);
+        const starR = size * (0.05 + 0.018 * p[k]);
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, starR * 3.0);
         glow.addColorStop(0, COLS[k] + 'FF');
-        glow.addColorStop(0.3, COLS[k] + '77');
+        glow.addColorStop(0.35, COLS[k] + Math.round(tw * 120).toString(16).padStart(2, '0'));
         glow.addColorStop(1, COLS[k] + '00');
         ctx.fillStyle = glow;
-        ctx.beginPath(); ctx.arc(sx, sy, starR * 3.2, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx, sy, starR * 3.0, 0, 7); ctx.fill();
+        // white-hot core — the "life in the eye"
+        ctx.fillStyle = `rgba(255,255,255,${0.85 * tw})`;
+        ctx.beginPath(); ctx.arc(sx, sy, starR * 0.5, 0, 7); ctx.fill();
         // progress arc — the rings' DNA, worn by each star
-        const arcR = starR * 4.1;
+        const arcR = starR * 4.0;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = COLS[k] + '30';
-        ctx.lineWidth = Math.max(2, size * 0.013);
+        ctx.strokeStyle = COLS[k] + '26';
+        ctx.lineWidth = Math.max(2, size * 0.011);
         ctx.beginPath(); ctx.arc(sx, sy, arcR, 0, Math.PI * 2); ctx.stroke();
         if (p[k] > 0.005) {
+          const endA = -Math.PI / 2 + Math.PI * 2 * p[k];
           ctx.strokeStyle = COLS[k];
-          ctx.beginPath(); ctx.arc(sx, sy, arcR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p[k]); ctx.stroke();
+          ctx.beginPath(); ctx.arc(sx, sy, arcR, -Math.PI / 2, endA); ctx.stroke();
+          // bright end-dot marking exactly where progress stands
+          const ex = sx + Math.cos(endA) * arcR;
+          const ey = sy + Math.sin(endA) * arcR;
+          const eg = ctx.createRadialGradient(ex, ey, 0, ex, ey, size * 0.02);
+          eg.addColorStop(0, '#FFFFFF');
+          eg.addColorStop(0.4, COLS[k]);
+          eg.addColorStop(1, COLS[k] + '00');
+          ctx.fillStyle = eg;
+          ctx.beginPath(); ctx.arc(ex, ey, size * 0.02, 0, 7); ctx.fill();
         }
       }
 
@@ -159,9 +195,10 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
         ref={canvasRef}
         style={{ position: 'absolute', left: -PAD, top: -PAD, width: W, height: W, pointerEvents: 'none' } as any}
       />
-      {/* the agent nucleus — the goo lives at the heart of the network */}
+      {/* the agent nucleus — the goo lives at the heart of the network.
+          R7: bigger + sitting in a dark clearing so it reads clearly. */}
       <View pointerEvents="none">
-        <GuruBlob size={Math.round(size * 0.21)} state="idle" />
+        <GuruBlob size={Math.round(size * 0.28)} state="idle" />
       </View>
     </Pressable>
   );

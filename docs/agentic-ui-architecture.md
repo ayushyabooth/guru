@@ -127,10 +127,23 @@ thumbnails feed standard/mini.
 
 - **Route** `mobile/app/(tabs)/guru.tsx` (5th tab) — also reachable via Home logo tap
   (`router.push('/guru')`).
-- **GuruBlob** (`components/ui/GuruBlob.tsx`): canvas blob, radius = `R(1+Σ sin(kθ+φt)·a)`
-  (3 octaves), radial plasma fill sky→indigo→pink. States: `idle` (3s breathe), `thinking`
-  (0.9s agitation + hue shift), `celebrate` (one 1.25× pulse). Respects
-  `prefers-reduced-motion` (static). Sizes 64 (hero) / 28 (header) / 22 (tab).
+- **GuruBlob v3 "Fusion goo"** (`components/ui/GuruBlob.tsx`): metaball organism —
+  4 lissajous bodies; silhouette ray-marched from the summed-field level-set
+  (field > 1.35), so lobes fuse/stretch/nearly split. Tri-color pillar cores
+  inside (gather to center when `thinking`); ambient halo + blurred under-glow.
+  States: `idle` / `thinking` (faster, wider, near-division) / `celebrate`
+  (1.25× pulse). Reduced-motion → static frame. Resolution scales with size.
+  **Identity rule: the organism appears at every Ask Guru / agentic touchpoint**
+  (reader Ask Guru tab greeting + message avatar + thinking row + send button,
+  agent tab avatar/hero, header logo, Guru tab icon).
+- **GuruConstellation** (`components/Rings/GuruConstellation.tsx`): Home hero —
+  three pillar stars (white-hot cores, twinkle particles) in a breathing nebula,
+  thin progress arcs with bright end-dots (the rings' DNA), synapses firing
+  star↔star and star↔nucleus, goo organism in a dark clearing at center (0.28×).
+  Tap star → pillar; tap nucleus → /guru.
+- **Tab icons** (`components/Rings/StarIcon.tsx`): `StarIcon` (pillar star +
+  progress arc) for Catch-up/Dive-in/Recap; `ConstellationIcon` for Home;
+  GuruBlob for the Guru tab.
 - **AgentProvider / useAgentTurn**: POSTs to `/agent/turn`, parses the SSE stream via
   `fetch` + ReadableStream (EventSource can't carry the bearer header), appends blocks to
   session state, exposes `status` for ticker + blob state.

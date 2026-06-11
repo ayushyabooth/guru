@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { openExternalTab } from '../../utils/openExternalTab';
 import GuruFormattedText, { cleanGuruResponse } from '../../components/ui/GuruFormattedText';
+import GuruBlob from '../../components/ui/GuruBlob';
 import { CatchupService } from '../../services/article-service';
 import { useTimeTracking } from '../../hooks/useTimeTracking';
 import DarkThemeColors from '../../constants/darkTheme';
@@ -723,7 +724,11 @@ export default function ArticleDetailScreen() {
           <View>
             {guruMessages.length === 0 && !guruLoading && (
               <>
-                <Text style={[styles.webSectionTitle, { color: TC.textPrimary, marginBottom: Spacing.md }]}>
+                {/* GUR-228 identity: the organism greets you on every Ask Guru surface */}
+                <View style={{ alignItems: 'center', marginBottom: Spacing.md, marginTop: 4 }}>
+                  <GuruBlob size={48} state="idle" />
+                </View>
+                <Text style={[styles.webSectionTitle, { color: TC.textPrimary, marginBottom: Spacing.md, textAlign: 'center' }]}>
                   Think about it
                 </Text>
                 {rc?.socratic_prompts && rc.socratic_prompts.map((p: string, i: number) => (
@@ -755,7 +760,12 @@ export default function ArticleDetailScreen() {
               </>
             )}
             {guruMessages.map((msg, i) => (
-              <View key={i} style={[styles.messageBubbleRow, { justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }]}>
+              <View key={i} style={[styles.messageBubbleRow, { justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-end' }]}>
+                {msg.role !== 'user' && (
+                  <View style={{ marginRight: 7, marginBottom: 2 }}>
+                    <GuruBlob size={18} state="idle" />
+                  </View>
+                )}
                 <View style={[
                   styles.messageBubble,
                   {
@@ -772,9 +782,12 @@ export default function ArticleDetailScreen() {
               </View>
             ))}
             {guruLoading && (
-              <View style={[styles.messageBubbleRow, { justifyContent: 'flex-start' }]}>
+              <View style={[styles.messageBubbleRow, { justifyContent: 'flex-start', alignItems: 'center' }]}>
+                <View style={{ marginRight: 7 }}>
+                  <GuruBlob size={20} state="thinking" />
+                </View>
                 <View style={[styles.messageBubble, { backgroundColor: guruBubbleBg }]}>
-                  <Text style={{ color: TC.textTertiary, fontSize: 14 }}>Guru is thinking…</Text>
+                  <Text style={{ color: TC.textTertiary, fontSize: 14 }}>thinking…</Text>
                 </View>
               </View>
             )}
@@ -812,14 +825,19 @@ export default function ArticleDetailScreen() {
           <TouchableOpacity
             style={[
               styles.askGuruSendBtn,
-              { backgroundColor: guruInput.trim() && !guruLoading ? ACCENT : TC.textTertiary },
+              {
+                backgroundColor: guruInput.trim() && !guruLoading
+                  ? (isDark ? 'rgba(99,102,241,0.22)' : 'rgba(99,102,241,0.12)')
+                  : 'transparent',
+              },
             ]}
             onPress={() => sendGuruMessage()}
             disabled={!guruInput.trim() || guruLoading}
             accessibilityRole="button"
             accessibilityLabel="Send message to Guru"
           >
-            <Icon name="arrow-up" size={18} color="#FFFFFF" weight="bold" />
+            {/* GUR-228 identity: you hand your question to the organism itself */}
+            <GuruBlob size={22} state={guruLoading ? 'thinking' : 'idle'} />
           </TouchableOpacity>
         </View>
       </View>
