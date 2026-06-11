@@ -25,8 +25,8 @@ export default function GuruFAB({ count, visible, onClick }: GuruFABProps) {
       title={isPanelOpen ? 'Close Guru panel' : 'Open Guru insights'}
       style={{ bottom: `${bottomPx}px` }}
     >
-      {/* The living organism IS the brand mark (GUR-228 identity final R8) */}
-      <Goo size={34} />
+      {/* R10: the FAB IS the organism — no glass dish around it */}
+      <Goo size={52} bold />
       {count > 0 && <span class="guru-fab-badge">{count}</span>}
     </button>
   );

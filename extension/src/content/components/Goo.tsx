@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'preact/hooks';
  * as the app's GuruBlob v3 (GUR-228 identity final). Shared by the FAB, the
  * panel header, and the Ask Guru tab. Honors prefers-reduced-motion.
  */
-export default function Goo({ size = 34, speed = 0.8 }: { size?: number; speed?: number }) {
+export default function Goo({ size = 34, speed = 0.8, bold = false }: { size?: number; speed?: number; bold?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -66,15 +66,24 @@ export default function Goo({ size = 34, speed = 0.8 }: { size?: number; speed?:
       };
       ctx.clearRect(0, 0, W, W);
       trace();
+      // bold = standalone use (e.g. the FAB IS the organism): near-opaque body
+      // so it holds contrast on light publisher pages.
       const body = ctx.createRadialGradient(mx - 7 * sc, my - 8 * sc, 2, mx, my, 42 * sc);
-      body.addColorStop(0, 'rgba(129,140,248,0.55)');
-      body.addColorStop(0.6, 'rgba(67,56,202,0.5)');
-      body.addColorStop(1, 'rgba(30,27,75,0.52)');
+      body.addColorStop(0, bold ? 'rgba(129,140,248,0.98)' : 'rgba(129,140,248,0.55)');
+      body.addColorStop(0.6, bold ? 'rgba(67,56,202,0.96)' : 'rgba(67,56,202,0.5)');
+      body.addColorStop(1, bold ? 'rgba(30,27,75,0.97)' : 'rgba(30,27,75,0.52)');
       ctx.fillStyle = body;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(165,180,252,0.55)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = bold ? 'rgba(199,210,254,0.75)' : 'rgba(165,180,252,0.55)';
+      ctx.lineWidth = bold ? 1.4 : 1;
       ctx.stroke();
+      if (bold) {
+        // specular so it reads glossy/alive even on white
+        ctx.beginPath();
+        ctx.ellipse(mx - 12 * sc, my - 14 * sc, 10 * sc, 6 * sc, -0.6, 0, 7);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fill();
+      }
       ctx.save();
       trace();
       ctx.clip();

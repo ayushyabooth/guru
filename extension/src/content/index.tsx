@@ -209,25 +209,24 @@ function getBaseStyles(): string {
       width: 56px;
       height: 56px;
       border-radius: 50%;
-      /* Liquid glass: translucent dark glass + blur + gradient border + glow,
-         so the Guru triskelion mark reads as the brand on a glassy surface. */
-      background: linear-gradient(145deg, rgba(30,38,60,0.74) 0%, rgba(15,20,35,0.64) 100%);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      /* R10 (GUR-228): the FAB IS the organism — no glass dish. The button is
+         a transparent hit area; the goo canvas is the visible mark, lifted by
+         a soft drop shadow so it reads on light publisher pages. */
+      background: transparent;
+      border: none;
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 24px rgba(10,14,23,0.45), 0 0 18px rgba(99,102,241,0.26), inset 0 1px 0 rgba(255,255,255,0.25);
-      transition: transform 0.2s, box-shadow 0.2s, bottom 0.3s;
+      filter: drop-shadow(0 6px 14px rgba(30,27,75,0.38)) drop-shadow(0 0 18px rgba(99,102,241,0.28));
+      transition: transform 0.2s, filter 0.2s, bottom 0.3s;
       pointer-events: auto;
       z-index: 10;
     }
 
     .guru-fab:hover {
       transform: scale(1.08);
-      box-shadow: 0 10px 28px rgba(10,14,23,0.5), 0 0 28px rgba(99,102,241,0.42), inset 0 1px 0 rgba(255,255,255,0.3);
+      filter: drop-shadow(0 8px 18px rgba(30,27,75,0.45)) drop-shadow(0 0 26px rgba(99,102,241,0.45));
     }
 
     .guru-fab-badge {
