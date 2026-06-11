@@ -133,17 +133,23 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
         (ctx as any).filter = 'none';
       }
 
-      // the body
+      // the body — near-opaque (R11: translucent washed out at small sizes;
+      // the organism must read solid and alive everywhere)
       tracePath(1);
       const body = ctx.createRadialGradient(mx - 7 * sc, my - 8 * sc, 2, mx, my, 42 * sc);
-      body.addColorStop(0, 'rgba(129,140,248,0.46)');
-      body.addColorStop(0.6, 'rgba(67,56,202,0.42)');
-      body.addColorStop(1, 'rgba(30,27,75,0.44)');
+      body.addColorStop(0, 'rgba(129,140,248,0.98)');
+      body.addColorStop(0.6, 'rgba(67,56,202,0.96)');
+      body.addColorStop(1, 'rgba(30,27,75,0.97)');
       ctx.fillStyle = body;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(165,180,252,0.5)';
-      ctx.lineWidth = Math.max(0.8, 1.4 * sc);
+      ctx.strokeStyle = 'rgba(199,210,254,0.7)';
+      ctx.lineWidth = Math.max(0.9, 1.4 * sc);
       ctx.stroke();
+      // specular — keeps it glossy/alive now that the body is solid
+      ctx.beginPath();
+      ctx.ellipse(mx - 12 * sc, my - 14 * sc, 10 * sc, 6 * sc, -0.6, 0, 7);
+      ctx.fillStyle = 'rgba(255,255,255,0.32)';
+      ctx.fill();
 
       // the three pillar-cores, clipped inside; they gather when thinking
       ctx.save();

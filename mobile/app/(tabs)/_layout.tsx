@@ -223,10 +223,13 @@ function TabsWithMetrics() {
         name="guru"
         options={{
           title: 'Guru',
-          // The living blob IS the icon — alive even in the tab bar (GUR-228).
+          // R11: icon-only center tab — the organism IS the label. Bigger and
+          // solid so it's unmissable in the bar.
+          tabBarLabel: () => null,
+          tabBarAccessibilityLabel: 'Guru agent',
           tabBarIcon: ({ focused }) => (
-            <Animated.View style={{ opacity: focused ? 1 : TAB_INACTIVE_OPACITY }}>
-              <GuruBlob size={24} state="idle" />
+            <Animated.View style={{ opacity: focused ? 1 : 0.55, marginTop: 6 }}>
+              <GuruBlob size={34} state="idle" />
             </Animated.View>
           ),
         }}
