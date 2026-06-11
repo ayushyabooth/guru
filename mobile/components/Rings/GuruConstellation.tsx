@@ -53,10 +53,11 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
     const cy = W / 2;
     const ORBIT = size * 0.33;
 
-    const starPos = (k: number, t: number) => {
-      const a = -Math.PI / 2 + k * ((Math.PI * 2) / 3) + (reduced ? 0 : Math.sin(t * 0.25 + k) * 0.07);
-      const wob = reduced ? 0 : Math.sin(t * 0.4 + k * 2) * size * 0.012;
-      return [cx + Math.cos(a) * (ORBIT + wob), cy + Math.sin(a) * (ORBIT + wob)] as const;
+    // R8: fixed, perfectly symmetric triangle — no positional wobble. Life is
+    // expressed through glow/twinkle/synapses, never through geometry drift.
+    const starPos = (k: number, _t: number) => {
+      const a = -Math.PI / 2 + k * ((Math.PI * 2) / 3);
+      return [cx + Math.cos(a) * ORBIT, cy + Math.sin(a) * ORBIT] as const;
     };
 
     const draw = (now: number) => {
@@ -82,13 +83,13 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
       const pts = [0, 1, 2].map(k => starPos(k, t));
 
       // dark "clearing" behind the nucleus so the goo organism pops out of the
-      // nebula instead of drowning in it (founder R7: nucleus visibility)
-      const clearing = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.19);
-      clearing.addColorStop(0, 'rgba(7,10,20,0.72)');
-      clearing.addColorStop(0.7, 'rgba(7,10,20,0.38)');
+      // nebula instead of drowning in it (R7; widened in R8 for the larger goo)
+      const clearing = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 0.25);
+      clearing.addColorStop(0, 'rgba(7,10,20,0.78)');
+      clearing.addColorStop(0.7, 'rgba(7,10,20,0.42)');
       clearing.addColorStop(1, 'rgba(7,10,20,0)');
       ctx.fillStyle = clearing;
-      ctx.beginPath(); ctx.arc(cx, cy, size * 0.19, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, size * 0.25, 0, 7); ctx.fill();
 
       // drifting twinkle particles — finesse layer
       if (!reduced) {
@@ -123,14 +124,18 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
         }
       }
 
-      // stars + progress arcs
+      // stars + progress arcs — R8: UNIFORM geometry across all three pillars
+      // (identical star + arc radii); progress shows ONLY as arc fill + glow
+      // intensity, so the constellation always reads as a symmetric mark.
+      const starR = size * 0.056;
+      const arcR = size * 0.215;
       for (let k = 0; k < 3; k++) {
         const [sx, sy] = pts[k];
         const tw = reduced ? 1 : 0.88 + 0.12 * Math.sin(t * 1.5 + k * 2.1);
-        const starR = size * (0.05 + 0.018 * p[k]);
+        const energy = 0.55 + 0.45 * p[k]; // progress brightens, never resizes
         const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, starR * 3.0);
         glow.addColorStop(0, COLS[k] + 'FF');
-        glow.addColorStop(0.35, COLS[k] + Math.round(tw * 120).toString(16).padStart(2, '0'));
+        glow.addColorStop(0.35, COLS[k] + Math.round(tw * energy * 130).toString(16).padStart(2, '0'));
         glow.addColorStop(1, COLS[k] + '00');
         ctx.fillStyle = glow;
         ctx.beginPath(); ctx.arc(sx, sy, starR * 3.0, 0, 7); ctx.fill();
@@ -138,7 +143,6 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
         ctx.fillStyle = `rgba(255,255,255,${0.85 * tw})`;
         ctx.beginPath(); ctx.arc(sx, sy, starR * 0.5, 0, 7); ctx.fill();
         // progress arc — the rings' DNA, worn by each star
-        const arcR = starR * 4.0;
         ctx.lineCap = 'round';
         ctx.strokeStyle = COLS[k] + '26';
         ctx.lineWidth = Math.max(2, size * 0.011);
@@ -196,9 +200,9 @@ export default function GuruConstellation({ size = 240, progress, onStarPress, o
         style={{ position: 'absolute', left: -PAD, top: -PAD, width: W, height: W, pointerEvents: 'none' } as any}
       />
       {/* the agent nucleus — the goo lives at the heart of the network.
-          R7: bigger + sitting in a dark clearing so it reads clearly. */}
+          R8: substantially bigger (0.36×) — it should be unmissable. */}
       <View pointerEvents="none">
-        <GuruBlob size={Math.round(size * 0.28)} state="idle" />
+        <GuruBlob size={Math.round(size * 0.36)} state="idle" />
       </View>
     </Pressable>
   );

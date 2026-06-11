@@ -239,7 +239,11 @@ export default function GuruAgentScreen() {
           <BlockRenderer key={b._key} block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
         ))}
         {busy && (
-          <Text style={{ color: tSec, fontSize: 12, marginBottom: 10 }}>⏺ {status || 'working…'}</Text>
+          // R8: the organism itself thinks in the thread — not just a text line
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, marginTop: 2 }}>
+            <GuruBlob size={34} state="thinking" />
+            <Text style={{ color: tSec, fontSize: 12.5, flex: 1 }}>{status || 'working…'}</Text>
+          </View>
         )}
       </ScrollView>
       {/* Persistent mode switcher — escape hatch from any journey, one tap */}

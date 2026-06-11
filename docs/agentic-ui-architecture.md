@@ -144,6 +144,12 @@ thumbnails feed standard/mini.
 - **Tab icons** (`components/Rings/StarIcon.tsx`): `StarIcon` (pillar star +
   progress arc) for Catch-up/Dive-in/Recap; `ConstellationIcon` for Home;
   GuruBlob for the Guru tab.
+- **R8 identity laws**: constellation geometry is perfectly symmetric (uniform
+  star/arc radii, fixed equilateral triangle — progress = arc fill + glow
+  energy only); the hero nucleus is 0.36× in a widened dark clearing; the
+  agent thread's working state shows the organism agitating (GuruBlob 34,
+  thinking) beside the status text; the extension FAB renders the same goo
+  via a Preact canvas port (`extension/src/content/components/GuruFAB.tsx`).
 - **AgentProvider / useAgentTurn**: POSTs to `/agent/turn`, parses the SSE stream via
   `fetch` + ReadableStream (EventSource can't carry the bearer header), appends blocks to
   session state, exposes `status` for ticker + blob state.
