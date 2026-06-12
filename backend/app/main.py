@@ -66,7 +66,16 @@ async def add_timing_header(request: Request, call_next):
 
 # Response compression — JSON feed payloads compress ~5-10x; big win on high-latency
 # links. Added BEFORE CORS so CORSMiddleware remains the outermost user middleware.
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+# IMPORTANT: SSE must bypass gzip — GZipMiddleware buffers streaming bodies, which
+# turned the agent's incremental stream back into one end-of-turn burst (GUR-229).
+class SelectiveGZipMiddleware(GZipMiddleware):
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http" and scope.get("path", "").endswith("/agent/turn"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
+
+app.add_middleware(SelectiveGZipMiddleware, minimum_size=1024)
 
 # Add CORS middleware — MUST be added LAST so it is the outermost user middleware
 # and attaches CORS headers even to error responses (GUR-180). See note above.
