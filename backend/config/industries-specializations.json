@@ -139,6 +139,57 @@
       ]
     },
     {
+      "id": "ai",
+      "name": "AI",
+      "emoji": "🤖",
+      "icon": "robot-outline",
+      "color_primary": "#8B5CF6",
+      "color_secondary": "#7C3AED",
+      "description": "Foundation models, AI research, applied AI products",
+      "specializations": [
+        {
+          "id": "foundation_models_llms",
+          "name": "Foundation Models & LLMs",
+          "description": "Large language models, frontier model releases, training and scaling",
+          "emoji": "🧠",
+          "icon": "brain",
+          "color_primary": "#8B5CF6"
+        },
+        {
+          "id": "ai_research",
+          "name": "AI Research & Breakthroughs",
+          "description": "Cutting-edge papers, lab research, scientific advances in AI",
+          "emoji": "🔬",
+          "icon": "flask-outline",
+          "color_primary": "#3B82F6"
+        },
+        {
+          "id": "ai_product_applications",
+          "name": "AI Product & Applications",
+          "description": "Building with AI, agents, applied use cases, AI startups",
+          "emoji": "🚀",
+          "icon": "rocket-launch-outline",
+          "color_primary": "#F59E0B"
+        },
+        {
+          "id": "ai_safety_alignment",
+          "name": "AI Safety & Alignment",
+          "description": "Alignment research, AI policy, governance, responsible AI",
+          "emoji": "🛡️",
+          "icon": "shield-check-outline",
+          "color_primary": "#10B981"
+        },
+        {
+          "id": "ml_engineering_infrastructure",
+          "name": "ML Engineering & Infrastructure",
+          "description": "LLM tooling, inference, MLOps, production AI systems",
+          "emoji": "⚙️",
+          "icon": "cog-outline",
+          "color_primary": "#06B6D4"
+        }
+      ]
+    },
+    {
       "id": "finance",
       "name": "Finance",
       "emoji": "💰",

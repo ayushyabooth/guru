@@ -1075,6 +1075,135 @@
         "website": "https://nonprofitquarterly.org",
         "description": "Analysis of nonprofit performance, accountability, and outcomes measurement."
       }
+    ],
+    "foundation_models_llms": [
+      {
+        "id": "ahead_of_ai_raschka",
+        "name": "Sebastian Raschka — Ahead of AI",
+        "feed_url": "https://magazine.sebastianraschka.com/feed",
+        "website": "https://magazine.sebastianraschka.com",
+        "description": "Deep technical breakdowns of LLM architectures, training techniques, and research trends from a leading ML educator."
+      },
+      {
+        "id": "interconnects_lambert",
+        "name": "Nathan Lambert — Interconnects",
+        "feed_url": "https://www.interconnects.ai/feed",
+        "website": "https://www.interconnects.ai",
+        "description": "Frontier model analysis, RLHF, and open-model ecosystem commentary from an Allen Institute researcher."
+      },
+      {
+        "id": "huggingface_blog",
+        "name": "Hugging Face Blog",
+        "feed_url": "https://huggingface.co/blog/feed.xml",
+        "website": "https://huggingface.co/blog",
+        "description": "Open-source model releases, benchmarks, and hands-on LLM engineering from the center of the open AI ecosystem."
+      },
+      {
+        "id": "epoch_ai",
+        "name": "Epoch AI",
+        "feed_url": "https://epochai.substack.com/feed",
+        "website": "https://epoch.ai",
+        "description": "Rigorous data-driven research on AI scaling trends, compute, and the trajectory of frontier models."
+      }
+    ],
+    "ai_research": [
+      {
+        "id": "google_deepmind_blog",
+        "name": "Google DeepMind Blog",
+        "feed_url": "https://deepmind.google/blog/rss.xml",
+        "website": "https://deepmind.google/blog",
+        "description": "Research announcements and scientific breakthroughs from one of the world's leading AI labs."
+      },
+      {
+        "id": "bair_blog",
+        "name": "Berkeley AI Research (BAIR)",
+        "feed_url": "https://bair.berkeley.edu/blog/feed.xml",
+        "website": "https://bair.berkeley.edu/blog",
+        "description": "Accessible write-ups of cutting-edge academic AI research from UC Berkeley's flagship AI lab."
+      },
+      {
+        "id": "google_research_blog",
+        "name": "Google Research Blog",
+        "feed_url": "https://research.google/blog/rss/",
+        "website": "https://research.google/blog",
+        "description": "Peer-reviewed research advances across ML, systems, and applied AI from Google's research org."
+      },
+      {
+        "id": "mit_news_ai",
+        "name": "MIT News — Artificial Intelligence",
+        "feed_url": "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml",
+        "website": "https://news.mit.edu/topic/artificial-intelligence2",
+        "description": "Authoritative coverage of AI research breakthroughs and their implications from MIT."
+      }
+    ],
+    "ai_product_applications": [
+      {
+        "id": "one_useful_thing_mollick",
+        "name": "Ethan Mollick — One Useful Thing",
+        "feed_url": "https://www.oneusefulthing.org/feed",
+        "website": "https://www.oneusefulthing.org",
+        "description": "Wharton professor's evidence-based essays on how AI actually changes work, products, and organizations."
+      },
+      {
+        "id": "latent_space",
+        "name": "Latent Space",
+        "feed_url": "https://www.latent.space/feed",
+        "website": "https://www.latent.space",
+        "description": "The leading newsletter/podcast for AI engineers — deep interviews and analysis on building AI products."
+      },
+      {
+        "id": "openai_news",
+        "name": "OpenAI News",
+        "feed_url": "https://openai.com/news/rss.xml",
+        "website": "https://openai.com/news",
+        "description": "First-party product launches, model releases, and research announcements from OpenAI."
+      }
+    ],
+    "ai_safety_alignment": [
+      {
+        "id": "import_ai_clark",
+        "name": "Jack Clark — Import AI",
+        "feed_url": "https://importai.substack.com/feed",
+        "website": "https://importai.substack.com",
+        "description": "Weekly AI policy and frontier-research digest from Anthropic's co-founder and policy lead."
+      },
+      {
+        "id": "cais_safety_newsletter",
+        "name": "AI Safety Newsletter (CAIS)",
+        "feed_url": "https://newsletter.safe.ai/feed",
+        "website": "https://newsletter.safe.ai",
+        "description": "The Center for AI Safety's digest of safety research, governance, and AI risk developments."
+      },
+      {
+        "id": "alignment_forum",
+        "name": "Alignment Forum",
+        "feed_url": "https://www.alignmentforum.org/feed.xml",
+        "website": "https://www.alignmentforum.org",
+        "description": "The primary venue where alignment researchers publish and debate technical AI safety work."
+      }
+    ],
+    "ml_engineering_infrastructure": [
+      {
+        "id": "simon_willison",
+        "name": "Simon Willison",
+        "feed_url": "https://simonwillison.net/atom/everything/",
+        "website": "https://simonwillison.net",
+        "description": "Prolific, hands-on coverage of LLM tooling, prompt engineering, and practical AI development."
+      },
+      {
+        "id": "eugene_yan",
+        "name": "Eugene Yan",
+        "feed_url": "https://eugeneyan.com/rss/",
+        "website": "https://eugeneyan.com",
+        "description": "Battle-tested essays on ML systems design, LLM patterns, and production AI from an Amazon principal scientist."
+      },
+      {
+        "id": "andrej_karpathy",
+        "name": "Andrej Karpathy",
+        "feed_url": "https://karpathy.bearblog.dev/feed/",
+        "website": "https://karpathy.bearblog.dev",
+        "description": "Foundational essays on neural networks, LLM internals, and AI-native software from a defining voice in deep learning."
+      }
     ]
   }
 }
