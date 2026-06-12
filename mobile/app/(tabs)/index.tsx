@@ -550,8 +550,9 @@ function HomeContent() {
           <ExtensionInstallBanner />
         </View>
 
-        {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec) */}
-        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
+        {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec)
+            R15: dims while a filter re-scope is in flight so the refresh is visible. */}
+        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg, opacity: state.loading && displayMetrics.lastUpdated ? 0.45 : 1 }}>
           {(() => {
             // Pass raw ratios (un-clamped). Triskelion caps rendering at 1.0
             // internally but uses values > 1 to trigger the Over-Goal halo
@@ -606,11 +607,24 @@ function HomeContent() {
               activeTabId={state.activeFilter}
               onTabPress={handleTabPress}
             />
+            {/* GUR-228 R15: make the re-scope undeniable — a per-filter summary
+                that updates with every chip. The rings/stats above re-scope too,
+                but when one topic dominates a user's reading their scoped values
+                can legitimately equal the aggregate, which read as "filter does
+                nothing"; this line always names what the dashboard is showing. */}
+            {state.activeFilter !== 'all' && activeFilterTab && (
+              <Text style={{ marginTop: 10, fontSize: 12.5, lineHeight: 17, color: COLORS.textSecondary }} accessibilityLiveRegion="polite">
+                {state.loading
+                  ? `Scoping dashboard to ${activeFilterTab.label}…`
+                  : `${activeFilterTab.label} this week: ${displayMetrics.stats.articlesRead} read · ${displayMetrics.catchup.weeklyTotal || 0}m catch-up · ${displayMetrics.divein.weeklyProgress || 0}m dive-in${displayMetrics.stats.topTopics[0] ? ` · top: ${displayMetrics.stats.topTopics[0].name}` : ''}`}
+              </Text>
+            )}
           </View>
         )}
 
-        {/* Weekly Goals Progress (migrated from Recap) */}
-        <View style={styles.goalsSection}>
+        {/* Weekly Goals Progress (migrated from Recap)
+            R15: dims with the rings while a filter re-scope is in flight. */}
+        <View style={[styles.goalsSection, { opacity: state.loading && displayMetrics.lastUpdated ? 0.45 : 1 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Your Week</Text>
             {/* GUR-13: reading streak (data from /me/metrics current_streak) */}

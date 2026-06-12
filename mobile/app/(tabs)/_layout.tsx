@@ -156,7 +156,9 @@ function TabsWithMetrics() {
     bottom: 12,
     left: 16,
     right: 16,
-    height: 64,
+    // 72 (was 64): grown so the full guru organism (~62px body) seats INSIDE
+    // the glass island instead of floating above it (founder R15).
+    height: 72,
     borderRadius: 24,
     backgroundColor: isDark ? 'rgba(15, 20, 35, 0.80)' : 'rgba(255, 255, 255, 0.88)',
     // Border: light strokes on dark glass, dark tint on light glass
@@ -223,14 +225,12 @@ function TabsWithMetrics() {
         name="guru"
         options={{
           title: 'Guru',
-          // R13: the organism is CENTER STAGE — a ~62px creature perched on
-          // the bar, top ~third rising above the bar's top edge, no dead gap.
-          // The icon lives in an explicitly sized 64×64 box (same height as
-          // the bar) so centering is deterministic instead of depending on the
-          // tab bar's internal icon/label layout; translateY lifts the body so
-          // it leaks out of the glass island. GuruBlob is rendered `tight`
-          // (PAD 0.15×size, body 1.25×) so size=110 draws a ~62px visual body
-          // dead-centered in the box.
+          // R15 (founder): the organism keeps its ~62px size but is SEATED
+          // INSIDE the glass island (bar grown to 72). translateY +8 was
+          // measured on prod: it puts the body center on the new bar's
+          // center (5px breathing above/below). GuruBlob `tight` (PAD
+          // 0.15×size, body 1.25×) draws a ~62px visual body dead-centered
+          // in the 64×64 box.
           tabBarLabel: () => null,
           tabBarAccessibilityLabel: 'Guru agent',
           tabBarIcon: ({ focused }) => (
@@ -241,7 +241,7 @@ function TabsWithMetrics() {
                 height: 64,
                 alignItems: 'center',
                 justifyContent: 'center',
-                transform: [{ translateY: -18 }],
+                transform: [{ translateY: 8 }],
               }}
             >
               <GuruBlob size={110} state="idle" tight />
