@@ -223,13 +223,13 @@ function TabsWithMetrics() {
         name="guru"
         options={{
           title: 'Guru',
-          // R11: icon-only center tab — the organism IS the label. Bigger and
-          // solid so it's unmissable in the bar.
+          // R12: the organism is CENTER STAGE — large, full presence, rising
+          // out of the bar's top edge like a creature peeking over it.
           tabBarLabel: () => null,
           tabBarAccessibilityLabel: 'Guru agent',
           tabBarIcon: ({ focused }) => (
-            <Animated.View style={{ opacity: focused ? 1 : 0.55, marginTop: 6 }}>
-              <GuruBlob size={34} state="idle" />
+            <Animated.View style={{ opacity: focused ? 1 : 0.92, marginTop: -26 }}>
+              <GuruBlob size={54} state="idle" />
             </Animated.View>
           ),
         }}
