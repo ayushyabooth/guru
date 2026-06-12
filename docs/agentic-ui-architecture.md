@@ -155,6 +155,14 @@ thumbnails feed standard/mini.
   renders as **StarTrio** (three StarIcons + labels — the legacy triskelion
   canvas overflowed its card and is retired from blocks); the extension panel
   header and Ask Guru tab carry the organism (shared `Goo.tsx`).
+- **R11–R13 laws**: the organism body is near-opaque with a specular highlight
+  at every size (translucency = invisibility at small sizes; retired). The Guru
+  tab is label-free: a 54px goo at `marginTop:-26`, rising out of the tab bar.
+  **THE signature** = `components/ui/GuruWordmark.tsx`: bold lowercase "guru"
+  (weight 800, -0.5 tracking) + the organism as an oversized living full stop
+  (0.62× type size, state-aware). Used on the Home header (25px), agent header
+  (19px, period agitates while working) and extension panel header (Preact
+  inline equivalent). Spaced "G U R U" lettering is retired.
 - **AgentProvider / useAgentTurn**: POSTs to `/agent/turn`, parses the SSE stream via
   `fetch` + ReadableStream (EventSource can't carry the bearer header), appends blocks to
   session state, exposes `status` for ticker + blob state.
