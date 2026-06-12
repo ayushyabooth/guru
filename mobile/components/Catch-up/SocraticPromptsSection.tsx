@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, LayoutAnimation, Platform, UIManager } from 'react-native';
 import Icon from '../ui/Icon';
-import GuruRings from '../ui/GuruRings';
+import GuruBlob from '../ui/GuruBlob';
 import GlassSection from '../ui/GlassSection';
 
 // Enable LayoutAnimation for Android
@@ -120,7 +120,7 @@ export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
                         style={styles.guruBtn}
                         onPress={() => handleExploreWithGuru(prompt, index)}
                       >
-                        <GuruRings size="logo" dimensions={18} />
+                        <GuruBlob size={18} tight />
                         <Text style={styles.guruBtnText}>Explore with Guru</Text>
                         <Text style={styles.guruArrow}>→</Text>
                       </TouchableOpacity>

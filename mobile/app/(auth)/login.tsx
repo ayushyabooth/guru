@@ -24,7 +24,7 @@ import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Sun, Moon } from 'phosphor-react-native';
 import { GlassCard, GlassInput, GlassButton, OrganicBackground } from '../../components/ui';
-import GuruRings from '../../components/ui/GuruRings';
+import GuruWordmark from '../../components/ui/GuruWordmark';
 import {
   Spacing,
   Typography,
@@ -181,8 +181,10 @@ export default function LoginScreen() {
           {/* Logo + Brand Name - Horizontal Row */}
           <View style={styles.logoSection}>
             <View style={styles.brandRow}>
-              <GuruRings size="logo" dimensions={88} accessibilityLabel="Guru logo" />
-              <Text accessibilityRole="header" style={[styles.brandName, { color: colors.textPrimary }]}>GURU</Text>
+              {/* THE signature, hero-sized — a first-time user's first sight of the
+                  living organism (GUR-228 R18): "guru" with the creature as the
+                  full stop, gently alive. */}
+              <GuruWordmark size={46} color={colors.textPrimary} />
             </View>
           </View>
 

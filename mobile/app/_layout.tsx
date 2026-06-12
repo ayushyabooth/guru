@@ -77,7 +77,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
     if (this.state.hasError) {
       return (
         <View style={errorBoundaryStyles.container}>
-          <Text style={errorBoundaryStyles.logo}>GURU</Text>
+          <Text style={errorBoundaryStyles.logo}>guru.</Text>
           <Text style={errorBoundaryStyles.title}>Something went wrong</Text>
           {this.state.error?.message ? (
             <Text style={errorBoundaryStyles.message} numberOfLines={3}>

@@ -16,7 +16,6 @@ import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
 import { userService } from '../../services/user-service';
-import GuruRings from '../../components/ui/GuruRings';
 import GuruConstellation from '../../components/Rings/GuruConstellation';
 import GuruWordmark from '../../components/ui/GuruWordmark';
 import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';

@@ -224,6 +224,28 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Stale content cleanup error: {e}")
 
+    # GUR-229: in-process ingestion runs cannot survive a restart — any row
+    # still 'running' at boot is an orphan from a redeploy. Mark it failed so
+    # /ingestion/status never reports a phantom run as live.
+    try:
+        from app.db.database import SessionLocal
+        from app.models.ingestion_run import IngestionRun
+        from sqlalchemy import func as _f
+        _db = SessionLocal()
+        try:
+            n = _db.query(IngestionRun).filter(IngestionRun.status == "running").update(
+                {"status": "failed", "completed_at": _f.now(),
+                 "error_message": "interrupted: backend restarted mid-run (deploy)"},
+                synchronize_session=False,
+            )
+            _db.commit()
+            if n:
+                logger.warning(f"Marked {n} orphaned ingestion run(s) as failed (restart sweep)")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.error(f"Orphaned ingestion-run sweep error: {e}")
+
     # Start ingestion orchestrator (non-blocking, fire-and-forget)
     try:
         import asyncio

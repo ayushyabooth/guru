@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
@@ -94,6 +95,36 @@ export default function GuruAgentScreen() {
   const sessionIdRef = useRef<string | null>(restored.sessionId);
   const scrollRef = useRef<ScrollView>(null);
   const keyRef = useRef(restored.nextKey);
+  // BUG 1 fix (web first-tap swallowed): RN-web's responder system can miss the
+  // first press after hydration, so taps get BOTH onPress (responder) and a raw
+  // DOM onClick on web. A single real tap fires both, so a shared ref-based
+  // 300ms dedupe guarantees the handler runs exactly once per tap.
+  const lastPressRef = useRef(0);
+  const tapProps = (fn: () => void) => {
+    const guarded = () => {
+      const now = Date.now();
+      if (now - lastPressRef.current < 300) return;
+      lastPressRef.current = now;
+      fn();
+    };
+    return {
+      onPress: guarded,
+      // RN-web View/Pressable forward onClick to the DOM node; no-op on native.
+      ...(Platform.OS === 'web' ? ({ onClick: guarded } as any) : {}),
+    };
+  };
+  // BUG 2 fix: only auto-scroll while the user is "pinned" to the bottom
+  // (within 120px of the end — default true), and do the scroll in
+  // onContentSizeChange (fires after layout) instead of a fragile timeout.
+  const pinnedRef = useRef(true);
+  const onThreadScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    pinnedRef.current = distanceFromEnd < 120;
+  };
+  const onThreadContentSizeChange = () => {
+    if (pinnedRef.current) scrollRef.current?.scrollToEnd({ animated: false });
+  };
 
   // Persist the rendered journey on every change so leaving + returning
   // resumes in place (R17). `busy` is a dep so the save AFTER a turn completes
@@ -111,7 +142,8 @@ export default function GuruAgentScreen() {
     keyRef.current += 1;
     const withKey = { ...b, _key: `b${keyRef.current}` };
     setBlocks(prev => [...prev, withKey]);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    // Scrolling happens in the ScrollView's onContentSizeChange (post-layout,
+    // pinned-aware) — no timeout race during streamed block bursts.
   };
 
   const sendTurn = async (turnInput: TurnInput, echo?: string) => {
@@ -176,6 +208,8 @@ export default function GuruAgentScreen() {
     const t = text.trim();
     if (!t) return;
     setInput('');
+    // An explicit user send re-pins the thread so they see their own echo.
+    pinnedRef.current = true;
     sendTurn({ type: blocks.length === 0 ? 'goal' : 'message', text: t }, t);
   };
 
@@ -222,18 +256,19 @@ export default function GuruAgentScreen() {
         style={{ flex: 1, color: tPrim, fontSize: 14, paddingVertical: 8, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}) }}
         accessibilityLabel="Message Guru"
       />
-      <TouchableOpacity
-        onPress={() => onSend(input)}
+      <Pressable
+        {...tapProps(() => onSend(input))}
         disabled={!input.trim() || busy}
         accessibilityRole="button"
         accessibilityLabel="Send"
-        style={{
+        style={({ pressed }) => ({
           width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
           backgroundColor: input.trim() && !busy ? '#6366F1' : (isDark ? 'rgba(255,255,255,0.10)' : 'rgba(15,23,42,0.08)'),
-        }}
+          opacity: pressed ? 0.7 : 1,
+        })}
       >
         <Text style={{ color: input.trim() && !busy ? '#fff' : tSec, fontSize: 16 }}>↑</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 
@@ -252,19 +287,20 @@ export default function GuruAgentScreen() {
             </Text>
           </View>
           {GOALS.map((g, i) => (
-            <TouchableOpacity
+            <Pressable
               key={i}
-              onPress={() => onSend(g.text)}
+              {...tapProps(() => onSend(g.text))}
               accessibilityRole="button"
-              style={{
+              style={({ pressed }) => ({
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                 backgroundColor: `${g.color}1F`, borderColor: `${g.color}45`, borderWidth: 1,
                 borderRadius: 19, paddingHorizontal: 18, paddingVertical: 14, marginBottom: 12,
-              }}
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
               <Text style={{ color: tPrim, fontSize: 14, fontWeight: '600' }}>{g.label}</Text>
               <Text style={{ color: g.color, fontSize: 15, fontWeight: '700' }}>→</Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
           {/* First-time users get the widget install path from the agentic
               experience too, not just Home (self-hides once installed). */}
@@ -286,16 +322,23 @@ export default function GuruAgentScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 58, paddingHorizontal: 20, paddingBottom: 12 }}>
         <GuruWordmark size={19} color={tPrim} state={blobState} />
         <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          onPress={onNewGoal}
+        <Pressable
+          {...tapProps(onNewGoal)}
           accessibilityRole="button"
           accessibilityLabel="Start a new goal"
-          style={{ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 12, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)' }}
+          style={({ pressed }) => ({ paddingHorizontal: 11, paddingVertical: 5, borderRadius: 12, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)', opacity: pressed ? 0.7 : 1 })}
         >
           <Text style={{ color: tSec, fontSize: 11, fontWeight: '600' }}>↺ New goal</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
-      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+        onScroll={onThreadScroll}
+        scrollEventThrottle={16}
+        onContentSizeChange={onThreadContentSizeChange}
+      >
         {blocks.map(b => (
           <BlockRenderer key={b._key} block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
         ))}
@@ -310,15 +353,15 @@ export default function GuruAgentScreen() {
       {/* Persistent mode switcher — escape hatch from any journey, one tap */}
       <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginBottom: 8, gap: 7 }}>
         {MODES.map((m, i) => (
-          <TouchableOpacity
+          <Pressable
             key={i}
-            onPress={() => onSend(m.text)}
+            {...tapProps(() => onSend(m.text))}
             disabled={busy}
             accessibilityRole="button"
-            style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 13, backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)', borderWidth: 1, borderColor: isDark ? 'rgba(129,140,248,0.22)' : 'rgba(99,102,241,0.18)', opacity: busy ? 0.5 : 1 }}
+            style={({ pressed }) => ({ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 13, backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)', borderWidth: 1, borderColor: isDark ? 'rgba(129,140,248,0.22)' : 'rgba(99,102,241,0.18)', opacity: busy ? 0.5 : pressed ? 0.7 : 1 })}
           >
             <Text style={{ color: isDark ? '#A5B4FC' : '#6366F1', fontSize: 11, fontWeight: '600' }}>{m.label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
       {intentBar}
