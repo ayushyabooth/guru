@@ -2,8 +2,8 @@
 Ingestion Orchestrator - Master controller for 3-tier content ingestion.
 
 Manages scheduling and execution of the content tiers:
-- Tier 2: Luminary RSS feeds (every 6 hours)
-- Tier 3: Web discovery via Claude Web Search (every 12 hours) - runs last
+- Tier 2: Luminary RSS feeds (every TIER2_SCHEDULE_HOURS, default 72h / 3 days)
+- Tier 3: Web discovery via Claude Web Search (every TIER3_SCHEDULE_HOURS, default 72h / 3 days) - runs last
 
 Runs as a background task, non-blocking to API startup.
 Uses APScheduler (AsyncIOScheduler) for scheduling.

@@ -66,8 +66,8 @@ class Settings(BaseSettings):
     ARTICLE_TIME_WINDOW_DAYS: int = 14  # 2 weeks - articles older than this are excluded from feeds
 
     # Ingestion Settings (Tier 2=Luminary RSS, Tier 3=Web Discovery)
-    TIER2_SCHEDULE_HOURS: int = 168  # Weekly (was 6h)
-    TIER3_SCHEDULE_HOURS: int = 168  # Weekly (was 12h)
+    TIER2_SCHEDULE_HOURS: int = 72  # Every 3 days (founder, Jun 2026; was weekly)
+    TIER3_SCHEDULE_HOURS: int = 72  # Every 3 days (founder, Jun 2026; was weekly)
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
     TIER2_AGE_FILTER_DAYS: int = 30  # Only ingest articles from last N days
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization
