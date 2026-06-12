@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions } from 'react-native';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
+import GuruBlob from '../ui/GuruBlob';
 import {
   Spacing,
   Typography,
@@ -167,7 +168,7 @@ export default function CelebrationOverlay({
           )}
           {audioStatus === 'generating' && (
             <View style={styles.audioGenerating}>
-              <ActivityIndicator size="small" color={RingColors.recap.primary} />
+              <GuruBlob size={20} state="thinking" tight />
               <Text style={[styles.audioGeneratingText, { color: colors.textSecondary }]}>Creating your recap...</Text>
             </View>
           )}

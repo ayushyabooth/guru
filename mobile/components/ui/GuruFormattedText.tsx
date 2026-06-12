@@ -1,42 +1,107 @@
 import React from 'react';
 import { View, Text, TextStyle } from 'react-native';
 
+export interface ParsedGuruResponse {
+  /** Human-readable answer text — never raw JSON braces/keys. */
+  response: string;
+  /** Follow-up question suggestions extracted from a JSON wrapper, if any. */
+  followups: string[];
+}
+
+const TEXT_KEYS = ['response', 'answer', 'text', 'content', 'message', 'reply'] as const;
+const FOLLOWUP_KEYS = ['followups', 'follow_ups', 'followUps', 'follow_up_prompts', 'suggestions'] as const;
+
+const unescapeText = (s: string): string =>
+  s.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"').trim();
+
 /**
- * Normalise an Ask Guru / Socratic response into clean display text.
- * The model sometimes wraps its answer in a ```json fence or a JSON object, or
- * the transport double-escapes newlines — which leaked literal "\n" and "json"
- * into the chat bubble. Unwrap fences, extract the text field from a JSON
- * wrapper, and turn escaped whitespace into real whitespace.
+ * Tolerant parser for Ask Guru / Socratic model output. The model sometimes
+ * returns its raw `{"response": "...", "followups": [...]}` JSON verbatim
+ * (optionally wrapped in a ```json fence, with prose around it, truncated, or
+ * double-escaped). Strategy: strip fences → locate the outermost {...} →
+ * JSON.parse → on failure regex-extract "response":"..." → last-resort scrub
+ * of braces/keys. Raw JSON must NEVER reach the user.
  */
-export function cleanGuruResponse(raw: string): string {
-  if (!raw) return '';
-  let t = String(raw).trim();
+export function parseGuruResponse(raw: unknown): ParsedGuruResponse {
+  if (raw == null) return { response: '', followups: [] };
 
-  // Unwrap a ```json … ``` code fence anywhere in the text.
-  const fence = t.match(/```(?:json|markdown|md)?\s*([\s\S]*?)\s*```/i);
-  if (fence) t = fence[1].trim();
-
-  // If it looks like a JSON wrapper, pull out the human-readable field.
-  if ((t.startsWith('{') && t.includes('"response"')) || (t.startsWith('"') && t.endsWith('"'))) {
-    try {
-      const parsed = JSON.parse(t);
-      if (typeof parsed === 'string') {
-        t = parsed;
-      } else if (parsed && typeof parsed === 'object') {
-        t = parsed.response || parsed.answer || parsed.text || parsed.content ||
-            parsed.message || parsed.reply || t;
-      }
-    } catch {
-      // Malformed JSON (e.g. truncated, or a stray "{" before a fence) — grab
-      // the "response" string value directly so raw JSON never reaches the user.
-      const m = t.match(/"response"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      if (m) t = m[1];
-    }
+  // Already-parsed object (backend occasionally forwards the model object).
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const resp = TEXT_KEYS.map(k => obj[k]).find(v => typeof v === 'string' && v.trim()) as string | undefined;
+    const fuRaw = FOLLOWUP_KEYS.map(k => obj[k]).find(v => Array.isArray(v)) as unknown[] | undefined;
+    const followups = (fuRaw || []).filter((f): f is string => typeof f === 'string' && !!f.trim());
+    if (resp) return { response: unescapeText(resp), followups };
+    return { response: '', followups };
   }
 
-  // Convert escaped whitespace/quotes into real characters.
-  t = t.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"');
-  return t.trim();
+  let t = String(raw).trim();
+  if (!t) return { response: '', followups: [] };
+
+  // Unwrap a ```json … ``` code fence anywhere in the text, then drop any
+  // stray/unterminated fence markers that survive.
+  const fence = t.match(/```(?:json|markdown|md)?\s*([\s\S]*?)\s*```/i);
+  if (fence && fence[1].trim()) t = fence[1].trim();
+  t = t.replace(/```(?:json|markdown|md)?/gi, '').trim();
+
+  // A bare JSON string ("...").
+  if (t.startsWith('"') && t.endsWith('"')) {
+    try {
+      const p = JSON.parse(t);
+      if (typeof p === 'string') return { response: p.trim(), followups: [] };
+    } catch { /* fall through */ }
+  }
+
+  // Locate the outermost {...}; only treat as a wrapper if a known text key
+  // appears (so prose that merely contains braces is untouched).
+  const first = t.indexOf('{');
+  const last = t.lastIndexOf('}');
+  const hasTextKey = new RegExp(`"(?:${TEXT_KEYS.join('|')})"\\s*:`).test(t);
+  // Truncated wrapper: starts with `{"response": ...` but the closing `}` was cut off.
+  const candidate =
+    first !== -1 && last > first ? t.slice(first, last + 1)
+    : hasTextKey && first !== -1 ? t.slice(first)
+    : null;
+
+  if (hasTextKey && candidate) {
+    // 1) Strict parse of the outermost object.
+    try {
+      const parsed = JSON.parse(candidate);
+      const fromObj = parseGuruResponse(parsed);
+      if (fromObj.response) return fromObj;
+    } catch { /* fall through to regex extraction */ }
+
+    // 2) Regex extraction — survives truncated / mildly malformed JSON.
+    const m = candidate.match(new RegExp(`"(?:${TEXT_KEYS.join('|')})"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)`));
+    if (m && m[1].trim()) {
+      const followups: string[] = [];
+      const fuBlock = candidate.match(new RegExp(`"(?:${FOLLOWUP_KEYS.join('|')})"\\s*:\\s*\\[([\\s\\S]*?)(?:\\]|$)`));
+      if (fuBlock) {
+        const re = /"((?:[^"\\]|\\.)+)"/g;
+        let fm: RegExpExecArray | null;
+        while ((fm = re.exec(fuBlock[1])) !== null) followups.push(unescapeText(fm[1]));
+      }
+      return { response: unescapeText(m[1]), followups };
+    }
+
+    // 3) Last resort: scrub JSON punctuation/keys so braces never reach the user.
+    const scrubbed = candidate
+      .replace(new RegExp(`"(?:${FOLLOWUP_KEYS.join('|')})"\\s*:\\s*\\[[\\s\\S]*?(?:\\]|$)`, 'gi'), '')
+      .replace(/"[A-Za-z0-9_]+"\s*:/g, '')
+      .replace(/[{}[\]]/g, '')
+      .replace(/^[\s",:]+|[\s",:]+$/g, '');
+    if (scrubbed) return { response: unescapeText(scrubbed), followups: [] };
+  }
+
+  return { response: unescapeText(t), followups: [] };
+}
+
+/**
+ * Normalise an Ask Guru / Socratic response into clean display text.
+ * Thin wrapper over parseGuruResponse (which also surfaces followups).
+ */
+export function cleanGuruResponse(raw: string): string {
+  return parseGuruResponse(raw).response;
 }
 
 function renderInline(text: string, baseStyle: TextStyle, keyPrefix: string) {

@@ -8,11 +8,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
+import GuruBlob from '../ui/GuruBlob';
+import { cleanGuruResponse } from '../ui/GuruFormattedText';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import { GuidedQuestion } from '../../services/recap-service';
@@ -143,14 +144,15 @@ export default function QuestionsStage({
       const result = await onAnswer(currentIndex, answer);
 
       if (result && result.followup_text) {
-        // Add follow-up as system message
+        // Add follow-up as system message (cleaned — the model can return its
+        // raw JSON wrapper verbatim; braces/keys must never reach the user)
         setThreads(prev => {
           const updated = [...prev];
           updated[currentIndex] = {
             ...updated[currentIndex],
             messages: [
               ...updated[currentIndex].messages,
-              { role: 'system', text: result.followup_text! },
+              { role: 'system', text: cleanGuruResponse(result.followup_text!) },
             ],
           };
           return updated;
@@ -265,7 +267,7 @@ export default function QuestionsStage({
 
         {isLoading && (
           <View style={[styles.bubble, GM.card, styles.systemBubble]}>
-            <ActivityIndicator size="small" color={RingColors.recap.primary} />
+            <GuruBlob size={20} state="thinking" tight />
             <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Reflecting...</Text>
           </View>
         )}

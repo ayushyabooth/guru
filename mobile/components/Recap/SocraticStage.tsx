@@ -5,6 +5,8 @@ import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, Glas
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
 import GlassButton from '../ui/GlassButton';
+import GuruBlob from '../ui/GuruBlob';
+import { cleanGuruResponse } from '../ui/GuruFormattedText';
 import { SocraticResponse, KeyInsight } from '../../services/recap-service';
 
 interface SocraticStageProps {
@@ -46,7 +48,11 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
   const { colors, isDark } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const [messages, setMessages] = useState<ChatBubble[]>(
-    (initialExchanges || []).map(e => ({ role: e.role as 'assistant' | 'user', content: e.content }))
+    // Restored exchanges can carry the model's raw JSON wrapper — clean on seed.
+    (initialExchanges || []).map(e => ({
+      role: e.role as 'assistant' | 'user',
+      content: e.role === 'assistant' ? cleanGuruResponse(e.content) : e.content,
+    }))
   );
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +74,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
         const response = await onSendMessage('__open__');
         setMessages([{
           role: 'assistant',
-          content: response.response,
+          content: cleanGuruResponse(response.response),
           insightCaptured: response.insight_extracted,
         }]);
       } catch {
@@ -97,7 +103,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
       // Add assistant response
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: response.response,
+        content: cleanGuruResponse(response.response),
         insightCaptured: response.insight_extracted,
       }]);
 
@@ -206,7 +212,8 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
         })}
 
         {isLoading && (
-          <View style={[styles.bubble, GM.card, styles.assistantBubble]}>
+          <View style={[styles.bubble, GM.card, styles.assistantBubble, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+            <GuruBlob size={20} state="thinking" tight />
             <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Thinking...</Text>
           </View>
         )}

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Animated, Easing, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import Icon from '../ui/Icon';
 import { OrganicBackground } from '../ui';
-import { Triskelion } from '../Rings/Triskelion';
+import GuruBlob from '../ui/GuruBlob';
+import { parseGuruResponse, cleanGuruResponse } from '../ui/GuruFormattedText';
 import { Spacing } from '@/constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -149,28 +150,6 @@ const markdownStyles = StyleSheet.create({
   },
 });
 
-// Breathing animation for loading triskelion
-function BreathingTriskelion() {
-  const anim = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0.4, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity: anim }}>
-      <Triskelion size={24} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
-    </Animated.View>
-  );
-}
-
 // Generate a UUID v4 (simplified for cross-platform)
 const generateUUID = (): string => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -208,8 +187,9 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
   const userBubbleBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(99,102,241,0.90)';
   const userBubbleBorder = isDark ? 'rgba(125, 211, 252, 0.25)' : 'rgba(99,102,241,0.40)';
   const userTextColor = '#FFFFFF';
-  const assistantBubbleBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.90)';
-  const assistantBubbleBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.15)';
+  // Liquid-glass EDL: semi-transparent card bg + 1px subtle border (web blur applied inline)
+  const assistantBubbleBg = isDark ? 'rgba(15,20,35,0.55)' : 'rgba(255,255,255,0.90)';
+  const assistantBubbleBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.07)';
   const assistantAccentBarColor = isDark ? '#6366F1' : '#6366F1';
   const assistantTextColor = isDark ? '#E2E8F0' : '#334155';
   const guruLabelColor = '#6366F1';
@@ -299,17 +279,27 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
         conversationIdRef.current = data.conversation_id;
       }
 
+      // The model sometimes returns its raw {"response": "...", "followups": [...]}
+      // JSON verbatim inside data.response — parse tolerantly so braces/keys
+      // never reach the user, and surface any embedded followups as pills.
+      const parsed = parseGuruResponse(data.response);
+
       // Add assistant message to chat
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: data.response,
+        content: parsed.response || "I'm having trouble answering that. Please try again.",
         citations: data.related_article_citations || [],
       };
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Update follow-up prompts
-      if (data.follow_up_prompts && data.follow_up_prompts.length > 0) {
-        setFollowUpPrompts(data.follow_up_prompts);
+      // Update follow-up prompts (backend field first, then any extracted from
+      // the model's JSON wrapper; de-duped)
+      const mergedFollowups = Array.from(new Set([
+        ...(Array.isArray(data.follow_up_prompts) ? data.follow_up_prompts.filter((p: unknown): p is string => typeof p === 'string' && !!p.trim()) : []),
+        ...parsed.followups,
+      ]));
+      if (mergedFollowups.length > 0) {
+        setFollowUpPrompts(mergedFollowups);
       }
     } catch (error) {
       // Add error message
@@ -357,7 +347,7 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Triskelion size={20} progress={{ c: 1, d: 1, r: 1 }} mode="logo" />
+          <GuruBlob size={20} state={isLoading ? 'thinking' : 'idle'} tight />
           <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Guru</Text>
         </View>
 
@@ -414,6 +404,12 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
               message.role === 'user' ? styles.userMessageWrapper : styles.assistantMessageWrapper,
             ]}
           >
+            {/* GUR-228 identity: the organism is the assistant avatar */}
+            {message.role === 'assistant' && (
+              <View style={styles.assistantAvatar}>
+                <GuruBlob size={20} state="idle" />
+              </View>
+            )}
             <View
               style={[
                 styles.messageBubble,
@@ -448,7 +444,9 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
                 message.role === 'assistant' && { paddingLeft: 4 },
               ]}>
                 {renderMarkdown(
-                  message.content,
+                  // History restored from the backend can also carry the raw
+                  // JSON wrapper — clean every assistant message at render.
+                  message.role === 'assistant' ? cleanGuruResponse(message.content) : message.content,
                   message.role === 'user',
                   message.role === 'user' ? userTextColor : assistantTextColor,
                   CHAT_ACCENT,
@@ -473,10 +471,11 @@ export const SocraticChat: React.FC<SocraticChatProps> = ({
           </View>
         ))}
 
-        {/* Loading indicator — animated breathing triskelion */}
+        {/* Loading indicator — the organism concentrates while thinking */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <BreathingTriskelion />
+            <GuruBlob size={28} state="thinking" />
+            <Text style={{ fontSize: 14, color: isDark ? '#94A3B8' : themeColors.textTertiary }}>thinking…</Text>
           </View>
         )}
 
@@ -671,6 +670,9 @@ const styles = StyleSheet.create({
   assistantMessageWrapper: {
     alignSelf: 'flex-start',
     maxWidth: '85%',
+  },
+  assistantAvatar: {
+    marginTop: 6,
   },
   messageBubble: {
     borderRadius: 16,

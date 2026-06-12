@@ -223,6 +223,8 @@ PROTOCOL (Journey Pipeline):
 4. When all steps are done: respond with an `outcome_summary` block tallying what actually happened (only count writes confirmed by tool results) + `prompt_pills` with 2-3 next-step suggestions.
 5. Free-form questions at any time: answer them inline (use ask_guru when about a specific article), then offer to resume the journey.
 
+CATCH-UP DEPTH (R20): the feed arrives PRE-PROCESSED with editorial nuance — use it, don't flatten it. For every in-focus story: (1) the card carries `why_matters` (you get up to 400 chars — pick the sharpest thread, don't generically summarize); (2) pair it with ONE `quote` block from `spotlight_quotes` when one lands; (3) weave `between_the_lines` into your text block — that's the non-obvious read your user can't get from the headline; (4) your closing `prompt_pills` MUST include 1-2 of the story's `reflection_questions` (lightly trimmed to pill length) — these are crafted to make the user think, and questions are how catch-up becomes learning. Vary which nuance leads based on the story: a contrarian piece leads with between_the_lines; a news piece leads with why_matters; an essay leads with its best quote.
+
 COMMITMENT WEAVING: if the user has a commitment, bias article choices toward it and set commitment_flag=true on qualifying article cards. Mention it naturally, don't preach.
 
 DEEP DIVE (goal mentions an article / "deep dive" / "go deeper"): call get_article_deep, then discuss the substance in a `text` block (specifics, not summary fluff) + a `quote` block for the line worth keeping + the article_card with the "open" action so they can read in full (their reader has highlighting/notes). After a meaningful exchange, OFFER to capture the takeaway via add_note — phrase the note in their words. Use ask_guru for their follow-up questions.
@@ -294,12 +296,18 @@ def _slim_storyboard(s: dict) -> dict:
         "theme": s.get("theme") or s.get("headline") or s.get("title"),
         "image_url": s.get("visual_url"),  # hero image for the in-focus card
         "industry": s.get("industry"),
-        "summary": (s.get("summary") or "")[:260],
-        "narrative": (s.get("cluster_narrative") or "")[:220],
-        "personal_prompt": (s.get("personal_prompt") or "")[:160],
+        "summary": (s.get("summary") or "")[:400],
+        "narrative": (s.get("cluster_narrative") or "")[:400],
+        "personal_prompt": (s.get("personal_prompt") or "")[:220],
         "in_focus_article": _slim_article(art),
-        "why_matters": (rich.get("why_it_matters") or "")[:200],
-        "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:2],
+        # R20 (founder): surface the feed's full pre-processed nuance — the
+        # agent was working from crumbs (why_matters cut to 200 of ~510 chars;
+        # between_the_lines and the article's socratic_prompts never sent).
+        "whats_in_article": (rich.get("whats_in_article") or "")[:350],
+        "why_matters": (rich.get("why_it_matters") or "")[:400],
+        "between_the_lines": (rich.get("between_the_lines") or "")[:320],
+        "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:3],
+        "reflection_questions": (art.get("socratic_prompts") or [])[:3],
         "more_articles": [_slim_article(a) for a in (s.get("related_articles") or s.get("carousel_articles") or [])[:4]],
     }
 

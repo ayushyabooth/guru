@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -16,6 +15,8 @@ import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
 import GlassButton from '../../components/ui/GlassButton';
 import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
+import GuruBlob from '../../components/ui/GuruBlob';
+import { cleanGuruResponse } from '../../components/ui/GuruFormattedText';
 import { useMetrics } from '../../store/metric-context';
 import {
   recapService,
@@ -378,7 +379,7 @@ export default function RecapScreen() {
     setSocraticExchanges(prev => [
       ...prev,
       { role: 'user', content: message },
-      { role: 'assistant', content: response.response },
+      { role: 'assistant', content: cleanGuruResponse(response.response) },
     ]);
 
     // Track insights
@@ -569,7 +570,7 @@ export default function RecapScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
         {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={RingColors.recap.primary} />
+          <GuruBlob size={40} state="thinking" />
           <Text style={styles.loadingText}>Preparing your weekly recap...</Text>
           <Text style={[styles.loadingSubtext, { color: colors.textSecondary }]}>Gathering your articles and insights</Text>
         </View>

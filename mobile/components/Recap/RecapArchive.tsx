@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
   RefreshControl,
   Dimensions,
 } from 'react-native';
 import Icon from '../ui/Icon';
+import GuruBlob from '../ui/GuruBlob';
 import {
   Spacing,
   Typography,
@@ -175,7 +175,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={RingColors.recap.primary} />
+          <GuruBlob size={40} state="thinking" />
           <Text style={styles.loadingText}>Loading your journal...</Text>
         </View>
       ) : error ? (

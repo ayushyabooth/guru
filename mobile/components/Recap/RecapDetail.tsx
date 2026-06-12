@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
 import Icon from '../ui/Icon';
+import GuruBlob from '../ui/GuruBlob';
 import {
   Spacing,
   Typography,
@@ -136,7 +136,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={RingColors.recap.primary} />
+          <GuruBlob size={40} state="thinking" />
         </View>
       </SafeAreaView>
     );
