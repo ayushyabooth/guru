@@ -96,10 +96,12 @@ export default function GuruAgentScreen() {
   const keyRef = useRef(restored.nextKey);
 
   // Persist the rendered journey on every change so leaving + returning
-  // resumes in place (R17).
+  // resumes in place (R17). `busy` is a dep so the save AFTER a turn completes
+  // captures the session_id (it arrives in the final 'done' event, after the
+  // last block append).
   React.useEffect(() => {
     saveJourney(sessionIdRef.current, blocks, keyRef.current);
-  }, [blocks]);
+  }, [blocks, busy]);
 
   const bg = isDark ? '#0A0E17' : '#F8FAFC';
   const tPrim = isDark ? '#F1F5F9' : '#0F172A';
