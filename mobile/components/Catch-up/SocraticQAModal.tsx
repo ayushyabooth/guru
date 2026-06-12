@@ -38,13 +38,18 @@ const SocraticQAModal: React.FC<SocraticQAModalProps> = ({
           WebkitBackdropFilter: 'blur(8px)',
         } as any,
       ]}>
-        <SocraticChat
-          articleId={articleId}
-          articleTitle={articleTitle}
-          initialQuestion={question}
-          onClose={onClose}
-          onBack={onClose}
-        />
+        {/* RN Modal portals to the document root, escaping the app's 480px
+            web shell (ThemeAwareNav) — re-apply the same column here so the
+            chat matches the mobile-optimized experience (R20 follow-up). */}
+        <View style={styles.shellColumn}>
+          <SocraticChat
+            articleId={articleId}
+            articleTitle={articleTitle}
+            initialQuestion={question}
+            onClose={onClose}
+            onBack={onClose}
+          />
+        </View>
       </View>
     </Modal>
   );
@@ -55,6 +60,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
+  // Mirror of the app shell constraint in ThemeAwareNav — keep in sync.
+  shellColumn: Platform.OS === 'web'
+    ? { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' }
+    : { flex: 1 },
 });
 
 export default SocraticQAModal;
