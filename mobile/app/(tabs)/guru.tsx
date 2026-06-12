@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { useTheme } from '../../contexts/ThemeContext';
 import GuruBlob, { BlobState } from '../../components/ui/GuruBlob';
+import GuruWordmark from '../../components/ui/GuruWordmark';
 import BlockRenderer, { AgentBlock } from '../../components/Agent/BlockRenderer';
 import { openExternalTab } from '../../utils/openExternalTab';
 
@@ -220,11 +221,11 @@ export default function GuruAgentScreen() {
   // ── Journey state ──
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: bg }}>
-      {/* R9: header is identity-only — the working status lives solely in the
-          thread's thinking row, never duplicated up here. */}
+      {/* R13: THE signature lockup — "guru" + living period. The period is
+          state-aware: it agitates while the agent works. Status text lives
+          solely in the thread's thinking row. */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 58, paddingHorizontal: 20, paddingBottom: 12 }}>
-        <GuruBlob size={26} state={blobState} />
-        <Text style={{ color: tPrim, fontSize: 16, fontWeight: '700' }}>Guru</Text>
+        <GuruWordmark size={19} color={tPrim} state={blobState} />
         <View style={{ flex: 1 }} />
         <TouchableOpacity
           onPress={onNewGoal}

@@ -67,10 +67,12 @@ export default function OverlayPanel({ onClose }: OverlayPanelProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* The organism anchors the panel header (GUR-228 identity R9) */}
-        <div style={{ position: 'absolute', left: '16px', top: '10px', display: 'flex', alignItems: 'center', gap: '8px', pointerEvents: 'none' }}>
-          <Goo size={22} />
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#F1F5F9' }}>Guru</span>
+        {/* THE signature: "guru" + living period (GUR-228 identity R13) */}
+        <div style={{ position: 'absolute', left: '16px', top: '8px', display: 'flex', alignItems: 'flex-end', pointerEvents: 'none' }}>
+          <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.5px', color: '#F1F5F9', lineHeight: 1 }}>guru</span>
+          <span style={{ marginLeft: '3px', marginBottom: '0px', display: 'inline-flex' }}>
+            <Goo size={11} bold />
+          </span>
         </div>
         <div class="guru-panel-handle-bar" />
         <button
