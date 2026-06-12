@@ -242,8 +242,6 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
           {(block.prompts || []).map((p: string, i: number) => (
-            {/* Display stripped of any internal ids; the RAW text is still sent
-                so the agent keeps its target reference (R19). */}
             <TouchableOpacity key={i} style={pill('rgba(99,102,241,0.16)', '#A5B4FC')} onPress={() => onSend(p)} accessibilityRole="button">
               <Text style={pillTxt(isDark ? '#A5B4FC' : '#6366F1')}>{stripScaffolding(p)}</Text>
             </TouchableOpacity>
