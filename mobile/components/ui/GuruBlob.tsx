@@ -6,6 +6,14 @@ export type BlobState = 'idle' | 'thinking' | 'celebrate';
 interface Props {
   size?: number;
   state?: BlobState;
+  /**
+   * Opt-in compact rendering. Shrinks the canvas overscan padding from
+   * 0.6×size to 0.15×size and scales the organism's body up 1.25× so the
+   * drawn creature actually fills its layout box — for slots where the blob
+   * must be a centerpiece (tab bar) or a legible glyph (wordmark period).
+   * Default false → pixel-identical to the original rendering everywhere else.
+   */
+  tight?: boolean;
 }
 
 /**
@@ -21,12 +29,13 @@ interface Props {
  * (single 1.25× pulse). Ambient halo + blurred under-glow feather it into
  * dark backgrounds. Honors prefers-reduced-motion (one static frame).
  */
-export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
+export default function GuruBlob({ size = 28, state = 'idle', tight = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<BlobState>(state);
   stateRef.current = state;
 
-  const PAD = Math.ceil(size * 0.6); // goo lobes + halo need generous margin
+  // goo lobes + halo need generous margin; `tight` trims it for slot-bound uses
+  const PAD = Math.ceil(size * (tight ? 0.15 : 0.6));
   const W = size + PAD * 2;
 
   useEffect(() => {
@@ -46,7 +55,10 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
     const COLS = ['#38BDF8', '#EC4899', '#FB923C'];
-    const sc = size / 100;                 // base geometry authored at ~100px
+    // base geometry authored at ~100px; `tight` scales the whole organism
+    // (lobes, drift, cores, gloss) up 1.25× so the body fills the layout box
+    const sc = (size / 100) * (tight ? 1.25 : 1);
+    const tiny = size < 26;                // wordmark-period scale — stay vivid
     const N = size >= 80 ? 88 : size >= 40 ? 64 : 44; // silhouette resolution
     const STEPS = size >= 40 ? 16 : 12;    // binary-search depth per ray
 
@@ -117,15 +129,16 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
 
       // ambient halo — feathers the organism into dark backgrounds
       const halo = ctx.createRadialGradient(mx, my, size * 0.18, mx, my, W * 0.55);
-      halo.addColorStop(0, `rgba(99,102,241,${th ? 0.18 : 0.13})`);
+      halo.addColorStop(0, `rgba(99,102,241,${th ? 0.18 : tiny ? 0.2 : 0.13})`);
       halo.addColorStop(1, 'rgba(99,102,241,0)');
       ctx.fillStyle = halo;
       ctx.fillRect(0, 0, W, W);
 
-      // blurred under-glow of the silhouette (skip at tiny sizes for perf)
-      if (size >= 26) {
+      // blurred under-glow of the silhouette. Skipped at tiny sizes for perf —
+      // EXCEPT in tight mode, where even the wordmark period must glow.
+      if (size >= 26 || tight) {
         ctx.save();
-        (ctx as any).filter = `blur(${Math.max(2, size * 0.06)}px)`;
+        (ctx as any).filter = `blur(${Math.max(tiny ? 1.5 : 2, size * 0.06)}px)`;
         tracePath(1.05);
         ctx.fillStyle = 'rgba(79,70,229,0.5)';
         ctx.fill();
@@ -142,7 +155,8 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
       body.addColorStop(1, 'rgba(30,27,75,0.97)');
       ctx.fillStyle = body;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(199,210,254,0.7)';
+      // crisper rim at tiny sizes so the silhouette doesn't melt into the bg
+      ctx.strokeStyle = tiny ? 'rgba(199,210,254,0.85)' : 'rgba(199,210,254,0.7)';
       ctx.lineWidth = Math.max(0.9, 1.4 * sc);
       ctx.stroke();
       // specular — keeps it glossy/alive now that the body is solid
@@ -159,9 +173,11 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
       for (let k = 0; k < 3; k++) {
         const ox = mx + Math.cos(t * (th ? 1.6 : 0.5) + k * 2.09) * 13 * sc * gather;
         const oy = my + Math.sin(t * (th ? 1.3 : 0.42) + k * 2.7) * 12 * sc * gather;
-        const rr = (th ? 10 : 8) * sc;
+        // tiny sizes: bigger, fully-saturated cores so the three pillars stay
+        // visible even when the organism is a 12-20px period
+        const rr = (th ? 10 : tiny ? 9.5 : 8) * sc;
         const og = ctx.createRadialGradient(ox, oy, 0, ox, oy, rr);
-        og.addColorStop(0, COLS[k] + (th ? 'EE' : 'BB'));
+        og.addColorStop(0, COLS[k] + (th || tiny ? 'EE' : 'BB'));
         og.addColorStop(1, COLS[k] + '00');
         ctx.fillStyle = og;
         ctx.beginPath();
@@ -175,7 +191,7 @@ export default function GuruBlob({ size = 28, state = 'idle' }: Props) {
 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [size, W]);
+  }, [size, W, tight]);
 
   if (Platform.OS !== 'web') {
     return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#4F46E5' }} />;

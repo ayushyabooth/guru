@@ -92,7 +92,7 @@ export default function Goo({ size = 34, speed = 0.8, bold = false }: { size?: n
         const oy = my + Math.sin(t * 0.42 + k * 2.7) * 11 * sc;
         const rr = 9 * sc;
         const og = ctx.createRadialGradient(ox, oy, 0, ox, oy, rr);
-        og.addColorStop(0, COLS[k] + 'CC');
+        og.addColorStop(0, COLS[k] + (size < 26 ? 'EE' : 'CC'));
         og.addColorStop(1, COLS[k] + '00');
         ctx.fillStyle = og;
         ctx.beginPath(); ctx.arc(ox, oy, rr, 0, 7); ctx.fill();
@@ -102,7 +102,7 @@ export default function Goo({ size = 34, speed = 0.8, bold = false }: { size?: n
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [size, speed]);
+  }, [size, speed, bold]);
 
   return <canvas ref={ref} style={{ pointerEvents: 'none' }} />;
 }

@@ -67,11 +67,11 @@ export default function OverlayPanel({ onClose }: OverlayPanelProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* THE signature: "guru" + living period (GUR-228 identity R13) */}
+        {/* THE signature: "guru" + living period (GUR-228 identity R13/R14) */}
         <div style={{ position: 'absolute', left: '16px', top: '8px', display: 'flex', alignItems: 'flex-end', pointerEvents: 'none' }}>
-          <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.5px', color: '#F1F5F9', lineHeight: 1 }}>guru</span>
-          <span style={{ marginLeft: '3px', marginBottom: '0px', display: 'inline-flex' }}>
-            <Goo size={11} bold />
+          <span style={{ fontSize: '17px', fontWeight: 900, letterSpacing: '-0.24px', color: '#F1F5F9', lineHeight: '18px', textShadow: '0 0 8px #F1F5F955' }}>guru</span>
+          <span style={{ marginLeft: '2px', marginBottom: '1px', display: 'inline-flex' }}>
+            <Goo size={13} bold />
           </span>
         </div>
         <div class="guru-panel-handle-bar" />

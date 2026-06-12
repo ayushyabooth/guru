@@ -1104,6 +1104,20 @@
         "feed_url": "https://epochai.substack.com/feed",
         "website": "https://epoch.ai",
         "description": "Rigorous data-driven research on AI scaling trends, compute, and the trajectory of frontier models."
+      },
+      {
+        "id": "anthropic_news",
+        "name": "Anthropic News",
+        "feed_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+        "website": "https://www.anthropic.com/news",
+        "description": "First-party announcements, Claude model releases, and research updates from Anthropic (via a community-maintained RSS mirror; Anthropic publishes no official feed)."
+      },
+      {
+        "id": "arxiv_cs_cl",
+        "name": "arXiv cs.CL (Computation and Language)",
+        "feed_url": "https://rss.arxiv.org/rss/cs.CL",
+        "website": "https://arxiv.org/list/cs.CL/recent",
+        "description": "Official arXiv daily digest of new NLP and language-model papers — the primary venue where LLM research first appears."
       }
     ],
     "ai_research": [
@@ -1134,6 +1148,27 @@
         "feed_url": "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml",
         "website": "https://news.mit.edu/topic/artificial-intelligence2",
         "description": "Authoritative coverage of AI research breakthroughs and their implications from MIT."
+      },
+      {
+        "id": "arxiv_cs_ai",
+        "name": "arXiv cs.AI (Artificial Intelligence)",
+        "feed_url": "https://rss.arxiv.org/rss/cs.AI",
+        "website": "https://arxiv.org/list/cs.AI/recent",
+        "description": "Official arXiv daily digest of new artificial intelligence papers, straight from the world's primary preprint server."
+      },
+      {
+        "id": "microsoft_research_blog",
+        "name": "Microsoft Research Blog",
+        "feed_url": "https://www.microsoft.com/en-us/research/feed/",
+        "website": "https://www.microsoft.com/en-us/research/blog/",
+        "description": "Research advances across AI, systems, and science from one of the largest industrial research labs in the world."
+      },
+      {
+        "id": "dwarkesh_podcast",
+        "name": "Dwarkesh Podcast",
+        "feed_url": "https://www.dwarkesh.com/feed",
+        "website": "https://www.dwarkesh.com",
+        "description": "Long-form interviews with the researchers and lab leaders shaping frontier AI — widely regarded as the best technical AI podcast."
       }
     ],
     "ai_product_applications": [
@@ -1157,6 +1192,20 @@
         "feed_url": "https://openai.com/news/rss.xml",
         "website": "https://openai.com/news",
         "description": "First-party product launches, model releases, and research announcements from OpenAI."
+      },
+      {
+        "id": "google_ai_blog",
+        "name": "Google AI Blog",
+        "feed_url": "https://blog.google/technology/ai/rss/",
+        "website": "https://blog.google/technology/ai/",
+        "description": "Official Google announcements on Gemini, AI products, and how AI is shipped across Search, Cloud, and devices."
+      },
+      {
+        "id": "the_batch_deeplearning_ai",
+        "name": "The Batch — DeepLearning.AI",
+        "feed_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_the_batch.xml",
+        "website": "https://www.deeplearning.ai/the-batch/",
+        "description": "Andrew Ng's weekly digest of the most important AI news and research, explained for practitioners (via a community-maintained RSS mirror)."
       }
     ],
     "ai_safety_alignment": [
@@ -1180,6 +1229,20 @@
         "feed_url": "https://www.alignmentforum.org/feed.xml",
         "website": "https://www.alignmentforum.org",
         "description": "The primary venue where alignment researchers publish and debate technical AI safety work."
+      },
+      {
+        "id": "ai_snake_oil",
+        "name": "AI Snake Oil — Narayanan & Kapoor",
+        "feed_url": "https://www.aisnakeoil.com/feed",
+        "website": "https://www.aisnakeoil.com",
+        "description": "Princeton computer scientists' rigorous debunking of AI hype and analysis of AI policy, evaluation, and societal impact."
+      },
+      {
+        "id": "zvi_mowshowitz",
+        "name": "Zvi Mowshowitz — Don't Worry About the Vase",
+        "feed_url": "https://thezvi.substack.com/feed",
+        "website": "https://thezvi.substack.com",
+        "description": "Exhaustive weekly roundups of AI capabilities, policy, and existential-risk debates from one of the most-read voices in AI safety."
       }
     ],
     "ml_engineering_infrastructure": [
@@ -1203,6 +1266,13 @@
         "feed_url": "https://karpathy.bearblog.dev/feed/",
         "website": "https://karpathy.bearblog.dev",
         "description": "Foundational essays on neural networks, LLM internals, and AI-native software from a defining voice in deep learning."
+      },
+      {
+        "id": "anthropic_engineering",
+        "name": "Anthropic Engineering",
+        "feed_url": "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
+        "website": "https://www.anthropic.com/engineering",
+        "description": "Anthropic's engineering deep-dives on building with Claude, agents, and production AI systems (via a community-maintained RSS mirror)."
       }
     ]
   }

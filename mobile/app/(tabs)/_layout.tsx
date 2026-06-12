@@ -223,13 +223,28 @@ function TabsWithMetrics() {
         name="guru"
         options={{
           title: 'Guru',
-          // R12: the organism is CENTER STAGE — large, full presence, rising
-          // out of the bar's top edge like a creature peeking over it.
+          // R13: the organism is CENTER STAGE — a ~62px creature perched on
+          // the bar, top ~third rising above the bar's top edge, no dead gap.
+          // The icon lives in an explicitly sized 64×64 box (same height as
+          // the bar) so centering is deterministic instead of depending on the
+          // tab bar's internal icon/label layout; translateY lifts the body so
+          // it leaks out of the glass island. GuruBlob is rendered `tight`
+          // (PAD 0.15×size, body 1.25×) so size=110 draws a ~62px visual body
+          // dead-centered in the box.
           tabBarLabel: () => null,
           tabBarAccessibilityLabel: 'Guru agent',
           tabBarIcon: ({ focused }) => (
-            <Animated.View style={{ opacity: focused ? 1 : 0.92, marginTop: -26 }}>
-              <GuruBlob size={54} state="idle" />
+            <Animated.View
+              style={{
+                opacity: focused ? 1 : 0.92,
+                width: 64,
+                height: 64,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ translateY: -18 }],
+              }}
+            >
+              <GuruBlob size={110} state="idle" tight />
             </Animated.View>
           ),
         }}

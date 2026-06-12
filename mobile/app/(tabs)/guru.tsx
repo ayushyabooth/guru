@@ -10,6 +10,7 @@ import GuruBlob, { BlobState } from '../../components/ui/GuruBlob';
 import GuruWordmark from '../../components/ui/GuruWordmark';
 import BlockRenderer, { AgentBlock } from '../../components/Agent/BlockRenderer';
 import { openExternalTab } from '../../utils/openExternalTab';
+import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 
 /**
  * Agentic Guru tab — Journey Pipeline (Epic H, GUR-228).
@@ -212,6 +213,11 @@ export default function GuruAgentScreen() {
               <Text style={{ color: g.color, fontSize: 15, fontWeight: '700' }}>→</Text>
             </TouchableOpacity>
           ))}
+          {/* First-time users get the widget install path from the agentic
+              experience too, not just Home (self-hides once installed). */}
+          <View style={{ marginTop: 6 }}>
+            <ExtensionInstallBanner />
+          </View>
         </ScrollView>
         {intentBar}
       </KeyboardAvoidingView>
