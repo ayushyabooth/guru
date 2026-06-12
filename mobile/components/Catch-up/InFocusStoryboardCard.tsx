@@ -218,6 +218,23 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
     router.push(`/article/${inFocusArticle?.id}?askQuote=${encodeURIComponent(quote)}&source=catchup`);
   };
 
+  // Section-header chevron → open the reader anchored at that content.
+  // Spotlight anchors on its first quote; the rest use the reader's `section`
+  // param (scroll-to in the Summary tab; 'reflect' jumps to Ask Guru).
+  const handleSectionNavigate = (section: 'summary' | 'spotlight' | 'why' | 'between' | 'reflect') => {
+    const aid = inFocusArticle?.id;
+    if (!aid) return;
+    if (section === 'spotlight') {
+      const firstQuote = inFocusArticle?.rich_summary?.spotlight_quotes?.[0];
+      const anchor = firstQuote
+        ? `&highlightQuote=${encodeURIComponent(firstQuote)}`
+        : '&section=spotlight';
+      router.push(`/article/${aid}?source=catchup${anchor}`);
+      return;
+    }
+    router.push(`/article/${aid}?source=catchup&section=${section}`);
+  };
+
   if (!inFocusArticle) {
     return null;
   }
@@ -405,6 +422,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           isDark={isDark}
           categoryAccent={categoryColors.accent}
           onQuotePress={handleQuotePress}
+          onSectionPress={handleSectionNavigate}
         />
 
         {/* Socratic Prompts Section - Collapsible with tap-to-explore */}
@@ -413,6 +431,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           isDark={isDark}
           onQuestionTap={handleQuestionTap}
           articleId={inFocusArticle.id}
+          onHeaderNavigate={() => handleSectionNavigate('reflect')}
         />
 
         {/* In-Focus Action Buttons — pass accent color for glass CTA */}

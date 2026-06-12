@@ -49,6 +49,12 @@ interface GlassSectionProps {
   style?: ViewStyle;
   /** Callback when expand state changes */
   onToggle?: (expanded: boolean) => void;
+  /**
+   * Deep-link affordance: when provided, the header chevron becomes an
+   * accent-colored "open" chevron that calls this instead of toggling.
+   * The title area still toggles expand/collapse.
+   */
+  onNavigate?: () => void;
 }
 
 export default function GlassSection({
@@ -61,6 +67,7 @@ export default function GlassSection({
   collapsible = true,
   style,
   onToggle,
+  onNavigate,
 }: GlassSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const { isDark, colors } = useTheme();
@@ -109,14 +116,29 @@ export default function GlassSection({
   return (
     <View style={[containerStyle, style]}>
       {collapsible ? (
-        <TouchableOpacity
-          onPress={toggleExpand}
-          style={styles.headerTouchable}
-          activeOpacity={0.7}
-        >
-          <View style={styles.headerLeft}>{header}</View>
-          <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={chevronColor} />
-        </TouchableOpacity>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={toggleExpand}
+            style={styles.headerTouchable}
+            activeOpacity={0.7}
+          >
+            <View style={styles.headerLeft}>{header}</View>
+            {!onNavigate && (
+              <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={chevronColor} />
+            )}
+          </TouchableOpacity>
+          {onNavigate && (
+            <TouchableOpacity
+              onPress={onNavigate}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.navChevron}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${title || 'section'} in the article reader`}
+            >
+              <Icon name="chevron-right" size={18} color={accentColor} />
+            </TouchableOpacity>
+          )}
+        </View>
       ) : (
         <View style={styles.nonCollapsibleHeader}>
           <View style={styles.headerLeft}>{header}</View>
@@ -131,12 +153,23 @@ export default function GlassSection({
 }
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTouchable: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  navChevron: {
+    paddingRight: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   nonCollapsibleHeader: {
     flexDirection: 'row',

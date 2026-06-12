@@ -9,3 +9,4 @@ export { default as AudioPlayerStage } from './AudioPlayerStage';
 export { default as TextPodcastStage } from './TextPodcastStage';
 export { default as RecapArchive } from './RecapArchive';
 export { default as RecapDetail } from './RecapDetail';
+export { default as RecapHero } from './RecapHero';

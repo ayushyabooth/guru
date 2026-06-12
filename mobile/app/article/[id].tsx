@@ -103,7 +103,7 @@ function buildGlass(tier: GlassTier, isDark: boolean) {
 }
 
 export default function ArticleDetailScreen() {
-  const { id, highlightQuote, askQuote, source } = useLocalSearchParams();
+  const { id, highlightQuote, askQuote, source, section } = useLocalSearchParams();
   const router = useRouter();
   const { isDark, colors: themeColors } = useTheme();
 
@@ -236,6 +236,39 @@ export default function ArticleDetailScreen() {
       setTimeout(() => askAboutQuote(q), 500);
     }
   }, [askQuote, articleId]);
+
+  // Arriving from a Catch-up section-header chevron (?section=summary|why|between|
+  // spotlight|reflect, or ?highlightQuote=... from Spotlight) → once the article
+  // loads, jump to that content: scroll the Summary tab to the section, or open
+  // Ask Guru for 'reflect'. Best-effort — section Y positions are captured via
+  // onLayout, then scrolled after a short settle delay.
+  const webScrollRef = useRef<ScrollView | null>(null);
+  const sectionYs = useRef<Record<string, number>>({});
+  const sectionHandledRef = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !overlayArticle || sectionHandledRef.current) return;
+    const sec = typeof section === 'string' ? section : undefined;
+    const hq = typeof highlightQuote === 'string' ? highlightQuote : undefined;
+    const target =
+      sec === 'why' || sec === 'between' || sec === 'summary' || sec === 'spotlight' || sec === 'reflect'
+        ? sec
+        : hq ? 'spotlight' : undefined;
+    if (!target) return;
+    sectionHandledRef.current = true;
+    if (target === 'reflect') {
+      setTimeout(() => handleTabChange(3), 300);
+      return;
+    }
+    handleTabChange(0); // sections live on the Summary tab (no-op if already there)
+    setTimeout(() => {
+      const y = sectionYs.current[target];
+      const node: any = webScrollRef.current;
+      const scroller = node?.scrollTo ? node : node?.getNode?.();
+      if (typeof y === 'number' && scroller?.scrollTo) {
+        scroller.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      }
+    }, 450);
+  }, [overlayArticle, section, highlightQuote, handleTabChange]);
 
   // Track which surface opened this article (R17: any SOURCE_DESTS key).
   const [sourceTab] = useState<string>(() => {
@@ -561,6 +594,7 @@ export default function ArticleDetailScreen() {
 
       {/* ── Tab Content (parallax-animated) ───────────────────────────── */}
       <Animated.ScrollView
+        ref={webScrollRef as any}
         style={[styles.webContent, { transform: [{ translateX: tabAnim }] }]}
         contentContainerStyle={styles.webContentInner}
       >
@@ -568,7 +602,10 @@ export default function ArticleDetailScreen() {
         {activeTab === 0 && rc && (
           <>
             {rc.summary_whats_in && (
-              <View style={styles.webSection}>
+              <View
+                style={styles.webSection}
+                onLayout={(e) => { sectionYs.current.summary = e.nativeEvent.layout.y; }}
+              >
                 <View style={styles.sectionTitleRow}>
                   <View style={[styles.accentDot, { backgroundColor: RingColors.catchup.primary }]} />
                   <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>What's in the article</Text>
@@ -577,7 +614,10 @@ export default function ArticleDetailScreen() {
               </View>
             )}
             {rc.summary_why_matters && (
-              <View style={styles.webSection}>
+              <View
+                style={styles.webSection}
+                onLayout={(e) => { sectionYs.current.why = e.nativeEvent.layout.y; }}
+              >
                 <View style={styles.sectionTitleRow}>
                   <View style={[styles.accentDot, { backgroundColor: RingColors.divein.primary }]} />
                   <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Why it matters</Text>
@@ -586,7 +626,10 @@ export default function ArticleDetailScreen() {
               </View>
             )}
             {rc.summary_between_lines && (
-              <View style={styles.webSection}>
+              <View
+                style={styles.webSection}
+                onLayout={(e) => { sectionYs.current.between = e.nativeEvent.layout.y; }}
+              >
                 <View style={styles.sectionTitleRow}>
                   <View style={[styles.accentDot, { backgroundColor: RingColors.recap.primary }]} />
                   <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Between the lines</Text>
@@ -595,7 +638,10 @@ export default function ArticleDetailScreen() {
               </View>
             )}
             {rc.spotlight_quotes && rc.spotlight_quotes.length > 0 && (
-              <View style={styles.webSection}>
+              <View
+                style={styles.webSection}
+                onLayout={(e) => { sectionYs.current.spotlight = e.nativeEvent.layout.y; }}
+              >
                 <View style={styles.sectionTitleRow}>
                   <View style={[styles.accentDot, { backgroundColor: TC.warning }]} />
                   <Text style={[styles.webSectionTitle, { color: TC.textPrimary }]}>Spotlight Quotes</Text>

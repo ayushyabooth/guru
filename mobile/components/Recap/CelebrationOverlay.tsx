@@ -43,6 +43,11 @@ export default function CelebrationOverlay({
 }: CelebrationOverlayProps) {
   const { isDark, colors } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
+  // Theme-aware glass EDL for nested stat tiles (the static style hardcoded
+  // white-on-white fills that vanished in light mode).
+  const statGlass = isDark
+    ? { backgroundColor: 'rgba(255, 255, 255, 0.06)', borderColor: 'rgba(255, 255, 255, 0.10)' }
+    : { backgroundColor: 'rgba(15, 23, 42, 0.04)', borderColor: 'rgba(15, 23, 42, 0.08)' };
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -116,15 +121,15 @@ export default function CelebrationOverlay({
         <Icon name="star-four-points" size={28} color={RingColors.recap.primary} />
 
         <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
+          <View style={[styles.statItem, statGlass]}>
             <Text style={styles.statNumber}>{insightCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>insights captured</Text>
           </View>
-          <View style={styles.statItem}>
+          <View style={[styles.statItem, statGlass]}>
             <Text style={styles.statNumber}>{questionCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>questions reflected on</Text>
           </View>
-          <View style={styles.statItem}>
+          <View style={[styles.statItem, statGlass]}>
             <Text style={styles.statNumber}>1</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>commitment made</Text>
           </View>
@@ -147,8 +152,8 @@ export default function CelebrationOverlay({
         {/* Commitment preview */}
         {commitment && (
           <View style={styles.commitmentPreview}>
-            <Text style={styles.commitmentLabel}>Your commitment:</Text>
-            <Text style={styles.commitmentText} numberOfLines={2}>
+            <Text style={[styles.commitmentLabel, { color: colors.textSecondary }]}>Your commitment:</Text>
+            <Text style={[styles.commitmentText, { color: colors.textPrimary }]} numberOfLines={2}>
               "{commitment}"
             </Text>
           </View>
@@ -275,12 +280,11 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    // fill/border applied inline via theme-aware `statGlass`
   },
   statNumber: {
     ...Typography.headlineLarge,
@@ -316,12 +320,10 @@ const styles = StyleSheet.create({
   },
   commitmentLabel: {
     ...Typography.labelSmall,
-    color: 'rgba(255, 255, 255, 0.5)',
     marginBottom: 4,
   },
   commitmentText: {
     ...Typography.bodyMedium,
-    color: 'rgba(255, 255, 255, 0.9)',
     fontStyle: 'italic',
   },
   actionsRow: {

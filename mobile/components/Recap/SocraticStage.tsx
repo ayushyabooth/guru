@@ -47,6 +47,9 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
+  // Theme-aware hairline (glass EDL) — the static styles hardcoded white
+  // borders that disappear on light surfaces.
+  const hairline = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.07)';
   const [messages, setMessages] = useState<ChatBubble[]>(
     // Restored exchanges can carry the model's raw JSON wrapper — clean on seed.
     (initialExchanges || []).map(e => ({
@@ -221,7 +224,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
 
       {/* Input area or completion */}
       {isConcluded ? (
-        <View style={[styles.concludedArea, { backgroundColor: GM.card.backgroundColor }]}>
+        <View style={[styles.concludedArea, { backgroundColor: GM.card.backgroundColor, borderTopColor: hairline }]}>
           <Text style={[styles.concludedText, { color: colors.textSecondary }]}>
             {insightCount > 0 ? `${insightCount} insight${insightCount > 1 ? 's' : ''} captured during this dialogue` : 'Dialogue complete'}
           </Text>
@@ -233,7 +236,7 @@ export default function SocraticStage({ onSendMessage, onComplete, initialExchan
           />
         </View>
       ) : (
-        <View style={[styles.composer, { backgroundColor: GM.card.backgroundColor }]}>
+        <View style={[styles.composer, { backgroundColor: GM.card.backgroundColor, borderTopColor: hairline }]}>
           {/* GUR-212: manual advance to Commitment once there are >=2 user
               exchanges, so the journey is never stuck if is_concluded never fires. */}
           {userExchangeCount >= 2 && (
@@ -303,7 +306,7 @@ const styles = StyleSheet.create({
   assistantBubble: {
     alignSelf: 'flex-start',
     borderRadius: BorderRadius.lg,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    // border color inherited from theme-aware GM.card (white 0.15 dark / slate 0.08 light)
     borderLeftWidth: 3,
     borderLeftColor: '#6366F1',
     shadowColor: '#6366F1',
@@ -375,7 +378,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     ...Typography.bodyMedium,
     maxHeight: 100,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    // border color inherited from theme-aware GM.input
     borderRadius: BorderRadius.lg,
     ...getBackdropBlur(12),
   },

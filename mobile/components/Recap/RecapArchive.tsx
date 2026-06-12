@@ -18,7 +18,7 @@ import {
   RingColors,
   getBackdropBlur,
 } from '../../constants/liquidGlass';
-import DarkThemeColors from '../../constants/darkTheme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { recapService, RecapJourneySummary } from '../../services/recap-service';
 
 const { width } = Dimensions.get('window');
@@ -33,8 +33,13 @@ interface RecapArchiveProps {
  *
  * Horizontal scrollable timeline of past weekly recap journeys.
  * Each entry shows: date range, tier badge, insight count, status.
+ *
+ * Glass EDL (GUR-228): theme-aware glass cards — dark rgba(15,20,35,0.55)
+ * with rgba(255,255,255,0.08) hairline; light frosted white with
+ * rgba(15,23,42,0.07) hairline. Text adapts via useTheme.
  */
 export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveProps) {
+  const { colors, isDark } = useTheme();
   const [journeys, setJourneys] = useState<RecapJourneySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,6 +81,15 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   // order stable across renders.
   if (!Icon) return null;
 
+  // ── Theme-aware glass EDL materials ──────────────────────────────
+  const glassCard = isDark
+    ? { backgroundColor: 'rgba(15, 20, 35, 0.55)', borderColor: 'rgba(255, 255, 255, 0.08)' }
+    : { backgroundColor: 'rgba(255, 255, 255, 0.75)', borderColor: 'rgba(15, 23, 42, 0.07)' };
+  const headerGlass = isDark
+    ? { backgroundColor: 'rgba(15, 20, 35, 0.55)', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }
+    : { backgroundColor: 'rgba(255, 255, 255, 0.85)', borderBottomColor: 'rgba(15, 23, 42, 0.07)' };
+  const hairline = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed': return 'Completed';
@@ -90,7 +104,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   const formatDateRange = (weekStart: string, weekEnd: string) => {
     const start = new Date(weekStart);
     const end = new Date(weekEnd);
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
   const renderJourneyCard = (journey: RecapJourneySummary) => {
@@ -99,7 +113,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
     return (
       <TouchableOpacity
         key={journey.id}
-        style={[styles.journeyCard, isCompleted && styles.journeyCardCompleted]}
+        style={[styles.journeyCard, glassCard, isCompleted && styles.journeyCardCompleted]}
         onPress={() => onSelectJourney?.(journey.id)}
         activeOpacity={0.7}
       >
@@ -124,7 +138,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
         </View>
 
         {/* Date range */}
-        <Text style={styles.journeyDate}>
+        <Text style={[styles.journeyDate, { color: colors.textPrimary }]}>
           {formatDateRange(journey.week_start, journey.week_end)}
         </Text>
 
@@ -132,14 +146,14 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
         <View style={styles.journeyStats}>
           {journey.insight_count > 0 && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Text style={styles.journeyStat}>
+              <Text style={[styles.journeyStat, { color: colors.textSecondary }]}>
                 {journey.insight_count}
               </Text>
-              <Icon name="star-four-points" size={12} color={DarkThemeColors.textSecondary} />
+              <Icon name="star-four-points" size={12} color={colors.textSecondary} />
             </View>
           )}
           {journey.articles_read_count > 0 && (
-            <Text style={styles.journeyStat}>
+            <Text style={[styles.journeyStat, { color: colors.textSecondary }]}>
               {journey.articles_read_count} articles
             </Text>
           )}
@@ -154,7 +168,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
 
         {/* Commitment preview */}
         {journey.commitment && (
-          <Text style={styles.commitmentPreview} numberOfLines={2}>
+          <Text style={[styles.commitmentPreview, { color: colors.textSecondary }]} numberOfLines={2}>
             "{journey.commitment}"
           </Text>
         )}
@@ -163,33 +177,33 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, headerGlass]}>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
           <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Learning Journal</Text>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Learning Journal</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <GuruBlob size={40} state="thinking" />
-          <Text style={styles.loadingText}>Loading your journal...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your journal...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchJourneys}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : journeys.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Icon name="notebook-outline" size={48} color={DarkThemeColors.textSecondary} style={{ marginBottom: Spacing.md }} />
-          <Text style={styles.emptyTitle}>No recaps yet</Text>
-          <Text style={styles.emptySubtitle}>
+          <Icon name="notebook-outline" size={48} color={colors.textSecondary} style={{ marginBottom: Spacing.md }} />
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No recaps yet</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
             Complete your first weekly recap to start building your learning journal.
           </Text>
         </View>
@@ -207,7 +221,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
           }
         >
           {/* Timeline */}
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             {journeys.length} recap{journeys.length !== 1 ? 's' : ''} completed
           </Text>
 
@@ -222,31 +236,31 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
           </ScrollView>
 
           {/* Vertical list for detailed view */}
-          <Text style={styles.sectionTitle}>All Recaps</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>All Recaps</Text>
           {journeys.map(journey => {
             const isCompleted = journey.status === 'completed';
             return (
               <TouchableOpacity
                 key={`list-${journey.id}`}
-                style={styles.listItem}
+                style={[styles.listItem, { borderBottomColor: hairline }]}
                 onPress={() => onSelectJourney?.(journey.id)}
                 activeOpacity={0.7}
               >
                 <View style={styles.listItemLeft}>
                   <View style={[styles.listDot, isCompleted && styles.listDotCompleted]} />
                   <View>
-                    <Text style={styles.listDate}>
+                    <Text style={[styles.listDate, { color: colors.textPrimary }]}>
                       {formatDateRange(journey.week_start, journey.week_end)}
                     </Text>
-                    <Text style={styles.listMeta}>
+                    <Text style={[styles.listMeta, { color: colors.textSecondary }]}>
                       {journey.articles_read_count} articles
-                      {journey.insight_count > 0 ? ` \u00B7 ${journey.insight_count} insights` : ''}
+                      {journey.insight_count > 0 ? ` · ${journey.insight_count} insights` : ''}
                     </Text>
                   </View>
                 </View>
                 {!isCompleted && (
                   <View style={[styles.listTierBadge, { backgroundColor: 'rgba(148,163,184,0.12)' }]}>
-                    <Text style={[styles.listTierText, { color: '#94A3B8' }]}>
+                    <Text style={[styles.listTierText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                       {getStatusLabel(journey.status)}
                     </Text>
                   </View>
@@ -263,7 +277,6 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DarkThemeColors.background,
   },
   header: {
     flexDirection: 'row',
@@ -271,9 +284,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.lg,
     paddingTop: Spacing.md,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
     ...getBackdropBlur(24),
   },
   closeButton: {
@@ -283,7 +294,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
   },
   headerSpacer: {
     minWidth: 70,
@@ -303,7 +313,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -314,7 +323,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.error,
     textAlign: 'center',
   },
   retryButton: {
@@ -339,19 +347,16 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...Typography.headlineSmall,
-    color: DarkThemeColors.textPrimary,
     marginBottom: Spacing.xs,
   },
   emptySubtitle: {
     ...Typography.bodyMedium,
-    color: DarkThemeColors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,
   },
   // Sections
   sectionTitle: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textSecondary,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
@@ -366,11 +371,9 @@ const styles = StyleSheet.create({
   },
   journeyCard: {
     width: 160,
-    backgroundColor: 'rgba(15, 20, 35, 0.55)',
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     ...getBackdropBlur(16),
   },
   journeyCardCompleted: {
@@ -399,7 +402,6 @@ const styles = StyleSheet.create({
   },
   journeyDate: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textPrimary,
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
@@ -422,7 +424,6 @@ const styles = StyleSheet.create({
   },
   journeyStat: {
     ...Typography.labelSmall,
-    color: DarkThemeColors.textSecondary,
   },
   statusBadge: {
     alignSelf: 'center',
@@ -439,7 +440,6 @@ const styles = StyleSheet.create({
   },
   commitmentPreview: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: Spacing.xs,
@@ -452,7 +452,6 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   listItemLeft: {
     flexDirection: 'row',
@@ -474,11 +473,9 @@ const styles = StyleSheet.create({
   },
   listDate: {
     ...Typography.labelMedium,
-    color: DarkThemeColors.textPrimary,
   },
   listMeta: {
     ...Typography.bodySmall,
-    color: DarkThemeColors.textSecondary,
     marginTop: 2,
   },
   listTierBadge: {

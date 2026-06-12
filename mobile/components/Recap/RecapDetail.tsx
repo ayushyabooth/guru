@@ -83,6 +83,16 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   // to keep the hook call order stable across renders.
   if (!Icon) return null;
 
+  // ── Theme-aware glass EDL materials (GUR-228) ─────────────────────
+  // Dark: rgba(15,20,35,0.55) + white 0.08 hairline. Light: frosted white
+  // + slate 0.07 hairline. Applied over GM.* as a fill/border override.
+  const glassCard = isDark
+    ? { backgroundColor: 'rgba(15, 20, 35, 0.55)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }
+    : { backgroundColor: 'rgba(255, 255, 255, 0.75)', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.07)' };
+  const headerGlass = isDark
+    ? { backgroundColor: 'rgba(15, 20, 35, 0.55)', borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.08)' }
+    : { backgroundColor: 'rgba(255, 255, 255, 0.85)', borderBottomWidth: 1, borderBottomColor: 'rgba(15, 23, 42, 0.07)' };
+
   const formatDateRange = (weekStart: unknown, weekEnd: unknown) => {
     if (typeof weekStart !== 'string' || typeof weekEnd !== 'string') return '';
     const start = new Date(weekStart);
@@ -128,7 +138,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[GM.navBar, styles.header]}>
+        <View style={[styles.header, headerGlass]}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
@@ -145,7 +155,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   if (error || !summary) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[GM.navBar, styles.header]}>
+        <View style={[styles.header, headerGlass]}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
             <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
           </TouchableOpacity>
@@ -175,7 +185,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, headerGlass]}>
         <TouchableOpacity onPress={onClose} style={styles.backButton}>
           <Icon name="arrow-left" size={20} color={RingColors.recap.primary} />
         </TouchableOpacity>
@@ -194,7 +204,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
         </Text>
 
         {/* Activity Stats */}
-        <View style={[GM.card, styles.statsRow]}>
+        <View style={[GM.card, styles.statsRow, glassCard]}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{Number(activity.articles_read) || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>articles</Text>

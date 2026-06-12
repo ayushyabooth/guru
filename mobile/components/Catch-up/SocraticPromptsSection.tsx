@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, LayoutAnimation, Platform, UIManager } from 'react-native';
 import Icon from '../ui/Icon';
 import GuruBlob from '../ui/GuruBlob';
 import GlassSection from '../ui/GlassSection';
+import { API_BASE_URL } from '../../constants/config';
+import { getAuthToken } from '../../utils/auth';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -14,18 +17,110 @@ interface SocraticPromptsSectionProps {
   isDark?: boolean;
   onQuestionTap?: (question: string, index: number) => void;
   articleId?: string;
+  /** Header-chevron deep link: open the article reader at the reflect surface */
+  onHeaderNavigate?: () => void;
 }
+
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+/** The annotation's highlighted_text is the reflection question, truncated.
+ *  Must be identical for POST and the GET-match on restore. */
+const questionAnchor = (q: string): string =>
+  q.length > 120 ? `${q.slice(0, 119)}…` : q;
+
+// ── localStorage instant-restore fallback (API is the source of truth) ──────
+const LS_KEY = 'guru_socratic_notes';
+
+const readLocalNotes = (articleId: string): Record<string, { note: string }> => {
+  try {
+    const all = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    return all[articleId] || {};
+  } catch {
+    return {};
+  }
+};
+
+const writeLocalNote = (articleId: string, index: number, note: string, question: string) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    if (!all[articleId]) all[articleId] = {};
+    all[articleId][`prompt-${index}`] = {
+      note,
+      question,
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(all));
+  } catch {
+    /* best-effort */
+  }
+};
 
 export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
   prompts,
-  isDark = false,
+  isDark: isDarkProp,
   onQuestionTap,
-  articleId
+  articleId,
+  onHeaderNavigate
 }) => {
+  const { isDark: isDarkTheme } = useTheme();
+  const isDark = isDarkProp ?? isDarkTheme;
+
   const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [saveStatus, setSaveStatus] = useState<Record<number, SaveStatus>>({});
 
-  if (!prompts || prompts.length === 0) return null;
+  // Restore notes when the article changes: localStorage seeds text instantly,
+  // then the annotations API (source of truth) seeds text + Saved state.
+  useEffect(() => {
+    setNotes({});
+    setSaveStatus({});
+    if (!articleId || !prompts || prompts.length === 0) return;
+
+    // 1) Instant fallback from localStorage (text only — unknown server state).
+    const local = readLocalNotes(articleId);
+    const seeded: Record<number, string> = {};
+    prompts.slice(0, 3).forEach((_, i) => {
+      const entry = local[`prompt-${i}`];
+      if (entry?.note) seeded[i] = entry.note;
+    });
+    if (Object.keys(seeded).length > 0) setNotes(prev => ({ ...seeded, ...prev }));
+
+    // 2) Source of truth: persisted annotations for this article.
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/articles/${articleId}/annotations`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!Array.isArray(data) || cancelled) return;
+        const restoredNotes: Record<number, string> = {};
+        const restoredStatus: Record<number, SaveStatus> = {};
+        prompts.slice(0, 3).forEach((prompt, i) => {
+          const anchor = questionAnchor(prompt);
+          // Latest matching annotation wins (a re-save creates a new one).
+          const match = [...data].reverse().find(
+            (a: any) => a?.highlighted_text === anchor && a?.note_text
+          );
+          if (match) {
+            restoredNotes[i] = match.note_text;
+            restoredStatus[i] = 'saved';
+          }
+        });
+        if (cancelled) return;
+        if (Object.keys(restoredNotes).length > 0) {
+          setNotes(prev => ({ ...prev, ...restoredNotes }));
+          setSaveStatus(prev => ({ ...prev, ...restoredStatus }));
+        }
+      } catch {
+        /* restore is best-effort; localStorage seed already applied */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [articleId, prompts]);
 
   const handleQuestionTap = (index: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -42,23 +137,89 @@ export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
     }
   };
 
-  const handleSaveNote = (index: number, text: string) => {
+  const handleNoteChange = (index: number, text: string) => {
     setNotes(prev => ({ ...prev, [index]: text }));
-    try {
-      const saved = localStorage.getItem('guru_socratic_notes') || '{}';
-      const allNotes = JSON.parse(saved);
-      if (!allNotes[articleId || '']) {
-        allNotes[articleId || ''] = {};
-      }
-      allNotes[articleId || ''][`prompt-${index}`] = {
-        note: text,
-        question: prompts[index],
-        timestamp: new Date().toISOString(),
-      };
-      localStorage.setItem('guru_socratic_notes', JSON.stringify(allNotes));
-    } catch (error) {
-    }
+    // Typing after a save (or a failure) re-arms the Save button.
+    setSaveStatus(prev =>
+      prev[index] === 'saved' || prev[index] === 'error'
+        ? { ...prev, [index]: 'idle' }
+        : prev
+    );
+    if (articleId) writeLocalNote(articleId, index, text, prompts[index]);
   };
+
+  // Explicit Save → POST a real annotation (same shape as the agent's add_note),
+  // so the note lands in the article's Notes tab and feeds the weekly recap.
+  const handleSaveNote = useCallback(async (index: number) => {
+    const text = (notes[index] || '').trim();
+    if (!text || !articleId) return;
+    const status = saveStatus[index];
+    if (status === 'saving' || status === 'saved') return;
+    setSaveStatus(prev => ({ ...prev, [index]: 'saving' }));
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('no auth token');
+      const res = await fetch(`${API_BASE_URL}/articles/${articleId}/annotations`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          highlighted_text: questionAnchor(prompts[index]),
+          note_text: text,
+          color: 'gold',
+          start_offset: 0,
+          end_offset: 0,
+        }),
+      });
+      if (!res.ok) throw new Error(`save failed (${res.status})`);
+      setSaveStatus(prev => ({ ...prev, [index]: 'saved' }));
+    } catch {
+      // Keep the text; offer retry.
+      setSaveStatus(prev => ({ ...prev, [index]: 'error' }));
+    }
+  }, [notes, saveStatus, articleId, prompts]);
+
+  if (!prompts || prompts.length === 0) return null;
+
+  // ── Liquid-glass styles (EDL): semi-transparent fills + web backdrop blur ──
+  const webBlur = Platform.OS === 'web'
+    ? ({ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as any)
+    : {};
+
+  const primaryBtnGlass = {
+    backgroundColor: 'rgba(99,102,241,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(129,140,248,0.35)',
+    ...webBlur,
+  };
+  const primaryTextColor = isDark ? '#A5B4FC' : '#6366F1';
+
+  const secondaryBtnGlass = {
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+    ...webBlur,
+  };
+  const savedBtnGlass = {
+    backgroundColor: 'rgba(16,185,129,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.35)',
+    ...webBlur,
+  };
+  const errorBtnGlass = {
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.35)',
+    ...webBlur,
+  };
+
+  const glassInput = {
+    backgroundColor: 'transparent',
+    borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)',
+    color: isDark ? '#E2E8F0' : '#1E293B',
+    ...webBlur,
+  };
+
+  const labelColor = isDark ? '#F1F5F9' : '#1E293B';
 
   return (
     <GlassSection
@@ -67,12 +228,21 @@ export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
       accentColor="#38BDF8"
       defaultExpanded={false}
       style={styles.outerSection}
+      onNavigate={onHeaderNavigate}
     >
       <View style={styles.promptsList}>
         {prompts.slice(0, 3).map((prompt, index) => {
           const isQuestionExpanded = expandedQuestionIndex === index;
           const noteText = notes[index] || '';
-          const isSaved = noteText.length > 0;
+          const status: SaveStatus = saveStatus[index] || 'idle';
+          const canSave =
+            noteText.trim().length > 0 && (status === 'idle' || status === 'error');
+
+          const saveLabel =
+            status === 'saving' ? 'Saving…'
+            : status === 'saved' ? 'Saved ✓'
+            : status === 'error' ? "Couldn't save — tap to retry"
+            : 'Save';
 
           return (
             <View key={index} style={[styles.promptCard, isQuestionExpanded && styles.promptCardExpanded]}>
@@ -83,7 +253,7 @@ export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
                 style={styles.promptHeader}
               >
                 <Text
-                  style={styles.promptText}
+                  style={[styles.promptText, !isDark && { color: '#1E293B' }]}
                   numberOfLines={isQuestionExpanded ? undefined : 3}
                 >
                   {prompt}
@@ -95,34 +265,51 @@ export const SocraticPromptsSection: React.FC<SocraticPromptsSectionProps> = ({
               {isQuestionExpanded && (
                 <View style={styles.inlineQAContainer}>
                   <View style={styles.reflectionCard}>
-                    <Text style={styles.reflectionLabel}>What comes to mind?</Text>
+                    <Text style={[styles.reflectionLabel, { color: labelColor }]}>What comes to mind?</Text>
                     <TextInput
-                      style={styles.reflectionInput}
+                      style={[styles.reflectionInput, glassInput]}
                       placeholder="Jot your thoughts here..."
-                      placeholderTextColor="#6B7280"
+                      placeholderTextColor={isDark ? '#6B7280' : '#94A3B8'}
                       value={noteText}
-                      onChangeText={(text) => handleSaveNote(index, text)}
+                      onChangeText={(text) => handleNoteChange(index, text)}
                       multiline
                       numberOfLines={3}
                     />
                     <View style={styles.cardActions}>
                       <TouchableOpacity
-                        style={[styles.saveBtn, isSaved && styles.saveBtnActive]}
+                        style={[
+                          styles.saveBtn,
+                          status === 'saved' ? savedBtnGlass
+                            : status === 'error' ? errorBtnGlass
+                            : secondaryBtnGlass,
+                          !canSave && status !== 'saved' && status !== 'saving' && { opacity: 0.6 },
+                        ]}
+                        onPress={() => handleSaveNote(index)}
+                        disabled={!canSave}
+                        accessibilityRole="button"
+                        accessibilityLabel={saveLabel}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          {isSaved && <Icon name="check" size={14} color="#059669" />}
-                          <Text style={[styles.saveBtnText, isSaved && styles.saveBtnTextActive]}>
-                            {isSaved ? 'Saved' : 'Save'}
+                          {status === 'saved' && <Icon name="check" size={14} color="#34D399" />}
+                          <Text
+                            style={[
+                              styles.saveBtnText,
+                              { color: isDark ? '#94A3B8' : '#64748B' },
+                              status === 'saved' && { color: '#34D399' },
+                              status === 'error' && { color: '#F87171' },
+                            ]}
+                          >
+                            {saveLabel}
                           </Text>
                         </View>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={styles.guruBtn}
+                        style={[styles.guruBtn, primaryBtnGlass]}
                         onPress={() => handleExploreWithGuru(prompt, index)}
                       >
                         <GuruBlob size={18} tight />
-                        <Text style={styles.guruBtnText}>Explore with Guru</Text>
-                        <Text style={styles.guruArrow}>→</Text>
+                        <Text style={[styles.guruBtnText, { color: primaryTextColor }]}>Explore with Guru</Text>
+                        <Text style={[styles.guruArrow, { color: primaryTextColor }]}>→</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -187,29 +374,21 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.06)',
   },
   reflectionCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'transparent',
   },
   reflectionLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F1F5F9',
     marginBottom: 12,
   },
   reflectionInput: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
     minHeight: 80,
     textAlignVertical: 'top',
-    backgroundColor: 'rgba(255,255,255,0.04)',
     marginBottom: 16,
-    color: '#E2E8F0',
   },
   cardActions: {
     flexDirection: 'row',
@@ -218,21 +397,13 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  saveBtnActive: {
-    backgroundColor: 'rgba(16,185,129,0.15)',
   },
   saveBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#94A3B8',
-  },
-  saveBtnTextActive: {
-    color: '#059669',
   },
   guruBtn: {
     flex: 1,
@@ -241,31 +412,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#38BDF8',
+    borderRadius: 14,
     gap: 8,
-  },
-  guruIconContainer: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guruIconText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
   },
   guruBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
   },
   guruArrow: {
     fontSize: 14,
-    color: '#fff',
     opacity: 0.8,
   },
 });

@@ -274,7 +274,7 @@ export default function QuestionsStage({
       </ScrollView>
 
       {/* Input area */}
-      <View style={styles.inputArea}>
+      <View style={[styles.inputArea, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)' }]}>
         {isChipFormat && currentQuestion.chips && !currentThread.answered ? (
           <View style={styles.chipsContainer}>
             {currentQuestion.chips.map((chip, idx) => (
@@ -305,7 +305,7 @@ export default function QuestionsStage({
               onPress={handleSubmit}
               disabled={!hasInput || isLoading}
             >
-              <Icon name="send" size={18} color={hasInput ? '#fff' : 'rgba(255,255,255,0.3)'} />
+              <Icon name="send" size={18} color={hasInput ? '#fff' : 'rgba(255,255,255,0.75)'} />
             </TouchableOpacity>
           </View>
         )}
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    // borderTopColor applied inline (theme-aware hairline)
     ...getBackdropBlur(16),
   },
   inputRow: {

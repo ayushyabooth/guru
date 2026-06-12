@@ -14,7 +14,6 @@ import { setTabBarHidden } from './_layout';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
 import GlassButton from '../../components/ui/GlassButton';
-import { PlasmaBlobRing } from '../../components/Rings/PlasmaBlobRing';
 import GuruBlob from '../../components/ui/GuruBlob';
 import { cleanGuruResponse } from '../../components/ui/GuruFormattedText';
 import { useMetrics } from '../../store/metric-context';
@@ -38,6 +37,7 @@ import {
   TextPodcastStage,
   RecapArchive,
   RecapDetail,
+  RecapHero,
 } from '../../components/Recap';
 import {
   Spacing,
@@ -782,15 +782,13 @@ export default function RecapScreen() {
         <View style={styles.entrySection}>
           <Text style={[styles.weekLabel, { color: colors.textSecondary }]}>{weekLabel}</Text>
 
-          {/* Recap hero ring — orange Plasma Blob per BRD §C (ring color token assertion) */}
+          {/* Recap hero — living organism in a gold progress arc (GUR-228
+              identity language; replaces the legacy PlasmaBlobRing) */}
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <PlasmaBlobRing
+            <RecapHero
               progress={ringProgress}
-              color={RingColors.recap.primary}
               size={240}
-              stroke={16}
-              animated
-              glow
+              state={hasCompletedRecap ? 'completed' : isInProgress ? 'in_progress' : 'not_started'}
             />
           </View>
           {/* Tier badge removed — no tiers in the app */}

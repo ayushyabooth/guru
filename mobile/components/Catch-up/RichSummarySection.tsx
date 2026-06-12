@@ -11,12 +11,16 @@ interface RichSummary {
   spotlight_quotes?: string[];
 }
 
+export type RichSummarySectionKey = 'summary' | 'spotlight' | 'why' | 'between';
+
 interface RichSummarySectionProps {
   richSummary: RichSummary | null;
   fallbackSummary?: string;
   isDark?: boolean;
   categoryAccent?: string;
   onQuotePress?: (quote: string) => void;
+  /** Header-chevron deep link: open the article reader anchored at this section */
+  onSectionPress?: (section: RichSummarySectionKey) => void;
 }
 
 /** Section accent dot colors — each section gets its own color */
@@ -59,7 +63,8 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
   fallbackSummary,
   isDark: isDarkProp = false,
   categoryAccent = '#38BDF8',
-  onQuotePress
+  onQuotePress,
+  onSectionPress
 }) => {
   const { colors } = useTheme();
 
@@ -89,6 +94,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
+          onNavigate={onSectionPress ? () => onSectionPress('summary') : undefined}
         >
           <Text style={[styles.sectionBody, { color: colors.textSecondary }]} numberOfLines={4}>{content.whats_in_article}</Text>
         </GlassSection>
@@ -107,6 +113,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
           accentColor={categoryAccent}
           defaultExpanded={true}
           style={styles.section}
+          onNavigate={onSectionPress ? () => onSectionPress('spotlight') : undefined}
         >
           <ScrollView
             horizontal
@@ -160,6 +167,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
+          onNavigate={onSectionPress ? () => onSectionPress('why') : undefined}
         >
           <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>{content.why_it_matters}</Text>
         </GlassSection>
@@ -178,6 +186,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
           accentColor={categoryAccent}
           defaultExpanded={false}
           style={styles.section}
+          onNavigate={onSectionPress ? () => onSectionPress('between') : undefined}
         >
           <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>{content.between_the_lines}</Text>
         </GlassSection>
