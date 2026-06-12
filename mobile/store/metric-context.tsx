@@ -48,6 +48,10 @@ interface MetricState {
 type MetricAction =
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; payload: { metrics: MetricsData; profile: UserProfile } }
+  // Stale-while-revalidate: paint cached data instantly WITHOUT touching
+  // `loading` — the in-flight network refresh keeps the dim-while-loading
+  // affordance on Home so the user still sees the refresh happen.
+  | { type: 'HYDRATE_FROM_CACHE'; payload: { metrics: MetricsData; profile: UserProfile } }
   | { type: 'FETCH_ERROR'; payload: string }
   | { type: 'SET_ACTIVE_FILTER'; payload: string }
   | { type: 'UPDATE_METRICS'; payload: Partial<MetricsData> };
@@ -95,7 +99,14 @@ function metricReducer(state: MetricState, action: MetricAction): MetricState {
         metrics: action.payload.metrics,
         profile: action.payload.profile,
       };
-    
+
+    case 'HYDRATE_FROM_CACHE':
+      return {
+        ...state,
+        metrics: action.payload.metrics,
+        profile: action.payload.profile,
+      };
+
     case 'FETCH_ERROR':
       return { ...state, loading: false, error: action.payload };
     
@@ -149,14 +160,35 @@ export function MetricProvider({
   const activeFilterRef = useRef(state.activeFilter);
   activeFilterRef.current = state.activeFilter;
 
+  // Filter whose data is currently rendered (set on fetch success). Used to
+  // decide when a cache hydration is needed: on mount and on filter change —
+  // NOT on every 60s poll, which would re-dispatch identical data.
+  const renderedFilterRef = useRef<string | null>(null);
+
   // Fetch metrics function — scoped to the active Home content filter.
+  // Stale-while-revalidate: if a cached response exists for this filter,
+  // dispatch it immediately (loading stays true via FETCH_START) so the UI
+  // paints instantly, then refresh over the network and update state.
   const fetchMetrics = async (filterOverride?: string) => {
+    const filter = filterOverride ?? activeFilterRef.current;
+
+    if (renderedFilterRef.current !== filter) {
+      const cached = metricService.getCachedMetrics(filter);
+      if (cached) {
+        dispatch({
+          type: 'HYDRATE_FROM_CACHE',
+          payload: { metrics: cached.metrics, profile: cached.profile },
+        });
+      }
+    }
+
     dispatch({ type: 'FETCH_START' });
 
     try {
-      const data = await metricService.getMetricsWithFallback(filterOverride ?? activeFilterRef.current);
-      dispatch({ 
-        type: 'FETCH_SUCCESS', 
+      const data = await metricService.getMetricsWithFallback(filter);
+      renderedFilterRef.current = filter;
+      dispatch({
+        type: 'FETCH_SUCCESS',
         payload: {
           metrics: data.metrics,
           profile: data.profile,

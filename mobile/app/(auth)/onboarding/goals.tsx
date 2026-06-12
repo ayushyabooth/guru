@@ -28,6 +28,7 @@ import {
 import { router } from 'expo-router';
 import { useOnboarding } from '@/store/user-context';
 import { getAuthToken } from '@/utils/auth';
+import { userService } from '../../../services/user-service';
 import { API_BASE_URL } from '@/constants/config';
 import { OrganicBackground, GlassButton } from '../../../components/ui';
 import Icon from '../../../components/ui/Icon';
@@ -224,6 +225,9 @@ export default function GoalsScreen() {
       );
 
       if (response.ok) {
+        // Profile just changed — bust the SWR /me cache so the tabs render
+        // the freshly-saved industry/goals, not a pre-onboarding snapshot.
+        userService.invalidateProfileCache();
         completeOnboarding();
         router.replace('/(tabs)');
       } else {

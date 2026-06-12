@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
 import { formatMinutes } from '../../services/metric-service';
+import { userService } from '../../services/user-service';
 import GuruRings from '../../components/ui/GuruRings';
 import GuruConstellation from '../../components/Rings/GuruConstellation';
 import GuruWordmark from '../../components/ui/GuruWordmark';
@@ -436,6 +437,9 @@ function HomeContent() {
 
   const handleGoalsSaved = () => {
     setShowGoalEditor(false);
+    // Goals live on the /me profile — bust the SWR cache so the refetch
+    // below picks up the new goals instead of a <5min-old cached profile.
+    userService.invalidateProfileCache();
     fetchMetrics();
   };
 
@@ -461,13 +465,48 @@ function HomeContent() {
     : `${activeFilterTab.label} Progress`;
 
   if (state.loading && !displayMetrics.lastUpdated) {
+    // First load with nothing cached (new user): lightweight content skeleton
+    // mirroring the page layout (header card, constellation, goals card)
+    // instead of a centered spinner. Theme-aware via COLORS.
+    const placeholderBg = COLORS.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: containerBg }]}>
+      <View
+        style={[styles.container, { backgroundColor: containerBg }]}
+        accessibilityLabel="Loading your progress"
+      >
         <OrganicBackground variant="home" />
-        <View style={styles.loadingPulse}>
-          <Text style={styles.loadingEmoji}>...</Text>
+        {/* Header glass card placeholder */}
+        <View style={styles.header}>
+          <View style={[styles.headerGlass, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }]}>
+            <View style={{ width: 96, height: 22, borderRadius: 6, backgroundColor: placeholderBg, marginBottom: Spacing.md }} />
+            <View style={{ width: 130, height: 14, borderRadius: 4, backgroundColor: placeholderBg, marginBottom: Spacing.sm }} />
+            <View style={{ width: 190, height: 26, borderRadius: 6, backgroundColor: placeholderBg }} />
+          </View>
         </View>
-        <Text style={[styles.loadingText, { color: COLORS.textSecondary }]}>Loading your progress...</Text>
+        {/* Constellation placeholder */}
+        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
+          <View style={{ width: 220, height: 220, borderRadius: 110, backgroundColor: placeholderBg, borderWidth: 1, borderColor: COLORS.glassBorder }} />
+          <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md }}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{ width: 64, height: 12, borderRadius: 4, backgroundColor: placeholderBg }} />
+            ))}
+          </View>
+        </View>
+        {/* Weekly goals glass card placeholder */}
+        <View style={styles.goalsSection}>
+          <View style={{ width: 110, height: 20, borderRadius: 5, backgroundColor: placeholderBg, marginBottom: Spacing.md }} />
+          <View style={[styles.goalsCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }]}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.goalItem}>
+                <View style={styles.goalHeader}>
+                  <View style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: placeholderBg }} />
+                  <View style={{ width: 60, height: 12, borderRadius: 4, backgroundColor: placeholderBg }} />
+                </View>
+                <View style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]} />
+              </View>
+            ))}
+          </View>
+        </View>
       </View>
     );
   }

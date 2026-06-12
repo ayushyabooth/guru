@@ -19,8 +19,12 @@ class UserSavedArticle(Base):
     article = relationship("Article", back_populates="saved_by_users")
     
     # Indexes and constraints
+    # idx_user_saved_at serves GET /saved-articles (WHERE user_id ORDER BY saved_at DESC).
+    # NOTE: create_all() will NOT add new indexes to an existing table; apply manually:
+    #   CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_saved_at ON user_saved_articles (user_id, saved_at DESC);
     __table_args__ = (
         Index('idx_user_article', 'user_id', 'article_id', unique=True),
+        Index('idx_user_saved_at', 'user_id', 'saved_at'),
     )
 
 

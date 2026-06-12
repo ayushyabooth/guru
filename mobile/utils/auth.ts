@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../constants/config';
+import { clearUserCaches } from './local-cache';
 
 // Decode JWT without verification (for checking expiry only)
 function decodeJWT(token: string): { exp?: number } | null {
@@ -119,6 +120,9 @@ export async function setRefreshToken(token: string): Promise<void> {
 }
 
 export async function removeAuthToken(): Promise<void> {
+  // Drop user-scoped SWR caches (profile, metrics, feeds) so a different
+  // account logging in on this device never renders the previous user's data.
+  clearUserCaches();
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');

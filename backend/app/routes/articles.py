@@ -197,12 +197,19 @@ async def list_expert_articles(
     """
     List expert articles with optional filtering
     """
+    from sqlalchemy.orm import load_only
+
     query = db.query(Article)
-    
+
     if is_paywalled is not None:
         query = query.filter(Article.is_paywalled == is_paywalled)
-    
-    articles = query.offset(skip).limit(limit).all()
+
+    # Only load the columns the response uses — skips JSON columns
+    # (inline_images, industries, specializations) and other unused fields.
+    articles = query.options(load_only(
+        Article.id, Article.url, Article.title, Article.source,
+        Article.word_count, Article.is_paywalled, Article.created_at,
+    )).offset(skip).limit(limit).all()
     
     return {
         "articles": [

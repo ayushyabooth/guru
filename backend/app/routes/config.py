@@ -3,7 +3,7 @@ Configuration API routes for industries and specializations
 
 Provides endpoints for frontend to load configurable onboarding data.
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Response
 from typing import List, Dict
 import logging
 
@@ -13,18 +13,23 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["config"])
 
+# Static config changes only on deploy — let browsers/CDN cache it for an hour
+# so repeat clients skip the round trip entirely (perf: high-latency links).
+CONFIG_CACHE_CONTROL = "public, max-age=3600"
+
 
 @router.get("/config/industries", response_model=List[Dict])
-async def get_industries():
+async def get_industries(response: Response):
     """
     Get all available industries for onboarding
-    
+
     Returns:
         List of industries with id, name, emoji, colors, description
     """
     try:
         config = IndustriesConfig.get_instance()
         industries = config.get_industries()
+        response.headers["Cache-Control"] = CONFIG_CACHE_CONTROL
         logger.info(f"Returning {len(industries)} industries")
         return industries
     except Exception as e:
@@ -36,7 +41,7 @@ async def get_industries():
 
 
 @router.get("/config/visual-config", response_model=Dict[str, Dict])
-async def get_visual_config():
+async def get_visual_config(response: Response):
     """
     Get flat visual config map for ALL industries, specializations, and interests.
 
@@ -49,6 +54,7 @@ async def get_visual_config():
     """
     try:
         config = IndustriesConfig.get_instance()
+        response.headers["Cache-Control"] = CONFIG_CACHE_CONTROL
         return config.get_visual_config()
     except Exception as e:
         logger.error(f"Error fetching visual config: {e}")
@@ -59,7 +65,7 @@ async def get_visual_config():
 
 
 @router.get("/config/interests", response_model=List[Dict])
-async def get_interests():
+async def get_interests(response: Response):
     """
     Get all available interests for onboarding
 
@@ -68,6 +74,7 @@ async def get_interests():
     """
     try:
         config = IndustriesConfig.get_instance()
+        response.headers["Cache-Control"] = CONFIG_CACHE_CONTROL
         return config.get_interests()
     except Exception as e:
         logger.error(f"Error fetching interests: {e}")
@@ -78,7 +85,7 @@ async def get_interests():
 
 
 @router.get("/config/industries/{industry_id}/specializations", response_model=List[Dict])
-async def get_specializations(industry_id: str):
+async def get_specializations(industry_id: str, response: Response):
     """
     Get all specializations for a specific industry
     
@@ -99,6 +106,7 @@ async def get_specializations(industry_id: str):
             )
         
         specs = config.get_specializations(industry_id)
+        response.headers["Cache-Control"] = CONFIG_CACHE_CONTROL
         logger.info(f"Returning {len(specs)} specializations for industry '{industry_id}'")
         return specs
         
@@ -113,7 +121,7 @@ async def get_specializations(industry_id: str):
 
 
 @router.get("/config/industries/{industry_id}", response_model=Dict)
-async def get_industry(industry_id: str):
+async def get_industry(industry_id: str, response: Response):
     """
     Get details for a specific industry
     
@@ -132,7 +140,8 @@ async def get_industry(industry_id: str):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Industry not found: {industry_id}"
             )
-        
+
+        response.headers["Cache-Control"] = CONFIG_CACHE_CONTROL
         return industry
         
     except HTTPException:

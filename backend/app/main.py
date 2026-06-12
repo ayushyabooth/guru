@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import os
 import logging
 import time
@@ -62,6 +63,10 @@ async def add_timing_header(request: Request, call_next):
 
 # HTTPS redirect — disabled; Railway/Vercel handle TLS at the proxy level.
 # Adding HTTPSRedirectMiddleware causes redirect loops behind reverse proxies.
+
+# Response compression — JSON feed payloads compress ~5-10x; big win on high-latency
+# links. Added BEFORE CORS so CORSMiddleware remains the outermost user middleware.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Add CORS middleware — MUST be added LAST so it is the outermost user middleware
 # and attaches CORS headers even to error responses (GUR-180). See note above.

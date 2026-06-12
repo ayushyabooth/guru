@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CatchupService, Storyboard, CatchupFeedResponse } from '../services/article-service';
+import { readCache, writeCache, userCacheKey } from '../utils/local-cache';
 
 interface UseCatchupFeedResult {
   storyboards: Storyboard[];
@@ -21,12 +22,24 @@ export function useCatchupFeed(context: string): UseCatchupFeedResult {
   // React Query manages the fetch, caching, and background revalidation.
   // When switching filters, cached data is returned instantly (staleTime = 5 min),
   // and a background refetch happens silently.
+  //
+  // The last response per filter is also persisted to localStorage so a fresh
+  // page load (new browser session) renders instantly from the last-known-good
+  // feed; initialDataUpdatedAt makes React Query revalidate in the background
+  // when the persisted copy is older than staleTime.
+  const persistKey = userCacheKey(`catchup-feed:${context}`);
   const { data, isLoading, error, refetch } = useQuery<CatchupFeedResponse>({
     queryKey: ['catchup-feed', context],
-    queryFn: () => CatchupService.getCatchupFeed(context, LIMIT, 0),
+    queryFn: async () => {
+      const response = await CatchupService.getCatchupFeed(context, LIMIT, 0);
+      writeCache(persistKey, response);
+      return response;
+    },
     staleTime: 5 * 60 * 1000,  // 5 min — filter switches serve cached data
     gcTime: 30 * 60 * 1000,    // 30 min — keep old filter data in memory
     placeholderData: (previousData) => previousData, // Show previous filter's data while loading
+    initialData: () => readCache<CatchupFeedResponse>(persistKey)?.data,
+    initialDataUpdatedAt: () => readCache<CatchupFeedResponse>(persistKey)?.timestamp,
   });
 
   const storyboards = (data?.storyboards ?? []).filter(s => !removedIds.has(s.id));

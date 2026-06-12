@@ -30,7 +30,11 @@ class Article(Base):
     # Tagging fields (filter-driven clustering depends on these)
     industries = Column(JSON, nullable=True)  # e.g., ["Consumer"]
     specializations = Column(JSON, nullable=True)  # e.g., ["Food & Beverage"]
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # index=True: hot filter column — every storyboard build/rebuild filters
+    # created_at >= cutoff, and startup cleanup filters created_at < cutoff.
+    # NOTE: create_all() will NOT add this to an existing table; apply manually:
+    #   CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_articles_created_at ON articles (created_at);
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships

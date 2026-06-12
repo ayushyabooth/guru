@@ -1,5 +1,7 @@
 import { getAuthToken } from '../utils/auth';
 import { API_BASE_URL } from '../constants/config';
+import { userService, UserProfile } from './user-service';
+import { readCache, writeCache, userCacheKey } from '../utils/local-cache';
 
 /** Format a minute value as "Xh Ym" when >= 60, or "Xm" when < 60 */
 export function formatMinutes(m: number): string {
@@ -46,9 +48,47 @@ export interface MetricsResponse {
   };
 }
 
+// Profile is fetched at most this often alongside metrics; between refreshes
+// the SWR-cached /me response is reused (it changes rarely — goal edits
+// invalidate it explicitly via userService.invalidateProfileCache()).
+const PROFILE_REFRESH_MS = 5 * 60 * 1000;
+
+function normalizeFilter(filter?: string): string {
+  return filter && filter !== 'all' ? filter : 'all';
+}
+
+function metricsCacheKey(filter?: string): string {
+  return userCacheKey(`metrics:${normalizeFilter(filter)}`);
+}
+
 class MetricService {
   private baseUrl = API_BASE_URL;
   private lastKnownGoodResponse: MetricsResponse | null = null;
+  // Per-filter last-known-good responses for stale-while-revalidate rendering.
+  private metricsMemoryCache = new Map<string, MetricsResponse>();
+
+  /**
+   * Last-known-good metrics for a filter (memory first, then localStorage).
+   * Consumers (metric-context) render this instantly, then refresh over the
+   * network — the ~300ms backend floor never blocks navigation.
+   */
+  getCachedMetrics(filter?: string): MetricsResponse | null {
+    const key = normalizeFilter(filter);
+    const inMemory = this.metricsMemoryCache.get(key);
+    if (inMemory) return inMemory;
+    const stored = readCache<MetricsResponse>(metricsCacheKey(filter));
+    if (stored) {
+      this.metricsMemoryCache.set(key, stored.data);
+      return stored.data;
+    }
+    return null;
+  }
+
+  private cacheMetrics(filter: string | undefined, result: MetricsResponse): void {
+    this.lastKnownGoodResponse = result;
+    this.metricsMemoryCache.set(normalizeFilter(filter), result);
+    writeCache(metricsCacheKey(filter), result);
+  }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const token = await getAuthToken();
@@ -71,16 +111,30 @@ class MetricService {
         ? `${this.baseUrl}/me/metrics?filter=${encodeURIComponent(filter)}`
         : `${this.baseUrl}/me/metrics`;
 
-      // Fetch metrics and profile in parallel
-      const [metricsResponse, profileResponse] = await Promise.all([
+      // Profile: reuse the SWR-cached /me when fresh — it changes rarely and
+      // was previously re-fetched on EVERY metrics call (60s polling included).
+      // When the cache is stale/missing, fetch it in parallel with metrics.
+      const cachedProfile = userService.getCachedProfile();
+      const profileIsFresh = !!cachedProfile && (Date.now() - cachedProfile.timestamp) < PROFILE_REFRESH_MS;
+
+      const profilePromise: Promise<UserProfile> = profileIsFresh
+        ? Promise.resolve(cachedProfile!.data)
+        : userService.fetchUserProfileFresh().catch((err: unknown) => {
+            // Map user-service auth wording so existing auth handling
+            // (redirect-to-login on "Authentication failed") keeps working.
+            if (err instanceof Error && (err.message.includes('Session expired') || err.message.includes('Not authenticated'))) {
+              throw new Error('Authentication failed. Please log in again.');
+            }
+            throw err;
+          });
+
+      // Fetch metrics and (when needed) profile in parallel
+      const [metricsResponse, profileData] = await Promise.all([
         fetch(metricsUrl, {
           method: 'GET',
           headers,
         }),
-        fetch(`${this.baseUrl}/me`, {
-          method: 'GET',
-          headers,
-        })
+        profilePromise,
       ]);
 
       if (!metricsResponse.ok) {
@@ -91,16 +145,7 @@ class MetricService {
         throw new Error(errorData.detail || `HTTP ${metricsResponse.status}: Failed to fetch metrics`);
       }
 
-      if (!profileResponse.ok) {
-        if (profileResponse.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        const errorData = await profileResponse.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${profileResponse.status}: Failed to fetch profile`);
-      }
-
       const metricsData = await metricsResponse.json();
-      const profileData = await profileResponse.json();
       
       // Transform the response to match our expected format
       const result: MetricsResponse = {
@@ -144,8 +189,8 @@ class MetricService {
         },
       };
 
-      // Cache successful response for fallback
-      this.lastKnownGoodResponse = result;
+      // Cache successful response (per filter) for SWR rendering + error fallback
+      this.cacheMetrics(filter, result);
       return result;
     } catch (error) {
       throw error;
@@ -209,7 +254,12 @@ class MetricService {
 
       console.warn('[MetricService] API failed, using fallback:', error instanceof Error ? error.message : error);
 
-      // Return last known good data if available
+      // Return last known good data if available — prefer the cache for the
+      // requested filter, then any last-known-good response.
+      const cached = this.getCachedMetrics(filter);
+      if (cached) {
+        return cached;
+      }
       if (this.lastKnownGoodResponse) {
         return this.lastKnownGoodResponse;
       }

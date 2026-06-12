@@ -15,12 +15,12 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useOnboarding } from '@/store/user-context';
 import { API_BASE_URL } from '@/constants/config';
 import { getAuthToken } from '@/utils/auth';
+import { readCache, writeCache, configCacheKey } from '@/utils/local-cache';
 import { OrganicBackground, GlassButton } from '../../../components/ui';
 import Icon from '../../../components/ui/Icon';
 import {
@@ -51,18 +51,31 @@ export default function SpecializationsScreen() {
   const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
   const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
+  // Stale-while-revalidate: specializations per industry change rarely —
+  // render instantly from the config cache and refresh silently.
   useEffect(() => {
     if (state.coreIndustry) {
-      fetchSpecializations();
+      const cached = readCache<Specialization[]>(
+        configCacheKey(`specializations:${state.coreIndustry}`)
+      );
+      if (cached) {
+        setSpecializationsList(cached.data);
+        setLoading(false);
+        fetchSpecializations(true); // silent background refresh
+      } else {
+        setLoading(true);
+        fetchSpecializations();
+      }
     }
   }, [state.coreIndustry]);
 
-  const fetchSpecializations = async () => {
+  const fetchSpecializations = async (background = false) => {
+    const industry = state.coreIndustry;
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const token = await getAuthToken();
       const response = await fetch(
-        `${API_BASE_URL}/config/industries/${state.coreIndustry}/specializations`,
+        `${API_BASE_URL}/config/industries/${industry}/specializations`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -76,11 +89,13 @@ export default function SpecializationsScreen() {
 
       const data = await response.json();
       setSpecializationsList(data);
+      writeCache(configCacheKey(`specializations:${industry}`), data);
       setError(null);
     } catch (err) {
-      setError('Failed to load specializations. Please try again.');
+      // Never replace cached content already on screen with an error state.
+      if (!background) setError('Failed to load specializations. Please try again.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -162,15 +177,31 @@ export default function SpecializationsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading specializations...</Text>
+        // First load with nothing cached: row skeletons matching the option
+        // card layout instead of a centered spinner (theme-aware).
+        <View style={[styles.content, styles.scrollContent]} accessibilityLabel="Loading specializations">
+          <View style={styles.optionsContainer}>
+            {Array.from({ length: 4 }).map((_, i) => {
+              const placeholderBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+              return (
+                <View key={i} style={[styles.optionCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                  <View style={styles.optionContent}>
+                    <View style={[styles.optionIcon, { backgroundColor: placeholderBg, borderRadius: 8 }]} />
+                    <View style={styles.optionLeft}>
+                      <View style={{ width: 160, height: 15, borderRadius: 4, backgroundColor: placeholderBg, marginBottom: 8 }} />
+                      <View style={{ width: 220, height: 12, borderRadius: 4, backgroundColor: placeholderBg }} />
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <GlassButton title="Try Again" onPress={fetchSpecializations} variant="primary" size="md" fullWidth={false} />
+          <GlassButton title="Try Again" onPress={() => fetchSpecializations()} variant="primary" size="md" fullWidth={false} />
         </View>
       ) : (
         <ScrollView

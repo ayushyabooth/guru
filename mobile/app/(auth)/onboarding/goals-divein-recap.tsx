@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ale
 import { router } from 'expo-router';
 import { useOnboarding } from '@/store/user-context';
 import * as SecureStore from 'expo-secure-store';
+import { userService } from '../../../services/user-service';
 import Icon from '../../../components/ui/Icon';
 
 export default function GoalsDiveinRecapScreen() {
@@ -60,6 +61,9 @@ export default function GoalsDiveinRecapScreen() {
       });
 
       if (response.ok) {
+        // Profile just changed — bust the SWR /me cache so the tabs render
+        // the freshly-saved goals, not a pre-onboarding snapshot.
+        userService.invalidateProfileCache();
         completeOnboarding();
         
         // Verify token is still stored before navigating

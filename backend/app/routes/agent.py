@@ -17,6 +17,8 @@ Architecture contract: docs/agentic-ui-architecture.md
 import asyncio
 import json
 import logging
+import queue
+import threading
 import uuid
 from typing import Optional
 
@@ -415,6 +417,73 @@ async def _execute_tool(app, token: str, name: str, tool_input: dict) -> str:
     return _slim_tool_result(name, status, data)
 
 
+class _BlockStreamParser:
+    """Incrementally extracts completed block objects from the model's
+    streaming `{"blocks":[...]}` output so the UI renders each block the
+    moment its JSON closes, instead of waiting ~6s for the full response
+    (GUR-229: blocks used to land in one burst at end-of-turn)."""
+
+    def __init__(self):
+        self.buf = ""
+        self.pos = 0            # scan cursor
+        self.in_array = False   # seen the opening '[' of "blocks"
+        self.obj_start = -1     # index of current object's '{'
+        self.depth = 0
+        self.in_str = False
+        self.esc = False
+        self.emitted = 0
+        self.done = False       # blocks array closed; ignore any further text
+
+    def feed(self, chunk: str) -> list:
+        self.buf += chunk
+        if self.done:
+            return []
+        out = []
+        if not self.in_array:
+            m = self.buf.find('"blocks"')
+            if m == -1:
+                return out
+            b = self.buf.find("[", m)
+            if b == -1:
+                return out
+            self.in_array = True
+            self.pos = b + 1
+        i = self.pos
+        while i < len(self.buf):
+            c = self.buf[i]
+            if self.in_str:
+                if self.esc:
+                    self.esc = False
+                elif c == "\\":
+                    self.esc = True
+                elif c == '"':
+                    self.in_str = False
+            elif c == '"':
+                self.in_str = True
+            elif c == "{":
+                if self.depth == 0:
+                    self.obj_start = i
+                self.depth += 1
+            elif c == "}":
+                self.depth -= 1
+                if self.depth == 0 and self.obj_start >= 0:
+                    try:
+                        obj = json.loads(self.buf[self.obj_start:i + 1])
+                        if isinstance(obj, dict) and obj.get("type"):
+                            out.append(obj)
+                            self.emitted += 1
+                    except Exception:
+                        pass
+                    self.obj_start = -1
+            elif c == "]" and self.depth == 0:
+                self.done = True  # array closed; ignore trailing text
+                i += 1
+                break
+            i += 1
+        self.pos = i
+        return out
+
+
 def _parse_blocks(raw: str) -> list:
     """Tolerant parse of the model's final {'blocks':[...]} output."""
     t = (raw or "").strip()
@@ -559,20 +628,44 @@ async def agent_turn(
     client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     session_id = str(sess.id)
 
+    def _stream_model(q):
+        """Runs the SDK's sync stream in a worker thread; forwards text deltas
+        and the final message through a queue (GUR-229 streaming fix)."""
+        try:
+            with client.messages.stream(
+                model=AGENT_MODEL,
+                max_tokens=3000,
+                system=system,
+                tools=TOOLS,
+                tool_choice={"type": "auto", "disable_parallel_tool_use": True},
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    q.put(("text", text))
+                q.put(("final", stream.get_final_message()))
+        except Exception as e:  # surfaced in gen()
+            q.put(("error", e))
+
     async def gen():
         nonlocal messages
         try:
             yield f"data: {json.dumps({'event': 'status', 'text': 'thinking…'})}\n\n"
             for _ in range(MAX_ITERS):
-                resp = await asyncio.to_thread(
-                    client.messages.create,
-                    model=AGENT_MODEL,
-                    max_tokens=3000,
-                    system=system,
-                    tools=TOOLS,
-                    tool_choice={"type": "auto", "disable_parallel_tool_use": True},
-                    messages=messages,
-                )
+                # Stream the model call: emit each completed block as its JSON
+                # closes so content flows instead of bursting at end-of-turn.
+                q: "queue.Queue" = queue.Queue()
+                threading.Thread(target=_stream_model, args=(q,), daemon=True).start()
+                parser = _BlockStreamParser()
+                resp = None
+                while resp is None:
+                    kind, payload = await asyncio.to_thread(q.get)
+                    if kind == "text":
+                        for block in parser.feed(payload):
+                            yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
+                    elif kind == "final":
+                        resp = payload
+                    else:
+                        raise payload
                 messages.append({"role": "assistant", "content": _serialize_content(resp.content)})
 
                 if resp.stop_reason == "tool_use":
@@ -591,10 +684,15 @@ async def agent_turn(
                     messages.append({"role": "user", "content": [
                         {"type": "tool_result", "tool_use_id": tool_use.id, "content": result}
                     ]})
+                    # Fill the inter-iteration gap — the next model call takes
+                    # 1.5-3s before its first streamed block (GUR-229).
+                    yield f"data: {json.dumps({'event': 'status', 'text': 'composing…'})}\n\n"
                     continue
 
+                # Streaming already emitted parser.emitted blocks; emit only the
+                # remainder (covers prose-fallback turns and parser misses).
                 final_text = "".join(b.text for b in resp.content if b.type == "text")
-                for block in _parse_blocks(final_text):
+                for block in _parse_blocks(final_text)[parser.emitted:]:
                     yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
                 break
 

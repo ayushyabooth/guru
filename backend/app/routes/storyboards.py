@@ -24,6 +24,51 @@ router = APIRouter(prefix="/api/v1", tags=["storyboards"])
 
 MAX_RELATED_ARTICLES = 5  # Cap related articles per storyboard to control payload size
 
+# --- In-process per-user TTL cache for the assembled catchup feed (perf) ---
+# The warm path still costs ~6 DB round-trips + response assembly per request.
+# Repeat hits within the TTL (pull-to-refresh, tab switches, agent recaps) are
+# served from memory. Invalidated on save/unsave/not-relevant (the only writers
+# of user-visible feed state, all in this module). Short TTL bounds staleness
+# from background ingestion/cache rebuilds.
+import threading as _threading
+import time as _time
+
+FEED_CACHE_TTL_SECONDS = 60
+_FEED_CACHE_MAX_ENTRIES = 1024
+_feed_cache: dict = {}  # (user_id, filter, limit, offset) -> (expires_monotonic, response_dict)
+_feed_cache_lock = _threading.Lock()
+
+
+def _feed_cache_get(key):
+    with _feed_cache_lock:
+        entry = _feed_cache.get(key)
+        if entry is None:
+            return None
+        if entry[0] <= _time.monotonic():
+            del _feed_cache[key]
+            return None
+        return entry[1]
+
+
+def _feed_cache_set(key, value):
+    with _feed_cache_lock:
+        if len(_feed_cache) >= _FEED_CACHE_MAX_ENTRIES:
+            now = _time.monotonic()
+            expired = [k for k, v in _feed_cache.items() if v[0] <= now]
+            for k in expired:
+                del _feed_cache[k]
+            if len(_feed_cache) >= _FEED_CACHE_MAX_ENTRIES:
+                _feed_cache.clear()  # safety valve; cache is best-effort
+        _feed_cache[key] = (_time.monotonic() + FEED_CACHE_TTL_SECONDS, value)
+
+
+def _feed_cache_invalidate_user(user_id):
+    uid = str(user_id)
+    with _feed_cache_lock:
+        stale = [k for k in _feed_cache if k[0] == uid]
+        for k in stale:
+            del _feed_cache[k]
+
 
 @router.get("/catchup-feed")
 async def get_catchup_feed(
@@ -47,6 +92,13 @@ async def get_catchup_feed(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid filter format"
             )
+
+        # Serve from in-process TTL cache when fresh (skips all DB work)
+        cache_key = (str(current_user.id), filter, limit, offset)
+        cached_response = _feed_cache_get(cache_key)
+        if cached_response is not None:
+            logger.info(f"Catchup feed cache HIT for user {current_user.id}, filter '{filter}'")
+            return cached_response
 
         # Get or build storyboards for this filter context
         all_storyboards = get_or_build_storyboards_for_filter(current_user, filter, db)
@@ -270,13 +322,15 @@ async def get_catchup_feed(
 
         logger.info(f"Returning {len(storyboard_responses)} storyboards for filter '{filter}'")
 
-        return {
+        feed_response = {
             "storyboards": storyboard_responses,
             "total": total,
             "filter": filter,
             "limit": limit,
             "offset": offset
         }
+        _feed_cache_set(cache_key, feed_response)
+        return feed_response
 
     except HTTPException:
         raise
@@ -338,7 +392,9 @@ async def mark_storyboard_not_relevant(
         
         db.add(not_relevant)
         db.commit()
-        
+
+        _feed_cache_invalidate_user(current_user.id)
+
         logger.info(f"User {current_user.id} marked storyboard {storyboard_id} as not relevant for filter '{filter}'")
         
         return {"message": "Storyboard marked as not relevant for this filter"}
@@ -397,7 +453,9 @@ async def save_article(
         
         db.add(saved_article)
         db.commit()
-        
+
+        _feed_cache_invalidate_user(current_user.id)  # is_saved flags in cached feed are now stale
+
         logger.info(f"User {current_user.id} saved article {article_id}")
         
         return {"message": "Article saved successfully", "is_saved": True}
@@ -445,7 +503,9 @@ async def unsave_article(
         
         db.delete(saved_article)
         db.commit()
-        
+
+        _feed_cache_invalidate_user(current_user.id)  # is_saved flags in cached feed are now stale
+
         logger.info(f"User {current_user.id} unsaved article {article_id}")
         
         return {"message": "Article removed from saved list", "is_saved": False}
@@ -478,11 +538,18 @@ async def get_saved_articles(
         
         total = saved_articles_query.count()
         saved_articles = saved_articles_query.offset(offset).limit(limit).all()
-        
-        # Get article details
+
+        # Batch-fetch article details in ONE query (was N+1: one query per saved article)
+        article_ids = [sa.article_id for sa in saved_articles]
+        article_map = {
+            a.id: a
+            for a in db.query(Article).filter(Article.id.in_(article_ids)).all()
+        } if article_ids else {}
+
+        # Build response (order preserved from saved_at desc)
         articles = []
         for saved_article in saved_articles:
-            article = db.query(Article).filter(Article.id == saved_article.article_id).first()
+            article = article_map.get(saved_article.article_id)
             if article:
                 articles.append({
                     "id": str(article.id),

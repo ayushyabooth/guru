@@ -16,7 +16,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -25,6 +24,7 @@ import { router } from 'expo-router';
 import { useOnboarding } from '@/store/user-context';
 import { API_BASE_URL } from '@/constants/config';
 import { getAuthToken } from '@/utils/auth';
+import { readCache, writeCache, configCacheKey } from '@/utils/local-cache';
 import { OrganicBackground, GlassButton } from '../../../components/ui';
 import Icon from '../../../components/ui/Icon';
 import {
@@ -51,6 +51,8 @@ interface Industry {
   color_secondary: string;
   description: string;
 }
+
+const INDUSTRIES_CACHE_KEY = configCacheKey('industries');
 
 // Industry Icons with gradients
 const IndustryIcon = ({ type, size = 48 }: { type: string; size?: number }) => {
@@ -270,13 +272,23 @@ export default function IndustryScreen() {
   const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
   const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
+  // Config changes rarely but pays the full cold-start penalty (~1.1s) on a
+  // new user's very first screen. Stale-while-revalidate: render the cached
+  // industry list instantly, refresh silently in the background.
   useEffect(() => {
-    fetchIndustries();
+    const cached = readCache<Industry[]>(INDUSTRIES_CACHE_KEY);
+    if (cached) {
+      setIndustries(cached.data);
+      setLoading(false);
+      fetchIndustries(true); // silent background refresh
+    } else {
+      fetchIndustries();
+    }
   }, []);
 
-  const fetchIndustries = async () => {
+  const fetchIndustries = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const token = await getAuthToken();
       const response = await fetch(`${API_BASE_URL}/config/industries`, {
         headers: {
@@ -290,11 +302,14 @@ export default function IndustryScreen() {
 
       const data = await response.json();
       setIndustries(data);
+      writeCache(INDUSTRIES_CACHE_KEY, data);
       setError(null);
     } catch (err) {
-      setError('Failed to load industries. Please try again.');
+      // A failed background refresh must not replace already-rendered
+      // cached content with an error screen.
+      if (!background) setError('Failed to load industries. Please try again.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -330,15 +345,36 @@ export default function IndustryScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading industries...</Text>
+        // First load with nothing cached: grid skeleton matching the industry
+        // card layout instead of a centered spinner (theme-aware).
+        <View style={styles.content} accessibilityLabel="Loading industries">
+          <View style={[styles.scrollContent]}>
+            <View style={styles.gridContainer}>
+              {Array.from({ length: 9 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.gridCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
+                >
+                  <View style={[
+                    styles.iconBackground,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)' },
+                  ]} />
+                  <View style={{
+                    width: '70%',
+                    height: 12,
+                    borderRadius: 4,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)',
+                  }} />
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchIndustries}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchIndustries()}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>

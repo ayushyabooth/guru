@@ -15,12 +15,12 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useOnboarding } from '@/store/user-context';
 import { API_BASE_URL } from '@/constants/config';
 import { getAuthToken } from '@/utils/auth';
+import { readCache, writeCache, configCacheKey } from '@/utils/local-cache';
 import { OrganicBackground, GlassButton } from '../../../components/ui';
 import Icon from '../../../components/ui/Icon';
 import {
@@ -40,6 +40,9 @@ interface Industry {
   description: string;
 }
 
+// Shared with the Step 1 industry screen — both fetch /config/industries.
+const INDUSTRIES_CACHE_KEY = configCacheKey('industries');
+
 export default function InterestsScreen() {
   const { state, setAdditionalInterests, previousStep, nextStep } = useOnboarding();
   const [industries, setIndustries] = useState<Industry[]>([]);
@@ -53,13 +56,23 @@ export default function InterestsScreen() {
   const footerBg = isDark ? 'rgba(15, 20, 35, 0.85)' : 'rgba(248, 250, 252, 0.92)';
   const footerBorder = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(15, 23, 42, 0.06)';
 
+  // Stale-while-revalidate: the industry config rarely changes and is usually
+  // already cached by the Step 1 (industry) screen — render instantly from
+  // cache and refresh silently in the background.
   useEffect(() => {
-    fetchIndustries();
+    const cached = readCache<Industry[]>(INDUSTRIES_CACHE_KEY);
+    if (cached) {
+      setIndustries(cached.data);
+      setLoading(false);
+      fetchIndustries(true); // silent background refresh
+    } else {
+      fetchIndustries();
+    }
   }, []);
 
-  const fetchIndustries = async () => {
+  const fetchIndustries = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const token = await getAuthToken();
       const response = await fetch(`${API_BASE_URL}/config/industries`, {
         headers: {
@@ -73,11 +86,13 @@ export default function InterestsScreen() {
 
       const data = await response.json();
       setIndustries(data);
+      writeCache(INDUSTRIES_CACHE_KEY, data);
       setError(null);
     } catch (err) {
-      setError('Failed to load industries. Please try again.');
+      // Never replace cached content already on screen with an error state.
+      if (!background) setError('Failed to load industries. Please try again.');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
@@ -142,15 +157,33 @@ export default function InterestsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#38BDF8" />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading industries...</Text>
+        // First load with nothing cached: row skeletons matching the option
+        // card layout instead of a centered spinner (theme-aware).
+        <View style={[styles.content, styles.scrollContent]} accessibilityLabel="Loading industries">
+          <View style={styles.optionsContainer}>
+            {Array.from({ length: 5 }).map((_, i) => {
+              const placeholderBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+              return (
+                <View key={i} style={[styles.optionCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                  <View style={styles.optionContent}>
+                    <View style={styles.optionLeft}>
+                      <View style={[styles.emojiContainer, { backgroundColor: placeholderBg }]} />
+                      <View style={styles.optionInfo}>
+                        <View style={{ width: 140, height: 15, borderRadius: 4, backgroundColor: placeholderBg, marginBottom: 8 }} />
+                        <View style={{ width: 200, height: 12, borderRadius: 4, backgroundColor: placeholderBg }} />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Icon name="alert-outline" size={48} color="#F59E0B" style={styles.errorIcon} />
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <GlassButton title="Try Again" onPress={fetchIndustries} variant="primary" size="md" fullWidth={false} />
+          <GlassButton title="Try Again" onPress={() => fetchIndustries()} variant="primary" size="md" fullWidth={false} />
         </View>
       ) : (
         <ScrollView

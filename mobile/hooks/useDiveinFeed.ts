@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../constants/config';
 import { getAuthToken } from '../utils/auth';
+import { readCache, writeCache, userCacheKey } from '../utils/local-cache';
 
 export interface DiveinArticleRaw {
   id: string;
@@ -57,12 +58,22 @@ async function fetchDiveinFeed(filter: string): Promise<DiveinFeedResponse> {
 export function useDiveinFeed(filter: string) {
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
+  // Last response per filter is persisted to localStorage so a fresh page
+  // load renders instantly from last-known-good data; initialDataUpdatedAt
+  // triggers a silent background revalidation when the copy is stale.
+  const persistKey = userCacheKey(`divein-feed:${filter}`);
   const { data, isLoading, error, refetch } = useQuery<DiveinFeedResponse>({
     queryKey: ['divein-feed', filter],
-    queryFn: () => fetchDiveinFeed(filter),
+    queryFn: async () => {
+      const response = await fetchDiveinFeed(filter);
+      writeCache(persistKey, response);
+      return response;
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     placeholderData: (previousData) => previousData,
+    initialData: () => readCache<DiveinFeedResponse>(persistKey)?.data,
+    initialDataUpdatedAt: () => readCache<DiveinFeedResponse>(persistKey)?.timestamp,
   });
 
   const savedArticles = (data?.saved_articles ?? []).filter(a => !removedIds.has(a.id));
