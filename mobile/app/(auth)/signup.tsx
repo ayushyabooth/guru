@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '../../constants/config';
 import { Sun, Moon } from 'phosphor-react-native';
 import { GlassCard, GlassInput, GlassButton, OrganicBackground } from '../../components/ui';
 import GuruRings from '../../components/ui/GuruRings';
@@ -101,16 +102,24 @@ export default function SignupScreen() {
     setStatus('idle');
 
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-      const fullUrl = `${apiUrl}/auth/signup`;
+      const fullUrl = `${API_BASE_URL}/auth/signup`;
 
-      const response = await fetch(fullUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      // GUR-229 hardening: a backend redeploy window can refuse the first
+      // connection — retry once after a short pause before declaring failure,
+      // so a brand-new user's very first action doesn't die on a blip.
+      const post = () =>
+        fetch(fullUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+      let response: Response;
+      try {
+        response = await post();
+      } catch {
+        await new Promise((r) => setTimeout(r, 1500));
+        response = await post();
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -150,7 +159,7 @@ export default function SignupScreen() {
       }
     } catch {
       setStatus('error');
-      setErrorMessage('Network error. Please check your connection.');
+      setErrorMessage("Couldn't reach Guru — please try again in a moment.");
     } finally {
       setLoading(false);
     }

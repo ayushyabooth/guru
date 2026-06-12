@@ -36,10 +36,16 @@ const SPRING_FRICTION = 14;
 const TAB_ACCENTS: Record<string, string> = {
   index: '#6366F1',    // Home
   catchup: '#38BDF8',
+  guru: '#818CF8',     // agent organism
   divein: '#EC4899',
   recap: '#FB923C',
 };
 const FALLBACK_ACCENT = '#6366F1';
+
+// R16 (founder): the guru tab's pill is the organism's HOUSE — noticeably
+// bigger than the standard pill, springing smoothly between the two sizes as
+// focus moves. It emphasizes the agent as the lynchpin of the app.
+const GURU_PILL_WIDTH = 96;
 
 interface Props {
   isDark: boolean;
@@ -61,37 +67,44 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
   const tabCount = Math.max(routes.length, 1);
   const tabWidth = barWidth / tabCount;
 
-  // Contain the pill within the ACTUAL measured bar height. The bar's rendered
-  // height can exceed the nominal 64px once safe-area padding is applied (web +
-  // native), which made the fixed top-anchored pill protrude ABOVE the glass
-  // island ("off-axis"). Size it to a clear inset and vertically center it so it
-  // always sits cleanly inside the bar regardless of the real height.
-  // Envelope the icon+label stack (ring icon sits high in the tab) so the active
-  // ring doesn't poke above the pill ("exposed"), while staying inset within the bar.
-  const pillHeight = bar.h > 0 ? Math.min(58, Math.max(46, bar.h - 8)) : PILL_HEIGHT;
-  const pillTop = bar.h > 0 ? Math.max(0, (bar.h - pillHeight) / 2) : PILL_TOP;
+  const isGuru = activeName === 'guru';
 
-  // Center the pill on the active tab: pill.left = tab.center - PILL_WIDTH/2
+  // R16: the icon+label stack sits HIGH in the (now 72px) bar, so a vertically
+  // centered pill read as "lots of padding below the icon, barely any on top".
+  // Hug the content instead: small fixed top inset. The guru pill is taller —
+  // it houses the organism, reaching nearly the full bar.
+  const stdHeight = bar.h > 0 ? Math.min(58, Math.max(46, bar.h - 16)) : PILL_HEIGHT;
+  const pillHeight = isGuru ? (bar.h > 0 ? Math.max(60, bar.h - 6) : 66) : stdHeight;
+  const pillTop = isGuru ? 3 : 4;
+  const pillWidth = isGuru ? GURU_PILL_WIDTH : PILL_WIDTH;
+
+  // Center the pill on the active tab: pill.left = tab.center - pillWidth/2
   const targetX = useMemo(
-    () => (barWidth > 0 ? horizontalPadding + tabWidth * index + (tabWidth - PILL_WIDTH) / 2 : 0),
-    [barWidth, tabWidth, index, horizontalPadding],
+    () => (barWidth > 0 ? horizontalPadding + tabWidth * index + (tabWidth - pillWidth) / 2 : 0),
+    [barWidth, tabWidth, index, horizontalPadding, pillWidth],
   );
 
-  const translateX = useRef(new Animated.Value(targetX)).current;
+  const animX = useRef(new Animated.Value(targetX)).current;
+  const animW = useRef(new Animated.Value(PILL_WIDTH)).current;
+  const animH = useRef(new Animated.Value(PILL_HEIGHT)).current;
+  const animTop = useRef(new Animated.Value(PILL_TOP)).current;
 
   useEffect(() => {
-    // Slide the pill to the active tab once the bar width is known. The opacity
-    // fade was removed: useNativeDriver opacity isn't reliable on react-native-web
-    // and left the pill stuck near-transparent (~0.08), so the active ring looked
-    // "exposed". Opacity is now a static value gated on barWidth (below).
+    // Slide AND morph the pill to the active tab once the bar width is known.
+    // Size/position are layout props, so the whole group runs on the JS driver
+    // (this is a web-first surface; the spring stays smooth). The opacity fade
+    // was removed: useNativeDriver opacity isn't reliable on react-native-web —
+    // opacity is a static value gated on barWidth (below).
     if (barWidth === 0) return;
-    Animated.spring(translateX, {
-      toValue: targetX,
-      tension: SPRING_TENSION,
-      friction: SPRING_FRICTION,
-      useNativeDriver: true,
-    }).start();
-  }, [targetX, barWidth]);
+    const spring = (v: Animated.Value, to: number) =>
+      Animated.spring(v, { toValue: to, tension: SPRING_TENSION, friction: SPRING_FRICTION, useNativeDriver: false });
+    Animated.parallel([
+      spring(animX, targetX),
+      spring(animW, pillWidth),
+      spring(animH, pillHeight),
+      spring(animTop, pillTop),
+    ]).start();
+  }, [targetX, barWidth, pillWidth, pillHeight, pillTop]);
 
   return (
     <View
@@ -104,9 +117,10 @@ export default function AnimatedTabPill({ isDark, horizontalPadding = 0 }: Props
           styles.pill,
           {
             opacity: barWidth > 0 ? 1 : 0,
-            top: pillTop,
-            height: pillHeight,
-            transform: [{ translateX }],
+            top: animTop,
+            height: animH,
+            width: animW,
+            transform: [{ translateX: animX }],
             // Base fill is the accent at ~28%/22% — the vertical gradient on
             // web stacks an extra highlight on top for the 3D read.
             backgroundColor: isDark
