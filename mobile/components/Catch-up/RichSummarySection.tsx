@@ -19,6 +19,9 @@ interface RichSummarySectionProps {
   isDark?: boolean;
   categoryAccent?: string;
   onQuotePress?: (quote: string) => void;
+  /** R22: card-body tap → jump to the passage inside the ORIGINAL article.
+      When set, onQuotePress fires only from the explicit Ask Guru pill. */
+  onQuoteSource?: (quote: string) => void;
   /** Header-chevron deep link: open the article reader anchored at this section */
   onSectionPress?: (section: RichSummarySectionKey) => void;
 }
@@ -64,6 +67,7 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
   isDark: isDarkProp = false,
   categoryAccent = '#38BDF8',
   onQuotePress,
+  onQuoteSource,
   onSectionPress
 }) => {
   const { colors } = useTheme();
@@ -139,14 +143,32 @@ export const RichSummarySection: React.FC<RichSummarySectionProps> = ({
                     shadowRadius: 8,
                   },
                 ]}
-                onPress={() => onQuotePress?.(quote)}
+                onPress={() => (onQuoteSource ?? onQuotePress)?.(quote)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.quoteText, { color: colors.textSecondary }]} numberOfLines={4}>
                   "{quote}"
                 </Text>
+                {onQuoteSource && (
+                  <Text style={[styles.quoteHint, { color: colors.textTertiary ?? colors.textSecondary }]}>
+                    Tap to read this in the article ↗
+                  </Text>
+                )}
                 {onQuotePress && (
-                  <Text style={[styles.quoteHint, { color: categoryAccent }]}>Ask Guru about this →</Text>
+                  <TouchableOpacity
+                    style={[styles.askGuruPill, {
+                      backgroundColor: isDarkProp ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)',
+                      borderColor: isDarkProp ? 'rgba(129,140,248,0.45)' : 'rgba(99,102,241,0.35)',
+                    }]}
+                    onPress={(e: any) => { e?.stopPropagation?.(); onQuotePress(quote); }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ask Guru about this quote"
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <Text style={[styles.askGuruPillText, { color: isDarkProp ? '#A5B4FC' : '#6366F1' }]}>
+                      Ask Guru →
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </TouchableOpacity>
             ))}
@@ -232,6 +254,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     lineHeight: 22,
+  },
+  askGuruPill: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    ...(Platform.OS === 'web' ? { backdropFilter: 'blur(12px)' } as any : {}),
+  },
+  askGuruPillText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   quoteHint: {
     fontSize: 11,

@@ -213,9 +213,32 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
       content: quote,
       metadata: { storyboard_id: storyboard.id, industry: storyboard.industry },
     });
-    // Open the reader and ask Guru about this quote (single, clear action — the
-    // old dual CTAs both just dumped you on the reader and did nothing).
+    // Open the reader and ask Guru about this quote — fired ONLY by the
+    // explicit "Ask Guru" pill on the quote card (R22).
     router.push(`/article/${inFocusArticle?.id}?askQuote=${encodeURIComponent(quote)}&source=catchup`);
+  };
+
+  // R22 (founder): tapping the quote card itself jumps to the passage INSIDE
+  // the original article — a Chromium text-fragment link scrolls to and
+  // highlights the exact sentence on the source page. The in-app reader opens
+  // alongside as the companion (notes/Q&A), anchored at Spotlight.
+  const handleQuoteSource = (quote: string) => {
+    trackInteraction({
+      interactionType: 'spotlight_source_jump',
+      articleId: inFocusArticle?.id,
+      content: quote,
+      metadata: { storyboard_id: storyboard.id, industry: storyboard.industry },
+    });
+    const url = inFocusArticle?.url;
+    if (url) {
+      const frag = quote
+        .replace(/^["'“”\s]+|["'“”.?!,;\s]+$/g, '')
+        .split(/\s+/).slice(0, 10).join(' ');
+      openExternalTab(`${url}#:~:text=${encodeURIComponent(frag)}`);
+    }
+    setTimeout(() => {
+      router.push(`/article/${inFocusArticle?.id}?source=catchup&highlightQuote=${encodeURIComponent(quote.slice(0, 140))}`);
+    }, 0);
   };
 
   // Section-header chevron → open the reader anchored at that content.
@@ -422,6 +445,7 @@ export const InFocusStoryboardCard: React.FC<InFocusStoryboardCardProps> = ({
           isDark={isDark}
           categoryAccent={categoryColors.accent}
           onQuotePress={handleQuotePress}
+          onQuoteSource={handleQuoteSource}
           onSectionPress={handleSectionNavigate}
         />
 
