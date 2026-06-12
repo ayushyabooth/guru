@@ -71,6 +71,17 @@ const setSourceTabStorage = (source: string) => {
   } catch {}
 };
 
+// R17 navigation law (GUR-228): every surface that can open the reader has a
+// breadcrumb destination; the back affordance names it and returns there.
+// "guru" returns to the live agent journey. Unknown keys fall back to Dive-in.
+const SOURCE_DESTS: Record<string, { label: string; path: string }> = {
+  catchup: { label: 'Catch-up', path: '/catchup' },
+  divein: { label: 'Dive-in', path: '/divein' },
+  guru: { label: 'Guru', path: '/guru' },
+  recap: { label: 'Recap', path: '/recap' },
+};
+const sourceDest = (s: string) => SOURCE_DESTS[s] || SOURCE_DESTS.divein;
+
 // Chrome extension ID for web app -> extension messaging
 const EXTENSION_ID = ''; // Set after publishing or during dev
 
@@ -226,17 +237,19 @@ export default function ArticleDetailScreen() {
     }
   }, [askQuote, articleId]);
 
-  // Track which feed tab opened this article
+  // Track which surface opened this article (R17: any SOURCE_DESTS key).
   const [sourceTab] = useState<string>(() => {
     const s = typeof source === 'string' ? source : '';
-    if (s === 'catchup' || s === 'divein') {
+    if (s in SOURCE_DESTS) {
       setSourceTabStorage(s);
       return s;
     }
     return getSourceTab();
   });
 
-  const { logTime } = useTimeTracking(sourceTab || 'divein', {
+  // Time logging stays a pillar concept — an agent-initiated deep read IS
+  // dive-in time (BRD F.1); 'guru' is a navigation source, not a ring.
+  const { logTime } = useTimeTracking(sourceTab === 'catchup' ? 'catchup' : 'divein', {
     interval: 60000,
     contextId: articleId,
     activityType: 'article',
@@ -384,14 +397,14 @@ export default function ArticleDetailScreen() {
         return;
       }
     }
-    const feedPath = sourceTab === 'catchup' ? '/catchup' : '/divein';
+    const feedPath = sourceDest(sourceTab).path;
     router.replace(feedPath);
   };
 
   const handleBackToFeed = () => {
     setReadingHistory([]);
     setReadingHistoryState([]);
-    const feedPath = sourceTab === 'catchup' ? '/catchup' : '/divein';
+    const feedPath = sourceDest(sourceTab).path;
     router.replace(feedPath);
   };
 
@@ -465,11 +478,11 @@ export default function ArticleDetailScreen() {
           onPress={handleBack}
           style={styles.backButton}
           accessibilityRole="button"
-          accessibilityLabel={`Back to ${sourceTab === 'catchup' ? 'Catch-up' : 'Dive-in'}`}
+          accessibilityLabel={`Back to ${sourceDest(sourceTab).label}`}
         >
           <Text style={[styles.backChevron, { color: TC.textPrimary }]}>‹</Text>
           <Text style={[styles.backLabel, { color: TC.textSecondary }]}>
-            {sourceTab === 'catchup' ? 'Catch-up' : 'Dive-in'}
+            {sourceDest(sourceTab).label}
           </Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: TC.textPrimary }]} numberOfLines={1}>

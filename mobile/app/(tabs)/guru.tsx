@@ -39,17 +39,67 @@ type TurnInput =
   | { type: 'goal' | 'message'; text: string }
   | { type: 'decision'; approval_id: string; approved: boolean };
 
+// R17 (founder): the journey SURVIVES leaving the tab — dive into an article,
+// hop to a pillar, even reload the page (web), and you land exactly where you
+// left off. Module cache covers in-app navigation on every platform;
+// sessionStorage adds web-reload durability. "↺ New goal" is the only reset.
+// (The backend already persists the conversation per session_id — this keeps
+// the RENDERED journey in sync with it.)
+const JOURNEY_KEY = 'guru_agent_journey_v1';
+let journeyCache: { sessionId: string | null; blocks: AgentBlock[]; nextKey: number } | null = null;
+
+function loadJourney(): { sessionId: string | null; blocks: AgentBlock[]; nextKey: number } {
+  if (journeyCache) return journeyCache;
+  try {
+    if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
+      const raw = sessionStorage.getItem(JOURNEY_KEY);
+      if (raw) {
+        const j = JSON.parse(raw);
+        if (j && Array.isArray(j.blocks)) {
+          return { sessionId: j.sessionId ?? null, blocks: j.blocks, nextKey: j.nextKey || j.blocks.length + 1 };
+        }
+      }
+    }
+  } catch {}
+  return { sessionId: null, blocks: [], nextKey: 0 };
+}
+
+function saveJourney(sessionId: string | null, blocks: AgentBlock[], nextKey: number) {
+  journeyCache = { sessionId, blocks, nextKey };
+  try {
+    if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(JOURNEY_KEY, JSON.stringify(journeyCache));
+    }
+  } catch {}
+}
+
+function clearJourney() {
+  journeyCache = null;
+  try {
+    if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(JOURNEY_KEY);
+    }
+  } catch {}
+}
+
 export default function GuruAgentScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
-  const [blocks, setBlocks] = useState<AgentBlock[]>([]);
+  const restored = useRef(loadJourney()).current;
+  const [blocks, setBlocks] = useState<AgentBlock[]>(restored.blocks);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [blobState, setBlobState] = useState<BlobState>('idle');
-  const sessionIdRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(restored.sessionId);
   const scrollRef = useRef<ScrollView>(null);
-  const keyRef = useRef(0);
+  const keyRef = useRef(restored.nextKey);
+
+  // Persist the rendered journey on every change so leaving + returning
+  // resumes in place (R17).
+  React.useEffect(() => {
+    saveJourney(sessionIdRef.current, blocks, keyRef.current);
+  }, [blocks]);
 
   const bg = isDark ? '#0A0E17' : '#F8FAFC';
   const tPrim = isDark ? '#F1F5F9' : '#0F172A';
@@ -146,6 +196,7 @@ export default function GuruAgentScreen() {
 
   const onNewGoal = () => {
     sessionIdRef.current = null;
+    clearJourney();
     setBlocks([]);
     setStatus(null);
     setBlobState('idle');
