@@ -1,16 +1,15 @@
 # Guru
 
-**AI-powered industry intelligence platform** that transforms how professionals stay current. Guru dynamically clusters articles by semantic similarity, generates AI-powered summaries and insights, and guides deeper understanding through Socratic Q&A.
+**An agentic reading companion that plans its own work, runs a tool-use loop over its own backend, and builds its own UI to show you the results.**
 
-## What It Does
+At Guru's core is an in-app agent, the **Journey Pipeline**. You state an intent ("catch me up on AI", "run my weekly recap") and the agent proposes a 3-6 step plan you approve. It then executes that plan through roughly 10 tools that wrap its own backend on a Claude tool-use loop, streamed over SSE. Instead of returning text, the model emits a versioned declarative UI-block schema that the app renders on the fly: article cards, carousels, activity rings, approval cards. The model generates the interface itself, not just text. Every write action surfaces an approval card first, so a human stays in the loop.
 
-- **Smart Clustering** — Articles are semantically grouped into coherent storyboards that adapt to your professional context
-- **Multi-Filter Views** — Switch between industries and specializations; articles re-cluster dynamically per context
-- **Rich Summaries** — AI-generated "What's in it", "Why it matters", "Between the lines" breakdowns for every article
-- **Socratic Q&A** — Ask questions about any article and get contextual, citation-backed answers
-- **WebView Reader** — Read original articles in-app with annotation overlays, highlights, and notes
-- **Weekly Recap** — Guided reflection journey with active recall questions and insight extraction
-- **10 Industries, 50 Specializations** — Consumer, Technology, Finance, Healthcare, Manufacturing, Energy, Real Estate, Education, Government, Non-Profit
+The rest of Guru:
+
+- **Filter-driven semantic clustering** - the same articles re-cluster around the professional lens you're reading in (SentenceTransformer embeddings + scikit-learn).
+- **Chrome reading overlay** - a Manifest V3 extension (Preact + Shadow DOM) that layers an annotation rail and Socratic Q&A onto any page without modifying it.
+- **Weekly active-recall recap** - a 4-stage Learning Studio with memory wall, reflection, Socratic deep-dive, and one commitment.
+- **10 industries, 50 specializations** - Consumer, Technology, Finance, Healthcare, Manufacturing, Energy, Real Estate, Education, Government, Non-Profit.
 
 ## Tech Stack
 
