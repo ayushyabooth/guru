@@ -44,6 +44,14 @@ interface Props {
   onOpenArticle: (id: string, url?: string) => void;
 }
 
+// R19: internal ids must never reach the user's eyes. The system prompt
+// forbids them; this is the belt-and-braces for anything that slips through
+// (e.g. pills generated before the rule, persisted journeys).
+const UUID_RE = /\s*\(?\b(?:article|journey|storyboard)?\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)?/gi;
+export function stripScaffolding(s: string): string {
+  return (s || '').replace(UUID_RE, '').replace(/\(\s*\)/g, '').replace(/ {2,}/g, ' ').trim();
+}
+
 export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpenArticle }: Props) {
   const tPrim = isDark ? '#F1F5F9' : '#0F172A';
   const tSec = isDark ? '#94A3B8' : '#475569';
@@ -64,14 +72,14 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
     case 'user_echo':
       return (
         <View style={{ alignSelf: 'flex-end', maxWidth: '85%', backgroundColor: 'rgba(99,102,241,0.20)', borderColor: 'rgba(129,140,248,0.35)', borderWidth: 1, borderRadius: 16, borderBottomRightRadius: 5, paddingHorizontal: 13, paddingVertical: 9, marginBottom: 10 }}>
-          <Text style={{ color: isDark ? '#C7D2FE' : '#4338CA', fontSize: 13.5 }}>{block.text}</Text>
+          <Text style={{ color: isDark ? '#C7D2FE' : '#4338CA', fontSize: 13.5 }}>{stripScaffolding(block.text)}</Text>
         </View>
       );
 
     case 'text':
       return (
         <View style={{ marginBottom: 12, maxWidth: '96%' }}>
-          <GuruFormattedText text={block.md || ''} color={tPrim} accent="#818CF8" fontSize={14} />
+          <GuruFormattedText text={stripScaffolding(block.md || '')} color={tPrim} accent="#818CF8" fontSize={14} />
         </View>
       );
 
@@ -234,8 +242,10 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
           {(block.prompts || []).map((p: string, i: number) => (
+            {/* Display stripped of any internal ids; the RAW text is still sent
+                so the agent keeps its target reference (R19). */}
             <TouchableOpacity key={i} style={pill('rgba(99,102,241,0.16)', '#A5B4FC')} onPress={() => onSend(p)} accessibilityRole="button">
-              <Text style={pillTxt(isDark ? '#A5B4FC' : '#6366F1')}>{p}</Text>
+              <Text style={pillTxt(isDark ? '#A5B4FC' : '#6366F1')}>{stripScaffolding(p)}</Text>
             </TouchableOpacity>
           ))}
         </View>

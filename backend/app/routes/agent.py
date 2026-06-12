@@ -44,10 +44,12 @@ MAX_HISTORY_MSGS = 40  # keep sessions bounded
 
 # ── Tools (thin wrappers over existing endpoints) ────────────────────────────
 
-# Writes that mutate user data outside an explicitly-requested flow get an
-# approval gate. Recap progression (start/answer/socratic/advance) acts on the
-# user's direct instruction — the message itself is the consent.
-WRITE_TOOLS = {"save_article", "mark_not_relevant", "add_note", "set_commitment"}
+# Writes that COMPOSE content on the user's behalf (notes, commitments) get an
+# approval gate. save/not-relevant do NOT (R19, founder): the user's tap or
+# message IS the consent — asking again was double-confirmation. The system
+# prompt forbids calling them unprompted. Recap progression likewise acts on
+# the user's direct instruction.
+WRITE_TOOLS = {"add_note", "set_commitment"}
 
 TOOLS = [
     {
@@ -84,7 +86,7 @@ TOOLS = [
     },
     {
         "name": "save_article",
-        "description": "Save an article to the user's dive-in queue. WRITE: requires user approval (handled automatically — just call it when saving is the right action).",
+        "description": "Save an article to the user's dive-in queue. Executes IMMEDIATELY — call it ONLY when the user just asked to save (tapped Save / said save it). If YOU think something deserves saving unprompted, suggest it in text/pills and wait for their word.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -96,7 +98,7 @@ TOOLS = [
     },
     {
         "name": "mark_not_relevant",
-        "description": "Mark a storyboard as not relevant, removing it from the user's feed. WRITE: requires user approval.",
+        "description": "Mark a storyboard as not relevant, removing it from the user's feed. Executes IMMEDIATELY — call it ONLY when the user just asked to skip/remove it; never unprompted.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -217,7 +219,7 @@ SYSTEM_STATIC = """You are Guru's agent — the engine behind the app's agentic 
 PROTOCOL (Journey Pipeline):
 1. When given a NEW GOAL: gather what you need with read tools (feed, metrics, commitment), then respond with a `plan` block (3-5 steps, realistic minute estimates) plus one short `text` block. Do NOT execute steps yet — the user approves/starts the plan first.
 2. When the user says to start/continue/next: execute the CURRENT step only, then present its result as blocks (e.g. one `article_card` for review, or `rings`/`stats` for progress) and an updated `plan` block with statuses. One step per turn keeps the user in control.
-3. Saves and removals go through save_article / mark_not_relevant — the system automatically asks the user to approve; never claim a write happened until you see its tool result.
+3. Saves and removals (save_article / mark_not_relevant) execute IMMEDIATELY — the user's tap or message is the consent, never ask them to confirm again. Only call them when the user just asked; if YOU want to suggest saving something, offer it via text/pills and wait. Notes and commitments (add_note / set_commitment) are approval-gated automatically. Never claim a write happened until you see its tool result.
 4. When all steps are done: respond with an `outcome_summary` block tallying what actually happened (only count writes confirmed by tool results) + `prompt_pills` with 2-3 next-step suggestions.
 5. Free-form questions at any time: answer them inline (use ask_guru when about a specific article), then offer to resume the journey.
 
@@ -249,6 +251,8 @@ No prose outside the JSON. Block types (v1):
 Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the content, the text block carries the voice (sharp, encouraging mentor — never corporate).
 
 BROWSER WIDGET (extension): if the user asks about the Guru widget/extension, reading with Guru on external sites, or why articles open without Guru overlays, give these exact install steps as a numbered list (Chrome/Chromium only): 1) Download the widget from https://mobile-guru8.vercel.app/guru-extension.zip and unzip it. 2) Type chrome://extensions into a new tab (it can't be linked). 3) Toggle ON "Developer mode" (top-right). 4) Click "Load unpacked" (top-left) and select the unzipped folder. 5) Reload the article page — the Guru orb appears bottom-right. Also mention the in-app Setup page (the "Get the full Guru experience" card on Home or the Guru tab) walks them through it with live detection.
+
+NO SCAFFOLDING (ALWAYS): internal identifiers — UUIDs, article/journey/storyboard ids, field names — must NEVER appear in any user-visible text, pill, title, or detail line. Refer to articles by short title only ("Save 'Policy Blueprint'", never "(article c5af1e5d-…)"). IDs belong exclusively in tool-call arguments; you already know which article is in focus from the conversation.
 
 ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text.
 
