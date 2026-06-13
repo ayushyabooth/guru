@@ -157,15 +157,15 @@ async def get_divein_feed(
         # an Education-tagged saved article must NOT show up while the user is on
         # the Consumer filter. Apply the same filter_conditions as the discovery
         # pools so "Saved for Later" stays consistent with the active filter.
-        # NOTE: saved articles are the user's deliberate library — they must
-        # NOT be aged out by the freshness window (cutoff_date is for the
-        # algorithmic discovery/expert pools only). Filtering saved articles by
-        # created_at made older saves silently vanish ("I see only one saved
-        # article when I had multiple", GUR-231).
+        # Saved articles age out with the freshness window like everything else
+        # (founder, GUR-232): a save you never got to within ARTICLE_TIME_WINDOW_DAYS
+        # is stale and shouldn't clutter the queue. The window keeps the library
+        # current rather than unbounded.
         saved_articles = []
         if user_saved_ids:
             saved_query = db.query(Article).filter(
                 Article.id.in_(user_saved_ids),
+                Article.created_at >= cutoff_date,
                 Article.title.isnot(None),
                 Article.title != 'Untitled',
             )

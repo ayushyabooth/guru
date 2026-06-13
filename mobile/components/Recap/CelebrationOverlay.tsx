@@ -85,16 +85,14 @@ export default function CelebrationOverlay({
     ).start();
   }, []);
 
+  // GUR-232: Recap is decoupled from the calendar week \u2014 label the period as
+  // "Since <Mon D>" (the start of this reflection), not a "Week of \u2026" range.
+  // No backend week_start is wired here, so derive a ~7-days-ago start.
   const getWeekLabel = () => {
-    const now = new Date();
-    const day = now.getDay(); // 0=Sun..6=Sat
-    const diff = day === 0 ? 6 : day - 1; // days since Monday
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - diff);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    return `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    start.setHours(0, 0, 0, 0);
+    return `Since ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
   return (

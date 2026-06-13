@@ -201,7 +201,7 @@ export default function AudioPlayerStage({
     return (
       <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Your Weekly Recap</Text>
+          <Text style={styles.headerTitle}>Your Recap</Text>
           <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
             <Text style={styles.dismissText}>Done</Text>
           </TouchableOpacity>

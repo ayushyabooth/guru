@@ -19,6 +19,9 @@ export interface MetricsData {
     status: 'not_started' | 'in_progress' | 'completed';
     weeklyProgress: number;
     weeklyGoal: number;
+    // GUR-232: per-window recap completion (Today|Week toggle)
+    completedToday: boolean;
+    completedThisWeek: boolean;
   };
   streak: number;
   stats: {
@@ -26,6 +29,11 @@ export interface MetricsData {
     articlesSaved: number;
     filtersExplored: number;
     topTopics: { name: string; count: number }[];
+    notesThisWeek: number;
+    // GUR-232: today-window stats for the Today|Week toggle
+    articlesReadToday: number;
+    notesToday: number;
+    topTopicsToday: { name: string; count: number }[];
   };
   lastUpdated: string | null;
 }
@@ -41,7 +49,6 @@ interface MetricState {
   profile: UserProfile | null;
   loading: boolean;
   error: string | null;
-  activeFilter: string;
 }
 
 // Action types
@@ -53,7 +60,6 @@ type MetricAction =
   // affordance on Home so the user still sees the refresh happen.
   | { type: 'HYDRATE_FROM_CACHE'; payload: { metrics: MetricsData; profile: UserProfile } }
   | { type: 'FETCH_ERROR'; payload: string }
-  | { type: 'SET_ACTIVE_FILTER'; payload: string }
   | { type: 'UPDATE_METRICS'; payload: Partial<MetricsData> };
 
 // Initial state
@@ -74,15 +80,19 @@ const initialState: MetricState = {
       status: 'not_started',
       weeklyProgress: 0,
       weeklyGoal: 60,
+      completedToday: false,
+      completedThisWeek: false,
     },
     streak: 0,
-    stats: { articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [] },
+    stats: {
+      articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [],
+      notesThisWeek: 0, articlesReadToday: 0, notesToday: 0, topTopicsToday: [],
+    },
     lastUpdated: null,
   },
   profile: null,
   loading: false,
   error: null,
-  activeFilter: 'all',
 };
 
 // Reducer
@@ -109,10 +119,7 @@ function metricReducer(state: MetricState, action: MetricAction): MetricState {
 
     case 'FETCH_ERROR':
       return { ...state, loading: false, error: action.payload };
-    
-    case 'SET_ACTIVE_FILTER':
-      return { ...state, activeFilter: action.payload };
-    
+
     case 'UPDATE_METRICS':
       return {
         ...state,
@@ -129,14 +136,7 @@ interface MetricContextType {
   state: MetricState;
   dispatch: React.Dispatch<MetricAction>;
   fetchMetrics: () => Promise<void>;
-  setActiveFilter: (filter: string) => void;
   updateMetrics: (metrics: Partial<MetricsData>) => void;
-  getFilterTabs: () => Array<{
-    id: string;
-    label: string;
-    type: 'core' | 'specialization' | 'interest';
-    value: string;
-  }>;
 }
 
 const MetricContext = createContext<MetricContextType | undefined>(undefined);
@@ -155,25 +155,18 @@ export function MetricProvider({
 }: MetricProviderProps) {
   const [state, dispatch] = useReducer(metricReducer, initialState);
 
-  // Always-current active filter, so the polling interval (which captures an
-  // older fetchMetrics closure) still fetches for the latest selected filter.
-  const activeFilterRef = useRef(state.activeFilter);
-  activeFilterRef.current = state.activeFilter;
+  // True once the first network fetch has rendered. Used to gate cache
+  // hydration: hydrate from cache once on mount (instant paint) — NOT on every
+  // 60s poll, which would re-dispatch identical data.
+  const hasRenderedRef = useRef(false);
 
-  // Filter whose data is currently rendered (set on fetch success). Used to
-  // decide when a cache hydration is needed: on mount and on filter change —
-  // NOT on every 60s poll, which would re-dispatch identical data.
-  const renderedFilterRef = useRef<string | null>(null);
-
-  // Fetch metrics function — scoped to the active Home content filter.
-  // Stale-while-revalidate: if a cached response exists for this filter,
-  // dispatch it immediately (loading stays true via FETCH_START) so the UI
-  // paints instantly, then refresh over the network and update state.
-  const fetchMetrics = async (filterOverride?: string) => {
-    const filter = filterOverride ?? activeFilterRef.current;
-
-    if (renderedFilterRef.current !== filter) {
-      const cached = metricService.getCachedMetrics(filter);
+  // Fetch aggregate metrics (GUR-232: Home is no longer filter-scoped).
+  // Stale-while-revalidate: on first load, dispatch any cached response
+  // immediately (loading stays true via FETCH_START) so the UI paints
+  // instantly, then refresh over the network and update state.
+  const fetchMetrics = async () => {
+    if (!hasRenderedRef.current) {
+      const cached = metricService.getCachedMetrics();
       if (cached) {
         dispatch({
           type: 'HYDRATE_FROM_CACHE',
@@ -185,8 +178,8 @@ export function MetricProvider({
     dispatch({ type: 'FETCH_START' });
 
     try {
-      const data = await metricService.getMetricsWithFallback(filter);
-      renderedFilterRef.current = filter;
+      const data = await metricService.getMetricsWithFallback();
+      hasRenderedRef.current = true;
       dispatch({
         type: 'FETCH_SUCCESS',
         payload: {
@@ -201,68 +194,10 @@ export function MetricProvider({
     }
   };
 
-  // Set active filter
-  const setActiveFilter = (filter: string) => {
-    dispatch({ type: 'SET_ACTIVE_FILTER', payload: filter });
-  };
-
   // Update metrics
   const updateMetrics = (metrics: Partial<MetricsData>) => {
     dispatch({ type: 'UPDATE_METRICS', payload: metrics });
   };
-
-  // Generate filter tabs based on user profile
-  const getFilterTabs = () => {
-    const tabs = [];
-
-    if (state.profile) {
-      // "All" — aggregate view across every filter (dashboard default).
-      tabs.push({
-        id: 'all',
-        label: 'All',
-        type: 'all' as const,
-        value: 'all',
-      });
-
-      // Core industry tab
-      tabs.push({
-        id: 'core',
-        label: state.profile.coreIndustry,
-        type: 'core' as const,
-        value: 'core',
-      });
-
-      // Specialization tabs
-      state.profile.specializations.forEach((spec, index) => {
-        tabs.push({
-          id: `specialization-${index}`,
-          label: spec,
-          type: 'specialization' as const,
-          value: `specialization:${spec}`,
-        });
-      });
-
-      // Additional interest tabs
-      state.profile.additionalInterests.forEach((interest, index) => {
-        tabs.push({
-          id: `interest-${index}`,
-          label: interest,
-          type: 'interest' as const,
-          value: `interest:${interest}`,
-        });
-      });
-    }
-
-    return tabs;
-  };
-
-  // Re-scope the dashboard whenever the active Home filter changes. Skips the
-  // first run — the mount effect below already does the initial fetch.
-  const didMountFilter = useRef(false);
-  useEffect(() => {
-    if (!didMountFilter.current) { didMountFilter.current = true; return; }
-    fetchMetrics(state.activeFilter);
-  }, [state.activeFilter]);
 
   // Smart polling: only when app is in foreground (or document visible on web)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -324,9 +259,7 @@ export function MetricProvider({
     state,
     dispatch,
     fetchMetrics,
-    setActiveFilter,
     updateMetrics,
-    getFilterTabs,
   };
 
   return (

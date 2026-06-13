@@ -164,7 +164,11 @@ export default function RecapScreen() {
   weekStart.setHours(0, 0, 0, 0);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
-  const weekLabel = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  // GUR-232: Recap is decoupled from the calendar week \u2014 it reflects reading
+  // "since your last recap". Prefer the backend journey's week_start (date of
+  // the last recap, or ~7 days ago for the first); render as "Since <Mon D>".
+  const periodStart = journey?.week_start ? new Date(journey.week_start) : weekStart;
+  const sinceLabel = `Since ${periodStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
   // ── GUR-211: Immersive full-screen stages hide the floating tab bar ──
   // The Recap journey stages must be full-screen per BRD F.2. The floating
@@ -571,7 +575,7 @@ export default function RecapScreen() {
         {OrganicBackground ? <OrganicBackground variant="recap" /> : null}
         <View style={styles.loadingContainer}>
           <GuruBlob size={40} state="thinking" />
-          <Text style={styles.loadingText}>Preparing your weekly recap...</Text>
+          <Text style={styles.loadingText}>Preparing your recap...</Text>
           <Text style={[styles.loadingSubtext, { color: colors.textSecondary }]}>Gathering your articles and insights</Text>
         </View>
       </SafeAreaView>
@@ -726,7 +730,7 @@ export default function RecapScreen() {
         <TextPodcastStage
           script={audioScript || []}
           isLoading={!hasScript && audioStatus !== 'failed'}
-          error={audioStatus === 'failed' ? "We couldn't generate your conversation this week." : null}
+          error={audioStatus === 'failed' ? "We couldn't generate your conversation right now." : null}
           onFinish={handleTextRecapFinish}
           onDismiss={handleTextRecapFinish}
         />
@@ -775,12 +779,12 @@ export default function RecapScreen() {
               <Text style={styles.archiveButtonText}>Journal</Text>
             </TouchableOpacity>
           </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your weekly learning studio</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Reflect on your reading since your last recap</Text>
         </View>
 
         {/* Ghost Ring Entry Area */}
         <View style={styles.entrySection}>
-          <Text style={[styles.weekLabel, { color: colors.textSecondary }]}>{weekLabel}</Text>
+          <Text style={[styles.weekLabel, { color: colors.textSecondary }]}>{sinceLabel}</Text>
 
           {/* Recap hero — living organism in a gold progress arc (GUR-228
               identity language; replaces the legacy PlasmaBlobRing) */}
@@ -816,7 +820,7 @@ export default function RecapScreen() {
               <Icon name="star-four-points" size={32} color={RingColors.recap.primary} style={{ marginBottom: Spacing.sm }} />
               <Text style={styles.completedTitle}>Recap Complete</Text>
               <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-                You've completed your weekly learning recap.
+                You've completed your learning recap.
               </Text>
               <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs }}>
                 <TouchableOpacity
@@ -893,7 +897,7 @@ export default function RecapScreen() {
               <Text style={[styles.ctaText, { color: colors.textSecondary }]}>
                 {isInProgress
                   ? 'Continue where you left off'
-                  : 'Fill your last ring \u2014 consolidate what you learned this week'
+                  : 'Fill your last ring \u2014 consolidate what you learned since your last recap'
                 }
               </Text>
               <GlassButton
@@ -914,10 +918,10 @@ export default function RecapScreen() {
           <Text style={[styles.stagesTitle, { color: colors.textPrimary }]}>Journey Stages</Text>
 
           {[
-            { num: 1, name: 'Your Week', desc: 'Review the articles and insights you explored' },
+            { num: 1, name: 'Your Reading', desc: 'Review the articles and insights you explored' },
             { num: 2, name: 'Reflect', desc: 'Answer guided questions to strengthen recall' },
             { num: 3, name: 'Explore', desc: 'Deep Socratic dialogue to find connections' },
-            { num: 4, name: 'Listen', desc: 'NotebookLM-style audio recap of your week' },
+            { num: 4, name: 'Listen', desc: 'NotebookLM-style audio recap of your reading' },
           ].map((stage, index, arr) => {
             const isCompleted = stage.num <= completedStages;
             const isCurrent = isInProgress && stage.num === completedStages + 1;

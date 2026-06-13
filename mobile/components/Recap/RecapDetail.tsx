@@ -93,12 +93,13 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
     ? { backgroundColor: 'rgba(15, 20, 35, 0.55)', borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.08)' }
     : { backgroundColor: 'rgba(255, 255, 255, 0.85)', borderBottomWidth: 1, borderBottomColor: 'rgba(15, 23, 42, 0.07)' };
 
-  const formatDateRange = (weekStart: unknown, weekEnd: unknown) => {
-    if (typeof weekStart !== 'string' || typeof weekEnd !== 'string') return '';
+  // GUR-232: Recap is decoupled from the calendar week — label the period by
+  // its start ("Since <Mon D, YYYY>") rather than a "<start> – <end>" range.
+  const formatDateRange = (weekStart: unknown, _weekEnd?: unknown) => {
+    if (typeof weekStart !== 'string') return '';
     const start = new Date(weekStart);
-    const end = new Date(weekEnd);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
-    return `${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+    if (isNaN(start.getTime())) return '';
+    return `Since ${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
   const parseAudioScript = (raw: unknown): ScriptSegment[] => {
@@ -260,9 +261,9 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Icon name="microphone-outline" size={16} color={RingColors.recap.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Weekly Recap</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Your Recap</Text>
             </View>
-            <Text style={[styles.podcastSubtitle, { color: colors.textSecondary }]}>A personalized recap of your learning week</Text>
+            <Text style={[styles.podcastSubtitle, { color: colors.textSecondary }]}>A personalized recap of your reading since your last recap</Text>
 
             {script.map((segment, i) => (
               <View key={i} style={styles.scriptEntry}>
@@ -292,7 +293,7 @@ export default function RecapDetail({ journeyId, onClose }: RecapDetailProps) {
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recap in progress</Text>
             </View>
             <Text style={[styles.podcastSubtitle, { color: colors.textSecondary, marginTop: 4 }]}>
-              {`You've engaged with ${Number(activity.articles_read) || 0} article${(Number(activity.articles_read) || 0) === 1 ? '' : 's'} this week. Finish your Recap journey to unlock your insights, commitment, and weekly synthesis.`}
+              {`You've engaged with ${Number(activity.articles_read) || 0} article${(Number(activity.articles_read) || 0) === 1 ? '' : 's'} since your last recap. Finish your Recap journey to unlock your insights, commitment, and synthesis.`}
             </Text>
           </View>
         )}

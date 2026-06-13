@@ -23,9 +23,9 @@ import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 const GOALS = [
   { label: 'Catch me up', text: 'Catch me up on my feed', color: '#38BDF8' },
   { label: 'Dive into saved & expert picks', text: 'Dive-in mode: walk me through my saved-for-later queue and expert picks, deep-read style', color: '#EC4899' },
-  { label: 'Run my weekly recap', text: 'Run my weekly recap', color: '#FB923C' },
+  { label: 'Run my recap', text: 'Run my recap', color: '#FB923C' },
   { label: 'How am I tracking this week?', text: 'How am I tracking against my goals this week?', color: '#34D399' },
-  { label: 'What did I learn this week?', text: 'Synthesize what I learned this week from my reading', color: '#6366F1' },
+  { label: 'What did I learn today?', text: 'Synthesize what I learned today from my reading', color: '#6366F1' },
 ];
 
 // GUR-231: journey mode — drives the time heartbeat's ring_type. 'progress'
@@ -43,7 +43,7 @@ function classifyGoal(text: string): JourneyMode {
 const MODES: { label: string; text: string; mode: JourneyMode }[] = [
   { label: 'Catch up', text: 'Switch modes: catch me up on my feed', mode: 'catchup' },
   { label: 'Dive in', text: 'Switch modes: dive into my saved articles and expert picks', mode: 'divein' },
-  { label: 'Recap', text: 'Switch modes: run my weekly recap', mode: 'recap' },
+  { label: 'Recap', text: 'Switch modes: run my recap', mode: 'recap' },
   { label: 'Progress', text: 'Switch modes: show my progress and rings', mode: 'progress' },
 ];
 

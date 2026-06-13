@@ -82,7 +82,7 @@ export default function TextPodcastStage({
       <SafeAreaView style={[styles.container, { backgroundColor: screenBg }]}>
         <View style={styles.headerRow}>
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
-            Your Weekly Recap
+            Your Recap
           </Text>
           <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
             <Text style={[styles.doneText, { color: RingColors.recap.light }]}>Done</Text>
@@ -109,7 +109,7 @@ export default function TextPodcastStage({
       <SafeAreaView style={[styles.container, { backgroundColor: screenBg }]}>
         <View style={styles.headerRow}>
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
-            Your Weekly Recap
+            Your Recap
           </Text>
           <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
             <Text style={[styles.doneText, { color: RingColors.recap.light }]}>Done</Text>
@@ -117,7 +117,7 @@ export default function TextPodcastStage({
         </View>
         <View style={styles.centerContainer}>
           <Text style={[styles.errorTitle, { color: bodyTextColor }]}>
-            We couldn't generate your conversation this week.
+            We couldn't generate your conversation right now.
           </Text>
           {error ? (
             <Text style={[styles.errorSubtitle, { color: subtitleColor }]}>
@@ -163,7 +163,7 @@ export default function TextPodcastStage({
             <Text style={[styles.stickyLetter, { color: analystLabelColor }]}>A</Text>
           </View>
           <Text style={[styles.stickyTitle, { color: RingColors.recap.light }]}>
-            Your Weekly Recap
+            Your Recap
           </Text>
           <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
             <Text style={[styles.doneText, { color: RingColors.recap.light }]}>
@@ -181,7 +181,7 @@ export default function TextPodcastStage({
       >
         <View style={styles.headerRow}>
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
-            Your Weekly Recap
+            Your Recap
           </Text>
           <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
             <Text style={[styles.doneText, { color: RingColors.recap.light }]}>

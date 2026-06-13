@@ -31,13 +31,24 @@ export interface MetricsResponse {
       status: 'not_started' | 'in_progress' | 'completed';
       weeklyProgress: number;
       weeklyGoal: number;
+      // GUR-232: per-window recap completion so the Today|Week toggle can show
+      // "Done today / Not today" vs the weekly status independently.
+      completedToday: boolean;
+      completedThisWeek: boolean;
     };
     streak: number;
     stats: {
+      // Weekly window (default surfaced everywhere it was before)
       articlesRead: number;
       articlesSaved: number;
       filtersExplored: number;
       topTopics: { name: string; count: number }[];
+      notesThisWeek: number;
+      // Today window (GUR-232) — the Today|Week toggle reads these for the
+      // "today" view; saved is all-time so it has no today variant.
+      articlesReadToday: number;
+      notesToday: number;
+      topTopicsToday: { name: string; count: number }[];
     };
     lastUpdated: string;
   };
@@ -172,6 +183,12 @@ class MetricService {
               : 'not_started',
             weeklyProgress: metricsData.week?.filter((day: any) => day.recap_completed).length * 60 || 0,
             weeklyGoal: profileData.recap_weekly_goal_minutes || 60,
+            // GUR-232: decoupled per-window completion flags from the backend.
+            // Fall back to today's snapshot / weekly array if the new fields
+            // are absent (older API), so the toggle still reads sensibly.
+            completedToday: metricsData.recap_completed_today ?? !!metricsData.today?.recap_completed,
+            completedThisWeek: metricsData.recap_completed_this_week
+              ?? !!metricsData.week?.some((day: any) => day.recap_completed),
           },
           streak: metricsData.current_streak || 0,
           stats: {
@@ -179,6 +196,11 @@ class MetricService {
             articlesSaved: metricsData.articles_saved || 0,
             filtersExplored: metricsData.filters_explored || 0,
             topTopics: metricsData.top_topics || [],
+            notesThisWeek: metricsData.notes_this_week || 0,
+            // GUR-232: today-window stats
+            articlesReadToday: metricsData.articles_read_today || 0,
+            notesToday: metricsData.notes_today || 0,
+            topTopicsToday: metricsData.top_topics_today || [],
           },
           lastUpdated: new Date().toISOString(),
         },
@@ -229,9 +251,12 @@ class MetricService {
       metrics: {
         catchup: { dailyProgress: 0, dailyGoal: 30, weeklyTotal: 0 },
         divein: { dailyProgress: 0, dailyGoal: 30, weeklyProgress: 0, weeklyGoal: 120 },
-        recap: { status: 'not_started', weeklyProgress: 0, weeklyGoal: 60 },
+        recap: { status: 'not_started', weeklyProgress: 0, weeklyGoal: 60, completedToday: false, completedThisWeek: false },
         streak: 0,
-        stats: { articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [] },
+        stats: {
+          articlesRead: 0, articlesSaved: 0, filtersExplored: 0, topTopics: [],
+          notesThisWeek: 0, articlesReadToday: 0, notesToday: 0, topTopicsToday: [],
+        },
         lastUpdated: new Date().toISOString(),
       },
       profile: {

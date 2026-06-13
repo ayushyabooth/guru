@@ -19,7 +19,6 @@ import { userService } from '../../services/user-service';
 import GuruConstellation from '../../components/Rings/GuruConstellation';
 import GuruWordmark from '../../components/ui/GuruWordmark';
 import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
-import FeedTabBar from '../../components/Home/FeedTabBar';
 import { removeAuthToken, getAuthToken } from '../../utils/auth';
 import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
@@ -358,12 +357,16 @@ const debugStyles = StyleSheet.create({
 // ─── Home Content ──────────────────────────────────────────────────
 
 function HomeContent() {
-  const { state, fetchMetrics, setActiveFilter, getFilterTabs, updateMetrics } = useMetrics();
+  const { state, fetchMetrics, updateMetrics } = useMetrics();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [showSettings, setShowSettings] = useState(false); // GUR-200: settings modal hosts logout
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
+  // GUR-232: Today | Week window toggle. Default = Today. Governs the rings,
+  // the progress bars, the activity chips, and the section title together — no
+  // extra fetch, both windows already live in state.metrics.
+  const [view, setView] = useState<'today' | 'week'>('today');
   // GUR-13: this week's One Commitment for the reminder card
   const [commitment, setCommitment] = useState<string | null>(null);
   useEffect(() => {
@@ -400,10 +403,6 @@ function HomeContent() {
 
   const handleRefresh = async () => {
     await fetchMetrics();
-  };
-
-  const handleTabPress = (tabId: string, filter: string) => {
-    setActiveFilter(filter);
   };
 
   const handleRingPress = (section: 'catchup' | 'divein' | 'recap') => {
@@ -455,13 +454,21 @@ function HomeContent() {
     fetchMetrics();
   }, [fetchMetrics]);
 
-  const filterTabs = getFilterTabs();
-  // Reflect the active filter in the header so it's clear the dashboard is
-  // scoped (e.g. "Education Progress" vs the all-up "Your Progress").
-  const activeFilterTab = filterTabs.find((t: any) => t.value === state.activeFilter);
-  const progressTitle = (!state.activeFilter || state.activeFilter === 'all' || !activeFilterTab)
-    ? 'Your Progress'
-    : `${activeFilterTab.label} Progress`;
+  // GUR-232: Home is no longer filter-scoped — always the all-up progress.
+  const progressTitle = 'Your Progress';
+
+  // GUR-232: derive the Today|Week window once so the rings, bars, chips and
+  // section title all read from the same computed source.
+  const isToday = view === 'today';
+  const catchupDailyGoal = displayMetrics.catchup.dailyGoal;
+  const catchupWeeklyGoal = catchupDailyGoal * 7;
+  const diveinDailyGoal = displayMetrics.divein.dailyGoal || 30;
+  const diveinWeeklyGoal = displayMetrics.divein.weeklyGoal;
+
+  // Recap ring fill: completed = 1, in-progress = 0.5, else 0 — per window.
+  const recapInProgress = displayMetrics.recap.status === 'in_progress';
+  const recapTodayFill = displayMetrics.recap.completedToday ? 1 : recapInProgress ? 0.5 : 0;
+  const recapWeekFill = displayMetrics.recap.completedThisWeek ? 1 : recapInProgress ? 0.5 : 0;
 
   if (state.loading && !displayMetrics.lastUpdated) {
     // First load with nothing cached (new user): lightweight content skeleton
@@ -588,17 +595,19 @@ function HomeContent() {
           <ExtensionInstallBanner />
         </View>
 
-        {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec)
-            R15: dims while a filter re-scope is in flight so the refresh is visible. */}
-        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg, opacity: state.loading && displayMetrics.lastUpdated ? 0.45 : 1 }}>
+        {/* Hero Triskelion — v2 Plasma Blob + Volumetric (Figma Rings / Hero Volumetric Spec) */}
+        <View style={{ alignItems: 'center', paddingVertical: Spacing.lg }}>
           {(() => {
-            // Pass raw ratios (un-clamped). Triskelion caps rendering at 1.0
-            // internally but uses values > 1 to trigger the Over-Goal halo
-            // (Figma 47:2). Clamping here would suppress that state.
-            const c = displayMetrics.catchup.dailyProgress / Math.max(displayMetrics.catchup.dailyGoal, 1);
-            const d = (displayMetrics.divein.dailyProgress || displayMetrics.divein.weeklyProgress) /
-              Math.max(displayMetrics.divein.dailyGoal || displayMetrics.divein.weeklyGoal, 1);
-            const r = displayMetrics.recap.status === 'completed' ? 1 : displayMetrics.recap.status === 'in_progress' ? 0.5 : 0;
+            // GUR-232: rings reflect the Today|Week toggle. Pass raw ratios
+            // (un-clamped) — Triskelion caps rendering at 1.0 internally but
+            // uses values > 1 to trigger the Over-Goal halo (Figma 47:2).
+            const c = isToday
+              ? displayMetrics.catchup.dailyProgress / Math.max(catchupDailyGoal, 1)
+              : displayMetrics.catchup.weeklyTotal / Math.max(catchupWeeklyGoal, 1);
+            const d = isToday
+              ? displayMetrics.divein.dailyProgress / Math.max(diveinDailyGoal, 1)
+              : displayMetrics.divein.weeklyProgress / Math.max(diveinWeeklyGoal, 1);
+            const r = isToday ? recapTodayFill : recapWeekFill;
             const celebrate = c >= 1 && d >= 1 && r >= 1;
             return (
               <GuruConstellation
@@ -636,150 +645,168 @@ function HomeContent() {
           </TouchableOpacity>
         </View>
 
-        {/* Feed Tab Bar */}
-        {filterTabs.length > 0 && (
-          <View style={[styles.feedSection, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
-            <Text style={[styles.feedTitle, { color: COLORS.textPrimary }]}>Content Filters</Text>
-            <FeedTabBar
-              tabs={filterTabs}
-              activeTabId={state.activeFilter}
-              onTabPress={handleTabPress}
-            />
-            {/* GUR-228 R15: make the re-scope undeniable — a per-filter summary
-                that updates with every chip. The rings/stats above re-scope too,
-                but when one topic dominates a user's reading their scoped values
-                can legitimately equal the aggregate, which read as "filter does
-                nothing"; this line always names what the dashboard is showing. */}
-            {state.activeFilter !== 'all' && activeFilterTab && (
-              <Text style={{ marginTop: 10, fontSize: 12.5, lineHeight: 17, color: COLORS.textSecondary }} accessibilityLiveRegion="polite">
-                {state.loading
-                  ? `Scoping dashboard to ${activeFilterTab.label}…`
-                  : `${activeFilterTab.label} this week: ${displayMetrics.stats.articlesRead} read · ${displayMetrics.catchup.weeklyTotal || 0}m catch-up · ${displayMetrics.divein.weeklyProgress || 0}m dive-in${displayMetrics.stats.topTopics[0] ? ` · top: ${displayMetrics.stats.topTopics[0].name}` : ''}`}
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Weekly Goals Progress (migrated from Recap)
-            R15: dims with the rings while a filter re-scope is in flight. */}
-        <View style={[styles.goalsSection, { opacity: state.loading && displayMetrics.lastUpdated ? 0.45 : 1 }]}>
+        {/* GUR-232: Goals Progress — Today | Week window toggle governs the
+            section title, the activity chips, and the three progress bars. */}
+        <View style={styles.goalsSection}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>Your Week</Text>
-            {/* GUR-13: reading streak (data from /me/metrics current_streak) */}
-            {displayMetrics.streak > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#FB923C' }}>🔥 {displayMetrics.streak} day{displayMetrics.streak === 1 ? '' : 's'}</Text>
+            <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>{isToday ? 'Your Day' : 'Your Week'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* GUR-13: reading streak (data from /me/metrics current_streak) */}
+              {displayMetrics.streak > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FB923C' }}>🔥 {displayMetrics.streak} day{displayMetrics.streak === 1 ? '' : 's'}</Text>
+                </View>
+              )}
+              {/* GUR-232: Today | Week segmented pill — glass aesthetic */}
+              <View
+                style={[styles.windowToggle, { backgroundColor: COLORS.progressBarBg, borderColor: COLORS.glassBorder }]}
+                accessibilityRole="tablist"
+              >
+                {(['today', 'week'] as const).map((w) => {
+                  const active = view === w;
+                  return (
+                    <TouchableOpacity
+                      key={w}
+                      onPress={() => setView(w)}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={w === 'today' ? 'Show today' : 'Show this week'}
+                      style={[
+                        styles.windowToggleSegment,
+                        active && { backgroundColor: COLORS.isDark ? 'rgba(56,189,248,0.22)' : '#FFFFFF', borderColor: COLORS.isDark ? 'rgba(56,189,248,0.35)' : 'rgba(15,23,42,0.08)', borderWidth: 1 },
+                      ]}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: active ? '700' : '600', color: active ? COLORS.textPrimary : COLORS.textSecondary }}>
+                        {w === 'today' ? 'Today' : 'Week'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            )}
+            </View>
           </View>
-          {/* GUR-13: weekly activity stat chips (data from /me/metrics) */}
+          {/* GUR-232: activity stat chips — scoped to the active window.
+              saved is all-time (no today/week variant). The "filters" chip
+              was removed (meaningless); top topic reads "Top: <topic>". */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, marginBottom: 4 }}>
             {[
-              { n: displayMetrics.stats.articlesRead, l: 'read' },
+              { n: isToday ? displayMetrics.stats.articlesReadToday : displayMetrics.stats.articlesRead, l: 'read' },
               { n: displayMetrics.stats.articlesSaved, l: 'saved' },
-              { n: displayMetrics.stats.filtersExplored, l: 'filters' },
+              { n: isToday ? displayMetrics.stats.notesToday : displayMetrics.stats.notesThisWeek, l: 'notes' },
             ].map((s, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>{s.n}</Text>
                 <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>{s.l}</Text>
               </View>
             ))}
-            {displayMetrics.stats.topTopics[0] ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
-                <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>Top</Text>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textPrimary }}>{displayMetrics.stats.topTopics[0].name}</Text>
-              </View>
-            ) : null}
+            {(() => {
+              const topTopic = (isToday ? displayMetrics.stats.topTopicsToday : displayMetrics.stats.topTopics)[0];
+              return topTopic ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 }}>
+                  <Text style={{ fontSize: 12, color: COLORS.textSecondary }}>Top:</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.textPrimary }}>{topTopic.name}</Text>
+                </View>
+              ) : null;
+            })()}
           </View>
           <View style={[styles.goalsCard, { backgroundColor: COLORS.cardBgGlass, borderColor: COLORS.glassBorder }, blurStyle16]}>
             {(() => {
-              const catchupGoal = displayMetrics.catchup.dailyGoal * 7;
-              const catchupExceeded = displayMetrics.catchup.weeklyTotal > catchupGoal && catchupGoal > 0;
+              const progress = isToday ? displayMetrics.catchup.dailyProgress : displayMetrics.catchup.weeklyTotal;
+              const goal = isToday ? catchupDailyGoal : catchupWeeklyGoal;
+              const exceeded = progress > goal && goal > 0;
               return (
                 <View style={styles.goalItem}>
                   <View style={styles.goalHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: catchupExceeded ? DarkThemeColors.success : '#38BDF8' }} />
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: exceeded ? DarkThemeColors.success : '#38BDF8' }} />
                       <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Catch-up</Text>
-                      {catchupExceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+                      {exceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
                     </View>
-                    <Text style={[styles.goalValue, { color: catchupExceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
-                      {displayMetrics.catchup.weeklyTotal}m / {catchupGoal}m
+                    <Text style={[styles.goalValue, { color: exceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                      {progress}m / {goal}m
                     </Text>
                   </View>
                   <View
                     style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
                     accessibilityRole="progressbar"
-                    accessibilityLabel="Catch-up weekly progress"
-                    accessibilityValue={{ min: 0, max: catchupGoal, now: Math.min(displayMetrics.catchup.weeklyTotal, catchupGoal), text: `${displayMetrics.catchup.weeklyTotal} of ${catchupGoal} minutes` }}
+                    accessibilityLabel={`Catch-up ${isToday ? 'today' : 'weekly'} progress`}
+                    accessibilityValue={{ min: 0, max: goal, now: Math.min(progress, goal), text: `${progress} of ${goal} minutes` }}
                   >
                     <View style={[
                       styles.goalProgressFill,
-                      { backgroundColor: catchupExceeded ? DarkThemeColors.success : RingColors.catchup.primary },
-                      { width: `${Math.min(100, (displayMetrics.catchup.weeklyTotal / Math.max(catchupGoal, 1)) * 100)}%` }
+                      { backgroundColor: exceeded ? DarkThemeColors.success : RingColors.catchup.primary },
+                      { width: `${Math.min(100, (progress / Math.max(goal, 1)) * 100)}%` }
                     ]} />
                   </View>
                 </View>
               );
             })()}
             {(() => {
-              const diveinExceeded = displayMetrics.divein.weeklyProgress > displayMetrics.divein.weeklyGoal && displayMetrics.divein.weeklyGoal > 0;
+              const progress = isToday ? displayMetrics.divein.dailyProgress : displayMetrics.divein.weeklyProgress;
+              const goal = isToday ? diveinDailyGoal : diveinWeeklyGoal;
+              const exceeded = progress > goal && goal > 0;
               return (
                 <View style={styles.goalItem}>
                   <View style={styles.goalHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: diveinExceeded ? DarkThemeColors.success : '#EC4899' }} />
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: exceeded ? DarkThemeColors.success : '#EC4899' }} />
                       <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Dive-in</Text>
-                      {diveinExceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+                      {exceeded && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
                     </View>
-                    <Text style={[styles.goalValue, { color: diveinExceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
-                      {displayMetrics.divein.weeklyProgress}m / {displayMetrics.divein.weeklyGoal}m
+                    <Text style={[styles.goalValue, { color: exceeded ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                      {progress}m / {goal}m
                     </Text>
                   </View>
                   <View
                     style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
                     accessibilityRole="progressbar"
-                    accessibilityLabel="Dive-in weekly progress"
-                    accessibilityValue={{ min: 0, max: displayMetrics.divein.weeklyGoal, now: Math.min(displayMetrics.divein.weeklyProgress, displayMetrics.divein.weeklyGoal), text: `${displayMetrics.divein.weeklyProgress} of ${displayMetrics.divein.weeklyGoal} minutes` }}
+                    accessibilityLabel={`Dive-in ${isToday ? 'today' : 'weekly'} progress`}
+                    accessibilityValue={{ min: 0, max: goal, now: Math.min(progress, goal), text: `${progress} of ${goal} minutes` }}
                   >
                     <View style={[
                       styles.goalProgressFill,
-                      { backgroundColor: diveinExceeded ? DarkThemeColors.success : RingColors.divein.primary },
-                      { width: `${Math.min(100, (displayMetrics.divein.weeklyProgress / Math.max(displayMetrics.divein.weeklyGoal, 1)) * 100)}%` }
+                      { backgroundColor: exceeded ? DarkThemeColors.success : RingColors.divein.primary },
+                      { width: `${Math.min(100, (progress / Math.max(goal, 1)) * 100)}%` }
                     ]} />
                   </View>
                 </View>
               );
             })()}
-            <View style={styles.goalItem}>
-              <View style={styles.goalHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : '#FB923C' }} />
-                  <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Recap</Text>
-                  {displayMetrics.recap.status === 'completed' && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+            {(() => {
+              // GUR-232: recap row reads per-window. Today → Done today / Not
+              // today (or In progress); Week → the existing weekly status.
+              const done = isToday ? displayMetrics.recap.completedToday : displayMetrics.recap.completedThisWeek;
+              const fill = isToday ? recapTodayFill : recapWeekFill;
+              const label = isToday
+                ? (done ? 'Done today' : recapInProgress ? 'In Progress' : 'Not today')
+                : (done ? 'Done' : recapInProgress ? 'In Progress' : 'Not Started');
+              return (
+                <View style={styles.goalItem}>
+                  <View style={styles.goalHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: done ? DarkThemeColors.success : '#FB923C' }} />
+                      <Text style={[styles.goalLabel, { color: COLORS.textPrimary }]}>Recap</Text>
+                      {done && <Text style={{ fontSize: 14 }}>{'✓'}</Text>}
+                    </View>
+                    <Text style={[styles.goalValue, { color: done ? DarkThemeColors.success : COLORS.textSecondary }]}>
+                      {label}
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
+                    accessibilityRole="progressbar"
+                    accessibilityLabel={`Recap ${isToday ? 'today' : 'weekly'} progress`}
+                    accessibilityValue={{ min: 0, max: 100, now: Math.round(fill * 100), text: label }}
+                  >
+                    <View style={[
+                      styles.goalProgressFill,
+                      { backgroundColor: done ? DarkThemeColors.success : RingColors.recap.primary },
+                      { width: `${Math.round(fill * 100)}%` }
+                    ]} />
+                  </View>
                 </View>
-                <Text style={[styles.goalValue, { color: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : COLORS.textSecondary }]}>
-                  {displayMetrics.recap.status === 'completed' ? 'Done' : displayMetrics.recap.status === 'in_progress' ? 'In Progress' : 'Not Started'}
-                </Text>
-              </View>
-              <View
-                style={[styles.goalProgressBar, { backgroundColor: COLORS.progressBarBg }]}
-                accessibilityRole="progressbar"
-                accessibilityLabel="Recap weekly progress"
-                accessibilityValue={{
-                  min: 0,
-                  max: 100,
-                  now: displayMetrics.recap.status === 'completed' ? 100 : displayMetrics.recap.status === 'in_progress' ? 50 : 0,
-                  text: displayMetrics.recap.status === 'completed' ? 'Done' : displayMetrics.recap.status === 'in_progress' ? 'In progress' : 'Not started',
-                }}
-              >
-                <View style={[
-                  styles.goalProgressFill,
-                  { backgroundColor: displayMetrics.recap.status === 'completed' ? DarkThemeColors.success : RingColors.recap.primary },
-                  { width: displayMetrics.recap.status === 'completed' ? '100%' : displayMetrics.recap.status === 'in_progress' ? '50%' : '0%' }
-                ]} />
-              </View>
-            </View>
+              );
+            })()}
           </View>
         </View>
 
@@ -964,26 +991,22 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.sm,
   },
-  feedSection: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-    marginHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
+  // GUR-232: Today | Week segmented pill control
+  windowToggle: {
+    flexDirection: 'row',
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    ...getBackdropBlur(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    padding: 2,
+    gap: 2,
   },
-  feedTitle: {
-    ...Typography.labelLarge,
-    color: DarkThemeColors.textPrimary,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
+  windowToggleSegment: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    // keep an invisible 1px border so the active segment's border doesn't
+    // shift layout when it appears.
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   sectionTitle: {
     ...Typography.headlineSmall,

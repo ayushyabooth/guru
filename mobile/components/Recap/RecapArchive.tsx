@@ -101,10 +101,12 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
     }
   };
 
-  const formatDateRange = (weekStart: string, weekEnd: string) => {
+  // GUR-232: Recap is decoupled from the calendar week — label each entry by
+  // its start ("Since <Mon D>") rather than a "<start> – <end>" range.
+  const formatDateRange = (weekStart: string, _weekEnd?: string) => {
     const start = new Date(weekStart);
-    const end = new Date(weekEnd);
-    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    if (isNaN(start.getTime())) return '';
+    return `Since ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
   const renderJourneyCard = (journey: RecapJourneySummary) => {
@@ -204,7 +206,7 @@ export default function RecapArchive({ onClose, onSelectJourney }: RecapArchiveP
           <Icon name="notebook-outline" size={48} color={colors.textSecondary} style={{ marginBottom: Spacing.md }} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No recaps yet</Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            Complete your first weekly recap to start building your learning journal.
+            Complete your first recap to start building your learning journal.
           </Text>
         </View>
       ) : (

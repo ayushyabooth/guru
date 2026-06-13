@@ -199,8 +199,28 @@ thumbnails feed standard/mini.
   Rendered with EXISTING blocks (card → argument text → evidence quote →
   counterpoints text → take prompt) — no new block types. Artifact: a crux
   note ("Crux — <title>", Argument/Evidence/Counterpoint/My take) via the
-  standard add_note approval → article Notes tab → weekly recap. The dive-in
-  tab's saved cards deep-link in via `?goal=` seeding ("Build the crux →").
+  standard add_note approval → article Notes tab → recap. The dive-in tab's
+  Saved-for-Later header deep-links in via `?goal=` seeding ("Build cruxes
+  with Guru →"; per-card CTAs were removed, GUR-231 R24).
+
+### 3.2 Daily-first + decoupled recap (GUR-232)
+
+- **Daily-first**: the agent defaults to the DAY ("catch me up" = today,
+  "what did I learn" = today, progress = today's rings); weekly only on
+  explicit request. `get_metrics` slimmer exposes `notes_today` +
+  `articles_read_today` alongside the weekly counts; recap-readiness weaving
+  prefers the daily count.
+- **Decoupled recap**: `start_recap` computes its window server-side as
+  "since your last completed recap" (first-ever = trailing ~7 days), NOT a
+  calendar week — see BRD Epic F.−1. The agent frames recap as "since you
+  last reflected", never "this week". Home's recap ring still reads
+  completion within the active Today|Week toggle window
+  (`recap_completed_today` / `recap_completed_this_week` from /me/metrics).
+- **Highlight-forward crux (R25)**: capture is the spine of the descent —
+  after each surfaced evidence/counterpoint quote the agent names the
+  load-bearing line and offers a one-tap "Keep this line" (`save_highlight`,
+  immediate-execute), so a crux ends with 1-2 saved highlights AND the crux
+  note, not capture-only-at-the-end.
 
 ## 4. Cost & model
 
