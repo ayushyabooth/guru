@@ -222,6 +222,42 @@ thumbnails feed standard/mini.
   immediate-execute), so a crux ends with 1-2 saved highlights AND the crux
   note, not capture-only-at-the-end.
 
+### 3.3 Production hardening — recall, metrics, cohesion (GUR-233–237)
+
+A correctness pass across the surfaces the agent shares with the rest of the app:
+
+- **Feed freshness (GUR-233)**: saving in catch-up (or the reader, or the agent's
+  save tool) now invalidates `['divein-feed']`; dive-in revalidates on focus. The
+  app's SWR caches were serving newly-saved articles stale for up to 5 min.
+- **Metrics correctness (GUR-234)**: dive-in time was over-counted by a naive
+  interval tracker on the in-app reader (no idle/visibility pause on web) — the
+  reader now uses the idle-aware context tracker, both feeds count scroll as
+  engagement, and a per-session server clamp guards the rollup. `/me/metrics`
+  buckets today/week in the **user's local timezone** (`?tz=`, `func.timezone`),
+  not server UTC. Browsing a storyboard for ≥2.5s now logs a zero-duration
+  `storyboard_view` marker so it counts toward "articles read" without adding time.
+- **Interests editor (GUR-235)**: `PUT /me/interests` updates only
+  specializations + interests (cap relaxed **2 → 4**), preserves core/goals, and
+  fires `warm_user_filters_sync` so a newly-added interest's feed pre-generates.
+  The agent reads the profile fresh each turn, so its personalization updates
+  automatically.
+- **Clustering cohesion (GUR-236)**: storyboards were force-grouped into a fixed
+  `n_clusters` with **no similarity gate**, and "Also in this story" was padded by
+  quality/recency within the broad specialization. Now: `AgglomerativeClustering`
+  uses a **distance threshold** (only genuinely-similar articles merge; loners →
+  clean single-article cards), and the related-fill is **gated by cosine
+  similarity to the headline** (≥0.40, calibrated against a real bad cluster whose
+  junk maxed at 0.20). Per-cluster cohesion is logged for tuning.
+- **Recap recall + pause/resume (GUR-237)**: snapshot resolves storyboard→headline
+  article and drops unresolvable "Content <id>" cards; every recap card (snapshot,
+  questions, insight constellation) deep-links to the **source passage** via the
+  reader's `?highlightQuote=`. A **Pause** control on every immersive stage exits
+  to the Recap entry (journey persists server-side); the entry CTA is stage-aware
+  and resumes precisely (questions reopen at the first unanswered). The agentic
+  Guru carries the same parity — `onOpenArticle(id, url, quote)` deep-links, quote
+  blocks gain "Read in context ›", and the thread/mode-switcher persist for
+  pause/resume.
+
 ## 4. Cost & model
 
 Default `claude-sonnet-4-6`: with cached system+tools (~3–4K tokens) a typical 4-iteration
