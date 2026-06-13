@@ -17,47 +17,13 @@ import {
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 
-/**
- * Marks a storyboard "read" once it has dwelled in the viewport (GUR-234).
- * Browsing a storyboard in the feed should count toward "articles read", so we
- * fire onRead after the card is ≥50% visible for 2.5s continuously. Web-only
- * (IntersectionObserver); a no-op wrapper on native.
- */
-function StoryboardViewTracker({
-  articleId,
-  onRead,
-  children,
-}: {
-  articleId?: string;
-  onRead: (articleId: string) => void;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<any>(null);
-  useEffect(() => {
-    if (Platform.OS !== 'web' || !articleId) return;
-    if (typeof IntersectionObserver === 'undefined') return;
-    const el = ref.current as unknown as Element | null;
-    if (!el || typeof (el as any).getBoundingClientRect !== 'function') return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const e = entries[0];
-        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
-          if (!timer) timer = setTimeout(() => onRead(articleId), 2500);
-        } else if (timer) {
-          clearTimeout(timer);
-          timer = null;
-        }
-      },
-      { threshold: [0, 0.5, 1] },
-    );
-    obs.observe(el);
-    return () => {
-      if (timer) clearTimeout(timer);
-      obs.disconnect();
-    };
-  }, [articleId, onRead]);
-  return <View ref={ref}>{children}</View>;
+// Tags a storyboard's DOM node with a stable id so the feed-level
+// IntersectionObserver can watch it for dwell (GUR-234). nativeID maps to the
+// DOM `id` on web; harmless on native. (A View *ref* on RN-web doesn't reliably
+// resolve to a DOM node, so we observe by querying the id instead.)
+const SB_ID_PREFIX = 'gsb-';
+function StoryboardViewTracker({ articleId, children }: { articleId?: string; children: React.ReactNode }) {
+  return <View nativeID={articleId ? `${SB_ID_PREFIX}${articleId}` : undefined}>{children}</View>;
 }
 
 /** Lightweight stagger wrapper — fades + slides each card with a 50ms offset */
@@ -125,6 +91,40 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
     CatchupService.markStoryboardRead(articleId);
     recordInteraction();
   }, [recordInteraction]);
+
+  // Feed-level dwell observer (web): watch every storyboard's DOM node (tagged
+  // via nativeID → id) and mark it read once it's ≥50% visible for 2.5s. Done at
+  // the feed level (querying the DOM by id) because a per-card View ref doesn't
+  // reliably resolve to a DOM node on RN-web. (GUR-234)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+    if (storyboards.length === 0) return;
+    const timers = new Map<string, ReturnType<typeof setTimeout>>();
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        const id = (e.target as HTMLElement).id || '';
+        if (!id.startsWith(SB_ID_PREFIX)) return;
+        const articleId = id.slice(SB_ID_PREFIX.length);
+        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+          if (!timers.has(id)) {
+            timers.set(id, setTimeout(() => { handleStoryboardRead(articleId); timers.delete(id); }, 2500));
+          }
+        } else {
+          const t = timers.get(id);
+          if (t) { clearTimeout(t); timers.delete(id); }
+        }
+      });
+    }, { threshold: [0, 0.5, 1] });
+    // Observe after paint so the nodes exist.
+    const raf = requestAnimationFrame(() => {
+      document.querySelectorAll(`[id^="${SB_ID_PREFIX}"]`).forEach((el) => obs.observe(el));
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((t) => clearTimeout(t));
+      obs.disconnect();
+    };
+  }, [storyboards.length, handleStoryboardRead]);
 
   // A save (or not-relevant) here changes what the Dive-in library should show.
   // The Dive-in feed query lives behind a 5-min staleTime + localStorage-seeded
@@ -224,10 +224,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
     >
       {storyboards.map((storyboard, index) => (
         <StaggeredCard key={storyboard.id} index={index}>
-          <StoryboardViewTracker
-            articleId={storyboard.headline_article?.id}
-            onRead={handleStoryboardRead}
-          >
+          <StoryboardViewTracker articleId={storyboard.headline_article?.id}>
             <InFocusStoryboardCard
               storyboard={storyboard}
               onSave={handleSaveArticle}
