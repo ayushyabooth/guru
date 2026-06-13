@@ -68,6 +68,11 @@ TOOLS = [
         "input_schema": {"type": "object", "properties": {"filter": {"type": "string"}}},
     },
     {
+        "name": "get_recent_notes",
+        "description": "The user's recent notes across articles (their own captured thinking). REQUIRED material for the weekly recap; also useful to avoid duplicate crux notes.",
+        "input_schema": {"type": "object", "properties": {"days": {"type": "integer", "description": "Window, default 7"}}},
+    },
+    {
         "name": "get_commitment",
         "description": "Get the user's One Commitment from their last weekly recap. Use it to bias article selection ('commitment weaving') and set commitment_flag on qualifying article_card blocks.",
         "input_schema": {"type": "object", "properties": {}},
@@ -201,6 +206,7 @@ STATUS_TEXT = {
     "get_catchup_feed": "reading your catch-up feed…",
     "get_divein_feed": "reading your saved queue…",
     "get_metrics": "checking your rings…",
+    "get_recent_notes": "gathering your notes…",
     "get_commitment": "recalling your commitment…",
     "ask_guru": "thinking it through…",
     "get_article_deep": "reading the article closely…",
@@ -240,11 +246,11 @@ CAPTURE STEP (GUR-231, ALL journey modes): every plan's FINAL step is "Capture t
 
 RECAP READINESS (GUR-231): get_metrics returns notes_this_week. Weave it in naturally where it motivates — after a capture ("that's four this week — Friday's recap will have real material"), or when proposing a journey ("no notes yet this week; let's fix that while we read"). Never nag; always tie it to the recap payoff.
 
-WEEKLY RECAP ("run my recap" / "what did I learn"): call get_recap_state, then start_recap if none active this week. Walk the stages conversationally, ONE question per turn:
-- Stage 1: present the week snapshot as `stats` + `text`.
-- Stage 2: present each question as a `recap_step` block {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<the question>","journey_id":"...","question_index":0} — the user answers in the input bar; submit their answer with submit_recap_answer, give brief feedback, move to the next.
+WEEKLY RECAP ("run my recap" / "what did I learn") — the recap is about what the USER thought, not what they read (R23 judges). Call get_recap_state, then start_recap if none active this week; ALSO call get_recent_notes — the user's captured notes are the recap's raw material. Walk the stages conversationally, ONE question per turn:
+- Stage 1 snapshot: QUOTE 1-3 of the user's own notes back to them (short `quote` blocks attributed as "your note on <article>") + minimal honest stats (articles read, notes captured — numbers from tool results ONLY; never editorialize the week or pad with filler metrics like filters explored).
+- Stage 2: anchor recall questions on the user's NOTES and prior answers when they exist (the article content is the fallback, not the default). Present each as a `recap_step` block {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<the question>","journey_id":"...","question_index":0}; submit answers with submit_recap_answer; engage with the substance per VOICE, no grading.
 - Stage 3: one reflective exchange via recap_socratic.
-- Stage 4: get_recap_insights → present as `text` + `quote`; then propose ONE commitment for next week and call set_commitment (it gets approval-gated automatically).
+- Stage 4: get_recap_insights → present as `text` + `quote`; then propose ONE commitment that ties directly to one of the user's notes and call set_commitment (approval-gated automatically).
 End with `outcome_summary`. If the user has too little activity for a meaningful recap, say so and suggest a catch-up instead.
 
 OUTPUT FORMAT (STRICT): your final text in every turn must be ONLY a JSON object:
@@ -265,6 +271,12 @@ Keep every turn under ~6 blocks. Be concrete and brief; the cards carry the cont
 
 BROWSER WIDGET (extension): if the user asks about the Guru widget/extension, reading with Guru on external sites, or why articles open without Guru overlays, give these exact install steps as a numbered list (Chrome/Chromium only): 1) Download the widget from https://mobile-guru8.vercel.app/guru-extension.zip and unzip it. 2) Type chrome://extensions into a new tab (it can't be linked). 3) Toggle ON "Developer mode" (top-right). 4) Click "Load unpacked" (top-left) and select the unzipped folder. 5) Reload the article page — the Guru orb appears bottom-right. Also mention the in-app Setup page (the "Get the full Guru experience" card on Home or the Guru tab) walks them through it with live detection.
 
+VOICE (NON-NEGOTIABLE, R23 judges): never praise the user or their input — no "sharp", "great", "honestly", "insight that ages well", no grades, NO EMOJI anywhere. Respond to the SUBSTANCE of what they said: name the strongest part of their idea by restating its consequence, then complicate it. When the user gives a take or thesis, your next move is ONE genuine counterargument or complication (steelman the other side, specific to their claim) BEFORE any note offer — they came to think, not to be agreed with. Confidence is specificity, not enthusiasm. Never assert unverifiable observations ("the system noticed…") and never cite a number that isn't in a tool result.
+
+APPROVAL PREAMBLE (ALWAYS): never let an approval card be the whole turn. When calling add_note or set_commitment, the SAME response must first output your blocks JSON with one short text block reacting to the substance (for a user take: the counterargument above), THEN the tool call. A bare dialog feels like talking to a form.
+
+FAST FIRST CONTENT (catch-up goals): your get_catchup_feed call auto-renders an instant headline strip of mini cards to the user (the system does this — not you). Do NOT render your own mini list; after the tool result, lead DIRECTLY with the in-focus story (hero card + descent). Keep pills under 60 characters — a pill is an action, not an essay.
+
 NO SCAFFOLDING (ALWAYS): internal identifiers — UUIDs, article/journey/storyboard ids, field names — must NEVER appear in any user-visible text, pill, title, or detail line. Refer to articles by short title only ("Save 'Policy Blueprint'", never "(article c5af1e5d-…)"). IDs belong exclusively in tool-call arguments; you already know which article is in focus from the conversation.
 
 ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text.
@@ -279,6 +291,22 @@ A text-only turn is a failure. A wall of same-shaped cards is a failure."""
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
+def _trunc(text, n: int) -> str:
+    """Sentence-boundary truncation (GUR-231 judges: hard slices fed mid-word
+    cuts to the model, which echoed them verbatim into cards/quotes/pills).
+    Cuts at the last sentence end before n; falls back to the last word."""
+    t = (text or "").strip()
+    if len(t) <= n:
+        return t
+    cut = t[:n]
+    for mark in (". ", "! ", "? "):
+        i = cut.rfind(mark)
+        if i >= int(n * 0.4):
+            return cut[: i + 1].strip()
+    i = cut.rfind(" ")
+    return (cut[:i].rstrip(" ,;:—-") + "…") if i > 0 else cut
+
 def _slim_article(a: dict) -> dict:
     rich = a.get("rich_summary") or {}
     wc = a.get("word_count")
@@ -289,9 +317,9 @@ def _slim_article(a: dict) -> dict:
         "url": a.get("url"),
         "image_url": a.get("article_image_url") or a.get("thumbnail_url") or a.get("image_url"),
         "reading_time": a.get("reading_time") or (max(1, round(wc / 200)) if wc else None),
-        "summary": (a.get("summary") or rich.get("whats_in_article") or a.get("expert_takeaway") or "")[:220],
-        "why_matters": (rich.get("why_it_matters") or "")[:200],
-        "spotlight_quote": ((rich.get("spotlight_quotes") or [None])[0] or "")[:240],
+        "summary": _trunc(a.get("summary") or rich.get("whats_in_article") or a.get("expert_takeaway"), 220),
+        "why_matters": _trunc(rich.get("why_it_matters"), 200),
+        "spotlight_quote": _trunc((rich.get("spotlight_quotes") or [None])[0], 240),
         "industry": a.get("industry") or a.get("context"),
         "is_saved": a.get("is_saved", False),
     }
@@ -307,16 +335,16 @@ def _slim_storyboard(s: dict) -> dict:
         "theme": s.get("theme") or s.get("headline") or s.get("title"),
         "image_url": s.get("visual_url"),  # hero image for the in-focus card
         "industry": s.get("industry"),
-        "summary": (s.get("summary") or "")[:400],
-        "narrative": (s.get("cluster_narrative") or "")[:400],
-        "personal_prompt": (s.get("personal_prompt") or "")[:220],
+        "summary": _trunc(s.get("summary"), 400),
+        "narrative": _trunc(s.get("cluster_narrative"), 400),
+        "personal_prompt": _trunc(s.get("personal_prompt"), 220),
         "in_focus_article": _slim_article(art),
         # R20 (founder): surface the feed's full pre-processed nuance — the
         # agent was working from crumbs (why_matters cut to 200 of ~510 chars;
         # between_the_lines and the article's socratic_prompts never sent).
-        "whats_in_article": (rich.get("whats_in_article") or "")[:350],
-        "why_matters": (rich.get("why_it_matters") or "")[:400],
-        "between_the_lines": (rich.get("between_the_lines") or "")[:320],
+        "whats_in_article": _trunc(rich.get("whats_in_article"), 350),
+        "why_matters": _trunc(rich.get("why_it_matters"), 400),
+        "between_the_lines": _trunc(rich.get("between_the_lines"), 320),
         "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:3],
         "reflection_questions": (art.get("socratic_prompts") or [])[:3],
         "more_articles": [_slim_article(a) for a in (s.get("related_articles") or s.get("carousel_articles") or [])[:4]],
@@ -338,10 +366,10 @@ def _slim_tool_result(name: str, status: int, data) -> str:
                 rich = a.get("rich_summary") or {}
                 out = _slim_article(a)
                 out.update({
-                    "core_argument": (rich.get("core_argument") or "")[:300],
+                    "core_argument": _trunc(rich.get("core_argument"), 300),
                     "strongest_evidence": (rich.get("strongest_evidence") or [])[:3],
                     "counterpoints": (rich.get("counterpoints") or [])[:2],
-                    "between_the_lines": (rich.get("between_the_lines") or "")[:300],
+                    "between_the_lines": _trunc(rich.get("between_the_lines"), 300),
                     "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:3],
                     "reflection_questions": (a.get("socratic_prompts") or [])[:2],
                 })
@@ -351,6 +379,12 @@ def _slim_tool_result(name: str, status: int, data) -> str:
                 "expert_picks": [_slim_article(a) for a in (data.get("essential_articles") or [])[:5]],
                 "discovery": [_slim_article(a) for a in (data.get("discovery_articles") or [])[:5]],
             })
+        if name == "get_recent_notes":
+            return json.dumps({"notes": [
+                {"article_id": n.get("article_id"), "article_title": n.get("article_title"),
+                 "note": _trunc(n.get("note"), 400), "created_at": (n.get("created_at") or "")[:10]}
+                for n in (data.get("notes") or [])[:10]
+            ]})
         if name == "get_metrics":
             today = data.get("today") or {}
             return json.dumps({
@@ -364,7 +398,7 @@ def _slim_tool_result(name: str, status: int, data) -> str:
             })
         if name == "ask_guru":
             return json.dumps({
-                "answer": (data.get("response") or "")[:900],
+                "answer": _trunc(data.get("response"), 900),
                 "follow_ups": data.get("follow_up_prompts", [])[:3],
             })
         if name == "get_article_deep":
@@ -417,6 +451,9 @@ async def _execute_tool(app, token: str, name: str, tool_input: dict) -> str:
     elif name == "get_metrics":
         params = {"filter": f} if tool_input.get("filter") else None
         status, data = await _call_api(app, token, "GET", "/api/v1/me/metrics", params=params)
+    elif name == "get_recent_notes":
+        status, data = await _call_api(app, token, "GET", "/api/v1/me/notes",
+                                       params={"days": tool_input.get("days") or 7, "limit": 10})
     elif name == "get_commitment":
         status, data = await _call_api(app, token, "GET", "/api/v1/me/commitment")
     elif name == "ask_guru":
@@ -562,11 +599,11 @@ def _approval_block(name: str, tool_input: dict, approval_id: str) -> dict:
         title, detail, confirm, cancel = "Remove from your feed?", [tool_input.get("title", "")], "Remove", "Keep as is"
     elif name == "add_note":
         title = "Add this note to the article?"
-        detail = [f'"{(tool_input.get("note") or "")[:160]}"', tool_input.get("title", "")]
+        detail = [f'"{tool_input.get("note") or ""}"', tool_input.get("title", "")]  # FULL text — never ask approval on a cut preview (GUR-231 judges)
         confirm, cancel = "Add note", "Discard"
     elif name == "set_commitment":
         title = "Set as next week's commitment?"
-        detail = [f'"{(tool_input.get("text") or "")[:180]}"', "This will shape next week's reading."]
+        detail = [f'"{tool_input.get("text") or ""}"', "This will shape next week's reading."]
         confirm, cancel = "Commit", "Not yet"
     else:
         title, detail, confirm, cancel = "Proceed?", [], "Yes", "No"
@@ -686,6 +723,7 @@ async def agent_turn(
 
     async def gen():
         nonlocal messages
+        minis_sent = False
         try:
             yield f"data: {json.dumps({'event': 'status', 'text': 'thinking…'})}\n\n"
             for _ in range(MAX_ITERS):
@@ -719,6 +757,32 @@ async def agent_turn(
                         break
                     yield f"data: {json.dumps({'event': 'status', 'text': STATUS_TEXT.get(tool_use.name, 'working…')})}\n\n"
                     result = await _execute_tool(app, token, tool_use.name, tool_use.input or {})
+                    # R23 FAST FIRST CONTENT: the catch-up cold open measured 26s
+                    # to first content. The instant fix is deterministic — as soon
+                    # as the feed tool returns, the SERVER streams a headline strip
+                    # of mini cards so the user sees their feed in ~2-4s while the
+                    # model composes the in-focus story (prompt forbids the model
+                    # from rendering its own mini list).
+                    if tool_use.name == "get_catchup_feed" and not minis_sent:
+                        minis_sent = True
+                        try:
+                            sbs = json.loads(result).get("storyboards") or []
+                            for sb in sbs[:5]:
+                                art = sb.get("in_focus_article") or {}
+                                if not art.get("article_id"):
+                                    continue
+                                mini = {
+                                    "type": "article_card", "variant": "mini",
+                                    "article_id": art.get("article_id"),
+                                    "title": art.get("title"),
+                                    "source": art.get("source"),
+                                    "url": art.get("url"),
+                                    "image_url": art.get("image_url"),
+                                    "reading_time": art.get("reading_time"),
+                                }
+                                yield f"data: {json.dumps({'event': 'block', 'block': mini})}\n\n"
+                        except Exception:
+                            pass
                     messages.append({"role": "user", "content": [
                         {"type": "tool_result", "tool_use_id": tool_use.id, "content": result}
                     ]})

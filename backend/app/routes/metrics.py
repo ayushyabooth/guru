@@ -162,6 +162,44 @@ async def log_time(
     )
 
 
+
+@router.get("/me/notes")
+async def get_my_recent_notes(
+    days: int = 7,
+    limit: int = 10,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The user's recent notes across all articles (R23: the weekly recap is
+    built from what the user THOUGHT — their notes — not just what they read)."""
+    from app.models.interaction import UserAnnotation
+    from app.models.article import Article
+    since = date.today() - timedelta(days=max(1, min(days, 30)) - 1)
+    rows = (
+        db.query(UserAnnotation, Article.title)
+        .join(Article, Article.id == UserAnnotation.article_id)
+        .filter(
+            UserAnnotation.user_id == current_user.id,
+            func.date(UserAnnotation.created_at) >= since,
+            UserAnnotation.note_text.isnot(None),
+            UserAnnotation.note_text != "",
+        )
+        .order_by(UserAnnotation.created_at.desc())
+        .limit(max(1, min(limit, 25)))
+        .all()
+    )
+    return {
+        "notes": [
+            {
+                "article_id": str(a.article_id),
+                "article_title": title,
+                "note": a.note_text,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a, title in rows
+        ]
+    }
+
 @router.get("/me/metrics", response_model=MetricsSummaryResponse)
 async def get_metrics_summary(
     filter: str | None = Query(
