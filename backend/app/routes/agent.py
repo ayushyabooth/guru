@@ -728,7 +728,7 @@ async def agent_turn(
         try:
             with client.messages.stream(
                 model=AGENT_MODEL,
-                max_tokens=3000,
+                max_tokens=4096,  # 3000 cut crux descents mid-stream (R24); cap not spend
                 system=system,
                 tools=TOOLS,
                 tool_choice={"type": "auto", "disable_parallel_tool_use": True},
