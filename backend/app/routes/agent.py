@@ -155,7 +155,7 @@ TOOLS = [
     },
     {
         "name": "start_recap",
-        "description": "Start (or resume) this week's recap journey. Returns journey_id, stage, and the Stage-1 week snapshot. Call when the user asks to run their weekly recap.",
+        "description": "Start (or resume) the user's recap journey. The window is computed server-side as 'since your last recap' (R25 — decoupled from calendar weeks). Returns journey_id, stage, and the Stage-1 snapshot. Call when the user asks to run their recap.",
         "input_schema": {"type": "object", "properties": {}},
     },
     {
@@ -254,15 +254,17 @@ DIVE-IN CRUX PROTOCOL (GUR-231 — dive-in mode, saved-queue walks, "build the c
 2. Then ask for THEIR TAKE — one pointed question ("Where do you land — does the evidence carry the claim?"), pills offering stances to react to. Engage with whatever they say; push back where their take skips the counterpoint.
 3. After their take: offer the CRUX NOTE via add_note — markdown structured exactly as: **Argument:** … / **Evidence:** … / **Counterpoint:** … / **My take:** <their words>. Title the note "Crux — <short article title>". One crux note per article.
 4. Update the `plan` block; next article is the next step. The outcome_summary tallies cruxes built.
-CRUX INTERACTION (R24): the descent must END in the user's thinking, not in your prose. After presenting argument/evidence/counterpoints, explicitly invite their response with ONE pointed question, and the closing pills must include: a stance to react to, "Keep that quote" (→ save_highlight with the exact quote you showed), and "Capture a note on this". When the user asks to highlight/keep a quote, call save_highlight immediately (their word is the consent). Their take always gets the VOICE counterargument, then the add_note offer.
+CRUX INTERACTION — HIGHLIGHT-FORWARD (R25, founder): capture is the SPINE of the descent, not an afterthought at the end. When you show the strongest-evidence `quote`, the line right after it must NAME why it is worth keeping and invite a one-tap save — e.g. "That line is the load-bearing claim — keep it?" — and the very next `prompt_pills` must include "Keep this line" (→ save_highlight with that exact quote). Do this at EACH stage that surfaces a quotable line (evidence, a sharp counterpoint), not only at the finish. The descent still ENDS in the user's thinking: one pointed take-question, pills with a stance to react to + "Keep this line" + "Capture a note". When the user asks to highlight/keep, call save_highlight immediately (their word is consent). Their take always gets the VOICE counterargument, then the add_note offer. Goal: by the end of a crux the user has saved 1-2 highlights AND a crux note without it feeling like homework.
 If crux fields are missing on an article (older content), call get_article_deep and compose the descent yourself from the full text — never skip the protocol. Use ask_guru for their follow-up questions. Deep-read option: the card keeps the "open" action — reading in full in the reader (highlights/notes) is always one tap.
 
 CAPTURE STEP (GUR-231, ALL journey modes): every plan's FINAL step is "Capture takeaways". When the journey reaches it, harvest 1-3 note candidates from the session — the user's own words where they contributed, the sharpest insight where they didn't — and offer them via add_note ONE at a time (each approval card is one offer). The outcome_summary must tally notes captured ("3 cruxes · 2 notes"). A journey that ends with zero capture offers is a failure.
 
-RECAP READINESS (GUR-231): get_metrics returns notes_this_week. Weave it in naturally where it motivates — after a capture ("that's four this week — Friday's recap will have real material"), or when proposing a journey ("no notes yet this week; let's fix that while we read"). Never nag; always tie it to the recap payoff.
+RECAP READINESS (R25): get_metrics returns notes_today and notes_this_week. Default to the DAILY framing (the product is daily-first) — weave it where it motivates ("that's two notes today — your recap will have real material"), and reach for the weekly count only when the user is talking weekly. Never nag; always tie it to the recap payoff.
 
-WEEKLY RECAP ("run my recap" / "what did I learn") — the recap is about what the USER thought, not what they read (R23 judges). Call get_recap_state, then start_recap if none active this week; ALSO call get_recent_notes — the user's captured notes are the recap's raw material. Walk the stages conversationally, ONE question per turn:
-- Stage 1 snapshot: QUOTE 1-3 of the user's own notes back to them (short `quote` blocks attributed as "your note on <article>") + minimal honest stats (articles read, notes captured — numbers from tool results ONLY; never editorialize the week or pad with filler metrics like filters explored).
+DAILY-FIRST (R25, founder): the product's default rhythm is the DAY, not the week. "Catch me up" = today's feed; "what did I learn" = today; progress = today's rings. Only frame things weekly when the user explicitly says "this week"/"weekly". Keep recap framing time-neutral (see RECAP).
+
+RECAP ("run my recap" / "what did I learn") — recap is decoupled from the calendar week (R25, founder): it covers the user's reading SINCE THEIR LAST RECAP, never "this week". The recap is about what the USER thought, not what they read (R23 judges). Call get_recap_state, then start_recap (it computes the since-last-recap window itself; first-ever covers the recent days); ALSO call get_recent_notes — the user's captured notes are the recap's raw material. Frame it as "since you last reflected" / "your recent reading", NEVER "this week" or "Week of …". Walk the stages conversationally, ONE question per turn:
+- Stage 1 snapshot: QUOTE 1-3 of the user's own notes back to them (short `quote` blocks attributed as "your note on <article>") + minimal honest stats (articles read, notes captured — numbers from tool results ONLY; never editorialize or pad with filler metrics).
 - Stage 2: anchor recall questions on the user's NOTES and prior answers when they exist (the article content is the fallback, not the default). Present each as a `recap_step` block {"type":"recap_step","stage":2,"title":"Active recall","prompt":"<the question>","journey_id":"...","question_index":0}; submit answers with submit_recap_answer; engage with the substance per VOICE, no grading.
 - Stage 3: one reflective exchange via recap_socratic.
 - Stage 4: get_recap_insights → present as `text` + `quote`; then propose ONE commitment that ties directly to one of the user's notes and call set_commitment (approval-gated automatically).
@@ -409,7 +411,9 @@ def _slim_tool_result(name: str, status: int, data) -> str:
                 "articles_saved": data.get("articles_saved"),
                 "top_topics": data.get("top_topics"),
                 "recap_status": data.get("recap_journey_status"),
+                "notes_today": data.get("notes_today", 0),
                 "notes_this_week": data.get("notes_this_week", 0),
+                "articles_read_today": data.get("articles_read_today", 0),
             })
         if name == "ask_guru":
             return json.dumps({

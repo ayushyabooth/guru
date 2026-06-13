@@ -1657,78 +1657,107 @@ Return ONLY the JSON array."""
         """
         user_uuid = user_id if isinstance(user_id, uuid.UUID) else uuid.UUID(str(user_id))
 
-        # Compute current week (Monday – Sunday)
+        # GUR-232: recap is decoupled from the calendar week — it covers SINCE
+        # THE LAST COMPLETED RECAP (founder). The window anchor (`week_start`,
+        # repurposed as the period start) = the date of the last completed
+        # recap; first-ever recap covers the trailing 7 days so it's never
+        # empty. `week_end` is always today, so the snapshot/stats/Q&A (all of
+        # which key off the journey's week_start/week_end) cover [since, now].
         today = date.today()
-        week_start = today - timedelta(days=today.weekday())  # Monday
-        week_end = week_start + timedelta(days=6)              # Sunday
+        last_completed = db.query(RecapJourney).filter(
+            and_(
+                RecapJourney.user_id == user_uuid,
+                RecapJourney.status == 'completed',
+                RecapJourney.completed_at.isnot(None),
+            )
+        ).order_by(RecapJourney.completed_at.desc()).first()
+        if last_completed and last_completed.completed_at:
+            period_start = last_completed.completed_at.date()
+        else:
+            period_start = today - timedelta(days=7)
+        week_start = period_start
+        week_end = today
 
-        # Check if journey already exists
+        # Resume the latest ACTIVE (non-completed) journey if one exists — the
+        # resume must NOT key off week_start (the anchor drifts day-to-day while
+        # nothing is completed, GUR-232). Refresh its window end to today so
+        # activity since creation is captured.
+        active = db.query(RecapJourney).filter(
+            and_(
+                RecapJourney.user_id == user_uuid,
+                RecapJourney.status != 'completed',
+            )
+        ).order_by(RecapJourney.created_at.desc()).first()
+        if active and not force_new:
+            active.week_end = today
+            db.commit()
+            db.refresh(active)
+            return {
+                "journey_id": str(active.id),
+                "week_start": active.week_start.isoformat(),
+                "week_end": active.week_end.isoformat(),
+                "tier": active.tier,
+                "status": active.status,
+                "stage_progress": active.stage_progress,
+                "resumed": True,
+            }
+
+        # No active journey (or force_new): we need a fresh recap for the
+        # [period_start, today] window. The (user_id, week_start) unique index
+        # means a journey may already sit at this anchor (e.g. a same-day
+        # re-recap, or a prior completed recap that started here) — reset and
+        # reuse that slot instead of inserting a duplicate.
         existing = db.query(RecapJourney).filter(
             and_(
                 RecapJourney.user_id == user_uuid,
                 RecapJourney.week_start == week_start,
             )
         ).order_by(RecapJourney.created_at.desc()).first()
-
         if existing:
-            if force_new and existing.status == 'completed':
-                # Reset the completed journey for a fresh re-do
-                logger.info(f"Force-new: resetting completed journey {existing.id} for user {user_id}")
-                # Clear related insights from previous journey
-                db.query(KeyInsight).filter(
-                    KeyInsight.recap_journey_id == existing.id
-                ).delete()
-                activity_stats = RecapJourneyService._compute_activity_stats(
-                    user_uuid, week_start, week_end, db
-                )
-                existing.status = 'not_started'
-                existing.stage_progress = 0
-                existing.snapshot_data = None  # Force fresh compute on first Stage 1 fetch
-                existing.guided_questions = None
-                existing.guided_responses = None
-                existing.socratic_exchanges = None
-                existing.commitment_text = None
-                existing.socratic_exchange_count = 0
-                existing.synthesis_text = None
-                existing.audio_url = None
-                existing.audio_script = None
-                existing.audio_duration_seconds = None
-                existing.audio_status = None
-                existing.audio_error = None
-                existing.completed_at = None
-                existing.articles_read_count = activity_stats["articles_read_count"]
-                existing.articles_saved_count = activity_stats["articles_saved_count"]
-                existing.qa_count = activity_stats["qa_count"]
-                existing.filters_explored_count = activity_stats["filters_explored_count"]
-                existing.total_time_minutes = activity_stats["total_time_minutes"]
-                db.commit()
-                db.refresh(existing)
-                return {
-                    "journey_id": str(existing.id),
-                    "week_start": week_start.isoformat(),
-                    "week_end": week_end.isoformat(),
-                    "tier": existing.tier,
-                    "status": existing.status,
-                    "stage_progress": existing.stage_progress,
-                    "activity_summary": activity_stats,
-                    "resumed": False,
-                }
-            elif force_new and existing.status != 'completed':
-                # Don't discard in-progress work
-                return {
-                    "error": "Cannot start new recap — you have one in progress. Complete or abandon it first.",
-                }
-            else:
-                # Return existing journey (resume)
-                return {
-                    "journey_id": str(existing.id),
-                    "week_start": existing.week_start.isoformat(),
-                    "week_end": existing.week_end.isoformat(),
-                    "tier": existing.tier,
-                    "status": existing.status,
-                    "stage_progress": existing.stage_progress,
-                    "resumed": True,
-                }
+            # A journey already sits at this anchor — reset it to a fresh recap
+            # for the [period_start, today] window (covers force_new and the
+            # ordinary "new recap since the last completed one" case). Resume of
+            # an in-progress journey was already handled above.
+            logger.info(f"Recap: resetting journey {existing.id} at anchor {week_start} for user {user_id}")
+            db.query(KeyInsight).filter(
+                KeyInsight.recap_journey_id == existing.id
+            ).delete()
+            activity_stats = RecapJourneyService._compute_activity_stats(
+                user_uuid, week_start, week_end, db
+            )
+            existing.week_end = today
+            existing.status = 'not_started'
+            existing.stage_progress = 0
+            existing.snapshot_data = None  # Force fresh compute on first Stage 1 fetch
+            existing.guided_questions = None
+            existing.guided_responses = None
+            existing.socratic_exchanges = None
+            existing.commitment_text = None
+            existing.socratic_exchange_count = 0
+            existing.synthesis_text = None
+            existing.audio_url = None
+            existing.audio_script = None
+            existing.audio_duration_seconds = None
+            existing.audio_status = None
+            existing.audio_error = None
+            existing.completed_at = None
+            existing.articles_read_count = activity_stats["articles_read_count"]
+            existing.articles_saved_count = activity_stats["articles_saved_count"]
+            existing.qa_count = activity_stats["qa_count"]
+            existing.filters_explored_count = activity_stats["filters_explored_count"]
+            existing.total_time_minutes = activity_stats["total_time_minutes"]
+            db.commit()
+            db.refresh(existing)
+            return {
+                "journey_id": str(existing.id),
+                "week_start": week_start.isoformat(),
+                "week_end": week_end.isoformat(),
+                "tier": existing.tier,
+                "status": existing.status,
+                "stage_progress": existing.stage_progress,
+                "activity_summary": activity_stats,
+                "resumed": False,
+            }
 
         # Cheap activity stats for the response (counts only — no snapshot).
         activity_stats = RecapJourneyService._compute_activity_stats(

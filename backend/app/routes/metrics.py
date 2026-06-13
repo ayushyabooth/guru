@@ -69,6 +69,16 @@ class MetricsSummaryResponse(BaseModel):
     # GUR-231: notes the user wrote this week (annotations with note text).
     # Defaults to 0 so older clients are unaffected.
     notes_this_week: int = 0
+    # GUR-232: today-scoped activity stats so the Home Today|Week toggle can
+    # show daily numbers (default day). Week-scoped fields above stay for the
+    # Week view. All default 0/empty so older clients are unaffected.
+    articles_read_today: int = 0
+    notes_today: int = 0
+    top_topics_today: list[dict] = Field(default_factory=list)
+    # Recap ring follows the toggle window (founder): did the user reflect in
+    # this window? recap_completed_today drives the Today ring; this_week the Week ring.
+    recap_completed_today: bool = False
+    recap_completed_this_week: bool = False
 
 
 @router.post("/metrics/log-time", response_model=TimeLogResponse, status_code=status.HTTP_201_CREATED)
@@ -334,6 +344,9 @@ async def get_metrics_summary(
     filters_explored = 0
     top_topics: list[dict] = []
     notes_this_week = 0
+    articles_read_today = 0
+    notes_today = 0
+    top_topics_today: list[dict] = []
     try:
         from app.models.interaction import UserSavedArticle, UserAnnotation
         read_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
@@ -376,9 +389,41 @@ async def get_metrics_summary(
             UserAnnotation.note_text.isnot(None),
             UserAnnotation.note_text != "",
         ).scalar() or 0
+
+        # GUR-232: today-scoped versions for the Home Today|Week toggle.
+        read_today_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.created_at) == today,
+            TimeLog.context_id.isnot(None),
+            TimeLog.ring_type.in_(["catchup", "divein"]),
+        )
+        if filter_match is not None:
+            read_today_q = read_today_q.filter(filter_match[0] == filter_match[1])
+        articles_read_today = read_today_q.scalar() or 0
+
+        notes_today = db.query(func.count(UserAnnotation.id)).filter(
+            UserAnnotation.user_id == current_user.id,
+            func.date(UserAnnotation.created_at) == today,
+            UserAnnotation.note_text.isnot(None),
+            UserAnnotation.note_text != "",
+        ).scalar() or 0
+
+        topic_today_q = db.query(
+            TimeLog.specialization, func.count(TimeLog.id).label("cnt")
+        ).filter(
+            TimeLog.user_id == current_user.id,
+            func.date(TimeLog.created_at) == today,
+            TimeLog.specialization.isnot(None),
+        )
+        if filter_match is not None:
+            topic_today_q = topic_today_q.filter(filter_match[0] == filter_match[1])
+        topic_today_rows = topic_today_q.group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
+        top_topics_today = [{"name": r[0], "count": int(r[1])} for r in topic_today_rows if r[0]]
     except Exception:
         # Never let stats computation break the metrics endpoint
-        pass
+        articles_read_today = 0
+        notes_today = 0
+        top_topics_today = []
 
     return MetricsSummaryResponse(
         today=DailyMetricResponse(
@@ -408,4 +453,11 @@ async def get_metrics_summary(
         filters_explored=int(filters_explored),
         top_topics=top_topics,
         notes_this_week=int(notes_this_week),
+        # GUR-232 today-scoped stats + recap-by-window (recap ring follows the
+        # Home toggle: completed-today drives Today ring, this-week the Week ring).
+        articles_read_today=int(articles_read_today),
+        notes_today=int(notes_today),
+        top_topics_today=top_topics_today,
+        recap_completed_today=bool(today_metric.recap_completed),
+        recap_completed_this_week=any(m.recap_completed for m in week_metrics),
     )
