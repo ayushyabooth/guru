@@ -609,6 +609,22 @@ export default function RecapScreen() {
     );
   }
 
+  // GUR-237: a Pause control on every immersive stage. It exits to the Recap
+  // entry; the journey stays in-progress server-side, so reopening Recap resumes
+  // exactly where you left off.
+  const renderPauseControl = () => (
+    <TouchableOpacity
+      style={styles.pauseButton}
+      onPress={() => setViewState('entry')}
+      accessibilityRole="button"
+      accessibilityLabel="Pause recap and continue later"
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    >
+      <Icon name="pause" size={13} color="#E2E8F0" />
+      <Text style={styles.pauseText}>Pause</Text>
+    </TouchableOpacity>
+  );
+
   // Stage 1: Snapshot / Glass Memory Wall
   if (viewState === 'snapshot' && snapshot) {
     if (!RecapRingProgress || !SnapshotStage) return null;
@@ -622,6 +638,7 @@ export default function RecapScreen() {
             insightCount={insights.length}
           />
         </View>
+        {renderPauseControl()}
         <SnapshotStage snapshot={snapshot} onContinue={handleSnapshotComplete} />
       </SafeAreaView>
     );
@@ -639,6 +656,7 @@ export default function RecapScreen() {
             insightCount={insights.length}
           />
         </View>
+        {renderPauseControl()}
         <QuestionsStage
           questions={questions}
           responses={responses}
@@ -662,6 +680,7 @@ export default function RecapScreen() {
             insightCount={insights.length}
           />
         </View>
+        {renderPauseControl()}
         <SocraticStage
           onSendMessage={handleSocraticMessage}
           onComplete={handleSocraticComplete}
@@ -683,6 +702,7 @@ export default function RecapScreen() {
             insightCount={insights.length}
           />
         </View>
+        {renderPauseControl()}
         <CommitmentScreen
           onSave={handleCommitmentSave}
         />
@@ -1017,6 +1037,26 @@ const styles = StyleSheet.create({
     top: 56,
     right: Spacing.lg,
     zIndex: 100,
+  },
+  pauseButton: {
+    position: 'absolute',
+    top: 56,
+    left: Spacing.lg,
+    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15,20,35,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  pauseText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E2E8F0',
   },
   // Loading
   loadingContainer: {

@@ -9,6 +9,7 @@ import {
   getBackdropBlur,
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
+import { useRouter } from 'expo-router';
 import type { KeyInsight } from '../../services/recap-service';
 
 const { width } = Dimensions.get('window');
@@ -40,6 +41,16 @@ export default function InsightConstellation({
   showLabels = false,
 }: InsightConstellationProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Open the insight's source article, deep-linked to the insight text where it
+  // matches a passage (reader falls back to the top otherwise). (GUR-237)
+  const openInsightSource = (insight: KeyInsight) => {
+    const aid = insight.source_article_ids?.[0];
+    if (!aid) return;
+    const q = insight.insight_text ? `&highlightQuote=${encodeURIComponent(insight.insight_text)}` : '';
+    router.push(`/article/${aid}?source=recap${q}` as any);
+  };
 
   // Position insights in a circular/force-directed layout
   const positioned = useMemo<PositionedInsight[]>(() => {
@@ -178,6 +189,16 @@ export default function InsightConstellation({
               ))}
             </View>
           )}
+          {selectedInsight.source_article_ids && selectedInsight.source_article_ids.length > 0 && (
+            <TouchableOpacity
+              style={styles.tooltipSource}
+              onPress={() => openInsightSource(selectedInsight)}
+              accessibilityRole="button"
+              accessibilityLabel="View the source article for this insight"
+            >
+              <Text style={styles.tooltipSourceText}>View source ›</Text>
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       )}
 
@@ -261,6 +282,15 @@ const styles = StyleSheet.create({
   tooltipFilterText: {
     ...Typography.labelSmall,
     color: DarkThemeColors.textSecondary,
+  },
+  tooltipSource: {
+    marginTop: Spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  tooltipSourceText: {
+    ...Typography.labelMedium,
+    color: RingColors.recap.primary,
+    fontWeight: '600',
   },
   labelRow: {
     marginTop: Spacing.sm,

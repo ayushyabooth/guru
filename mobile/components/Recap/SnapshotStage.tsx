@@ -55,10 +55,14 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const { articles_engaged, qa_highlights, reading_pattern, topic_clusters, user_highlights = [] } = snapshot;
 
-  // Tap a recalled article to reopen it (source tab + in-app reader for review). (GUR-237)
-  const openArticle = (article: { id?: string; url?: string | null }) => {
+  // Tap a recalled article to reopen it at the exact passage it surfaced — the
+  // reader scrolls to + highlights `highlightQuote`. Falls back to the top when
+  // no quote is known. (GUR-237)
+  const openArticle = (article: { id?: string; url?: string | null; key_quote?: string | null }) => {
     if (article.url) openExternalTab(article.url);
-    if (article.id) setTimeout(() => router.push(`/article/${article.id}?source=recap`), 0);
+    if (!article.id) return;
+    const q = article.key_quote ? `&highlightQuote=${encodeURIComponent(article.key_quote)}` : '';
+    setTimeout(() => router.push(`/article/${article.id}?source=recap${q}` as any), 0);
   };
   const hasActivity = articles_engaged.length > 0;
   const isWidened = (snapshot as any).widened_window === true;

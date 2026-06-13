@@ -173,14 +173,26 @@ export default function QuestionsStage({
     }
   };
 
-  const handleArticleTap = (id: string) => {
-    router.push(`/article/${id}?source=recap` as any);
+  // Open the source article at the passage the question is about — the reader
+  // scrolls to + highlights `quote`. Falls back to the top when none. (GUR-237)
+  const handleArticleTap = (id: string, quote?: string) => {
+    const q = quote ? `&highlightQuote=${encodeURIComponent(quote)}` : '';
+    router.push(`/article/${id}?source=recap${q}` as any);
+  };
+
+  // Pull the quoted highlight the question references (first quoted span ≥15 chars).
+  const extractQuote = (text: string): string | undefined => {
+    const m =
+      text.match(/[“”"]([^“”"]{15,}?)[“”"]/) ||
+      text.match(/[‘’']([^‘’']{15,}?)[‘’']/);
+    return m ? m[1].trim() : undefined;
   };
 
   // Render a message bubble with article reference parsing
   const renderMessage = (msg: Message, idx: number) => {
     const isUser = msg.role === 'user';
     const { parts } = !isUser ? parseArticleRefs(msg.text) : { parts: [msg.text] };
+    const refQuote = !isUser ? extractQuote(msg.text) : undefined;
 
     return (
       <View key={idx} style={[styles.bubble, isUser ? styles.userBubble : [GM.card, styles.systemBubble]]}>
@@ -192,7 +204,7 @@ export default function QuestionsStage({
               <Text
                 key={pIdx}
                 style={styles.articleRef}
-                onPress={() => handleArticleTap(part.id)}
+                onPress={() => handleArticleTap(part.id, refQuote)}
               >
                 {part.title}
               </Text>
@@ -209,7 +221,7 @@ export default function QuestionsStage({
                 <TouchableOpacity
                   key={rIdx}
                   style={styles.articleChip}
-                  onPress={() => handleArticleTap(ref.id)}
+                  onPress={() => handleArticleTap(ref.id, refQuote)}
                 >
                   <Icon name="file-document-outline" size={12} color={RingColors.recap.primary} />
                   <Text style={styles.articleChipText} numberOfLines={1}>{ref.title}</Text>
