@@ -190,7 +190,7 @@ class TopicsUpdateRequest(BaseModel):
     additional_interest_industries: List[str] = []  # industry IDs (interests)
 
 
-@router.patch("/me/interests", response_model=UserProfileResponse)
+@router.put("/me/interests", response_model=UserProfileResponse)
 async def update_my_topics(
     data: TopicsUpdateRequest,
     current_user: User = Depends(get_current_user),

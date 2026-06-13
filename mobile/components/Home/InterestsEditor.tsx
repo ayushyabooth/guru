@@ -107,7 +107,7 @@ export default function InterestsEditor({ onClose, onSaved }: Props) {
     try {
       const token = await getAuthToken();
       const res = await fetch(`${API_BASE_URL}/me/interests`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           specializations: [...selSpecs],
@@ -173,6 +173,8 @@ export default function InterestsEditor({ onClose, onSaved }: Props) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: t.surface }]}>
+      {/* Mobile column (web): match the app's 480px centered layout */}
+      <View style={styles.column}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: t.divider }]}>
         <TouchableOpacity onPress={onClose} disabled={saving} accessibilityRole="button" accessibilityLabel="Cancel">
@@ -220,7 +222,18 @@ export default function InterestsEditor({ onClose, onSaved }: Props) {
         </ScrollView>
       )}
 
-      {/* Curating overlay (post-save) */}
+      {/* Footer */}
+      {!loading && (
+        <View style={[styles.footer, { backgroundColor: t.footer, borderTopColor: t.divider }]}>
+          {!!error && <Text style={styles.error}>{error}</Text>}
+          <TouchableOpacity onPress={handleSave} disabled={saving} style={[styles.saveBtn, { backgroundColor: PINK }, saving && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Save changes">
+            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save changes</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
+      </View>
+
+      {/* Curating overlay (post-save) — centered over the column */}
       {curating && (
         <View style={styles.curatingOverlay}>
           <View style={[styles.curatingCard, { backgroundColor: isDark ? '#12182A' : '#FFFFFF', borderColor: `${PINK}55` }]}>
@@ -232,22 +245,14 @@ export default function InterestsEditor({ onClose, onSaved }: Props) {
           </View>
         </View>
       )}
-
-      {/* Footer */}
-      {!loading && (
-        <View style={[styles.footer, { backgroundColor: t.footer, borderTopColor: t.divider }]}>
-          {!!error && <Text style={styles.error}>{error}</Text>}
-          <TouchableOpacity onPress={handleSave} disabled={saving} style={[styles.saveBtn, { backgroundColor: PINK }, saving && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Save changes">
-            {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save changes</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // Web: constrain to the app's mobile column (matches ThemeAwareNav, 480px centered).
+  column: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
   headerAction: { fontSize: 15, fontWeight: '500' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700' },
