@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, AppState,
 } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -128,6 +128,8 @@ export default function GuruAgentScreen() {
   const [blobState, setBlobState] = useState<BlobState>('idle');
   // R26: time window for the two time-scoped entry chips (default today).
   const [entryWindow, setEntryWindow] = useState<'today' | 'week'>('today');
+  // Daily-first: always land on Today — reset whenever the tab regains focus.
+  useFocusEffect(React.useCallback(() => { setEntryWindow('today'); }, []));
   const sessionIdRef = useRef<string | null>(restored.sessionId);
   const scrollRef = useRef<ScrollView>(null);
   const keyRef = useRef(restored.nextKey);

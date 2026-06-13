@@ -10,7 +10,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMetrics, MetricsData } from '../../store/metric-context';
 import { CatchupService } from '../../services/article-service';
@@ -367,6 +367,9 @@ function HomeContent() {
   // the progress bars, the activity chips, and the section title together — no
   // extra fetch, both windows already live in state.metrics.
   const [view, setView] = useState<'today' | 'week'>('today');
+  // Daily-first (founder): always land on Today — reset whenever Home regains
+  // focus, so a prior Week toggle doesn't persist across navigations.
+  useFocusEffect(useCallback(() => { setView('today'); }, []));
   // GUR-13: this week's One Commitment for the reminder card
   const [commitment, setCommitment] = useState<string | null>(null);
   useEffect(() => {
