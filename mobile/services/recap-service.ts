@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../constants/config';
 export interface RecapArticle {
   id: string;
   title: string;
+  url?: string | null;
   source: string | null;
   thumbnail_url: string | null;
   filter_context: string;

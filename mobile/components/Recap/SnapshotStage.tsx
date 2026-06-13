@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { openExternalTab } from '../../utils/openExternalTab';
 import { Spacing, Typography, BorderRadius, RingColors, DarkGlassMaterials, GlassMaterials, getBackdropBlur } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
 import Icon from '../ui/Icon';
@@ -49,8 +51,15 @@ function getFilterBorder(filterContext: string): string {
 
 export default function SnapshotStage({ snapshot, onContinue }: SnapshotStageProps) {
   const { colors, isDark } = useTheme();
+  const router = useRouter();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
   const { articles_engaged, qa_highlights, reading_pattern, topic_clusters, user_highlights = [] } = snapshot;
+
+  // Tap a recalled article to reopen it (source tab + in-app reader for review). (GUR-237)
+  const openArticle = (article: { id?: string; url?: string | null }) => {
+    if (article.url) openExternalTab(article.url);
+    if (article.id) setTimeout(() => router.push(`/article/${article.id}?source=recap`), 0);
+  };
   const hasActivity = articles_engaged.length > 0;
   const isWidened = (snapshot as any).widened_window === true;
 
@@ -103,8 +112,12 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
 
         {/* Article cards with filter-colored tints */}
         {articles_engaged.map((article, idx) => (
-          <View
+          <TouchableOpacity
             key={article.id || idx}
+            activeOpacity={0.85}
+            onPress={() => openArticle(article)}
+            accessibilityRole="button"
+            accessibilityLabel={`Revisit ${article.title}`}
             style={[
               GM.card,
               styles.articleCard,
@@ -141,7 +154,11 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
                 <Text style={[styles.quoteText, { color: colors.textSecondary }]}>"{article.key_quote}"</Text>
               </View>
             )}
-          </View>
+            <View style={styles.recallHintRow}>
+              <Text style={[styles.recallHint, { color: colors.textTertiary }]}>Tap to revisit</Text>
+              <Icon name="chevron-right" size={15} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
         ))}
 
         {/* Q&A highlights */}
@@ -237,6 +254,17 @@ const styles = StyleSheet.create({
   clusterText: {
     ...Typography.labelSmall,
     color: RingColors.recap.primary,
+  },
+  recallHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 2,
+    marginTop: Spacing.sm,
+    opacity: 0.8,
+  },
+  recallHint: {
+    ...Typography.labelSmall,
   },
   articleCard: {
     borderRadius: BorderRadius.lg,

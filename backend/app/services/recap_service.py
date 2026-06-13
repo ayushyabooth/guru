@@ -20,6 +20,7 @@ import uuid
 
 from app.db.database import SessionLocal
 from app.models.article import Article, ExpertNote
+from app.models.storyboard import Storyboard
 from app.models.qa_models import QAExchange
 from app.models.recap import RecapSession, RecapSessionPublish, RecapJourney, KeyInsight
 from app.models.interaction import UserSavedArticle, UserInteraction, UserAnnotation
@@ -733,59 +734,81 @@ class RecapJourneyService:
 
         # ── Build articles_engaged list ──
         articles_engaged = []
+        _seen_article_idx = {}  # resolved article id (str) -> index in articles_engaged
         for ctx_id, engagement in article_engagement.items():
-            # Try to find the article record
+            # Resolve the context id to a real article. A context_id can be an
+            # article id OR a storyboard id (catch-up tracking) — resolve the
+            # storyboard to its headline article. Skip anything that doesn't map
+            # to a titled article rather than showing a "Content <id>" placeholder
+            # (GUR-237).
             article = None
             try:
-                article_uuid = uuid.UUID(ctx_id)
-                article = db.query(Article).filter(Article.id == article_uuid).first()
+                cid = uuid.UUID(ctx_id)
+                article = db.query(Article).filter(Article.id == cid).first()
+                if not article:
+                    sb = db.query(Storyboard).filter(Storyboard.id == cid).first()
+                    if sb and sb.headline_article_id:
+                        article = db.query(Article).filter(
+                            Article.id == sb.headline_article_id
+                        ).first()
             except (ValueError, Exception):
                 pass
 
-            # Get a key quote from ArticleRichContent
+            if not article or not article.title:
+                continue  # unresolvable / untitled — don't surface noise in the recap
+
+            rid = str(article.id)
+            mins = round(engagement["total_seconds"] / 60, 1)
+
+            # Merge duplicate engagements (e.g. read the article AND its storyboard).
+            if rid in _seen_article_idx:
+                existing = articles_engaged[_seen_article_idx[rid]]
+                existing["time_spent_minutes"] = round(existing["time_spent_minutes"] + mins, 1)
+                if "qa" in engagement["activity_types"] and existing["engagement_type"] == "read":
+                    existing["engagement_type"] = "qa_asked"
+                continue
+
+            # Key quote from ArticleRichContent
             key_quote = None
-            if article:
-                rich = db.query(ArticleRichContent).filter(
-                    ArticleRichContent.article_id == article.id
-                ).first()
-                if rich and rich.spotlight_quotes:
-                    quotes = rich.spotlight_quotes
-                    if isinstance(quotes, list) and len(quotes) > 0:
-                        key_quote = quotes[0] if isinstance(quotes[0], str) else str(quotes[0])
+            rich = db.query(ArticleRichContent).filter(
+                ArticleRichContent.article_id == article.id
+            ).first()
+            if rich and rich.spotlight_quotes:
+                quotes = rich.spotlight_quotes
+                if isinstance(quotes, list) and len(quotes) > 0:
+                    key_quote = quotes[0] if isinstance(quotes[0], str) else str(quotes[0])
 
-            # Determine engagement type
-            activity_types = engagement["activity_types"]
+            # Engagement type
             engagement_type = "read"
-            if "qa" in activity_types:
+            if "qa" in engagement["activity_types"]:
                 engagement_type = "qa_asked"
+            is_saved = db.query(UserSavedArticle).filter(
+                and_(
+                    UserSavedArticle.user_id == user_uuid,
+                    UserSavedArticle.article_id == article.id,
+                )
+            ).first()
+            if is_saved:
+                engagement_type = "saved"
 
-            # Check if saved
-            if article:
-                is_saved = db.query(UserSavedArticle).filter(
-                    and_(
-                        UserSavedArticle.user_id == user_uuid,
-                        UserSavedArticle.article_id == article.id,
-                    )
-                ).first()
-                if is_saved:
-                    engagement_type = "saved"
-
-            # Determine filter context
+            # Filter context
             filter_context = "core"
             if engagement["specialization"]:
                 filter_context = f"specialization:{engagement['specialization']}"
             elif engagement["industry"]:
                 filter_context = f"industry:{engagement['industry']}"
 
+            _seen_article_idx[rid] = len(articles_engaged)
             articles_engaged.append({
-                "id": ctx_id,
-                "title": article.title if article else f"Content {ctx_id[:8]}",
-                "source": article.source if article else None,
-                "thumbnail_url": article.article_image_url if article else None,
+                "id": rid,
+                "title": article.title,
+                "url": article.url,
+                "source": article.source,
+                "thumbnail_url": article.article_image_url,
                 "filter_context": filter_context,
                 "key_quote": key_quote,
                 "engagement_type": engagement_type,
-                "time_spent_minutes": round(engagement["total_seconds"] / 60, 1),
+                "time_spent_minutes": mins,
             })
 
         # Sort by time spent (deepest engagement first)
