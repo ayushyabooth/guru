@@ -71,7 +71,11 @@ export function useDiveinFeed(filter: string) {
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    placeholderData: (previousData) => previousData,
+    // Keep previous data only when revalidating the SAME filter; on a filter
+    // switch to an uncached (e.g. newly-added) interest, show the skeleton rather
+    // than the prior filter's articles. (GUR-235)
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey?.[1] === filter ? previousData : undefined,
     initialData: () => readCache<DiveinFeedResponse>(persistKey)?.data,
     initialDataUpdatedAt: () => readCache<DiveinFeedResponse>(persistKey)?.timestamp,
   });

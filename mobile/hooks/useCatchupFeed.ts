@@ -37,7 +37,12 @@ export function useCatchupFeed(context: string): UseCatchupFeedResult {
     },
     staleTime: 5 * 60 * 1000,  // 5 min — filter switches serve cached data
     gcTime: 30 * 60 * 1000,    // 30 min — keep old filter data in memory
-    placeholderData: (previousData) => previousData, // Show previous filter's data while loading
+    // Keep showing data only when revalidating the SAME filter. On a filter
+    // switch (e.g. to a newly-added interest with no cache), return undefined so
+    // the loading skeleton shows instead of the PREVIOUS filter's articles —
+    // otherwise a new "Finance" tab briefly shows the old "AI" feed. (GUR-235)
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey?.[1] === context ? previousData : undefined,
     initialData: () => readCache<CatchupFeedResponse>(persistKey)?.data,
     initialDataUpdatedAt: () => readCache<CatchupFeedResponse>(persistKey)?.timestamp,
   });
