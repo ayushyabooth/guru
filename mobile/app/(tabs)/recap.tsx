@@ -804,7 +804,7 @@ export default function RecapScreen() {
             </View>
             <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
             <View style={[styles.pill, glassPill]}>
-              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} filters</Text>
+              <Text style={[styles.pillText, { color: colors.textSecondary }]}>{filtersExplored} topics</Text>
             </View>
             <View style={[styles.pillDot, { backgroundColor: colors.textTertiary }]} />
             <View style={[styles.pill, glassPill]}>
