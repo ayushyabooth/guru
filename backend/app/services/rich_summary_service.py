@@ -72,7 +72,9 @@ class RichSummaryService:
             from app.config import settings
             response = self.claude.client.messages.create(
                 model=settings.CLAUDE_HAIKU_MODEL,
-                max_tokens=1000,  # Reduced from 3000 — 5 display fields only
+                # 1300: 5 display fields + 3 crux fields (GUR-231). This is a cap,
+                # not spend — billing is on tokens actually generated.
+                max_tokens=1300,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -92,6 +94,9 @@ class RichSummaryService:
                 summary_between_lines=parsed.get("between_lines", ""),
                 spotlight_quotes=parsed.get("spotlight_quotes", []),
                 socratic_prompts=parsed.get("socratic_prompts", []),
+                core_argument=parsed.get("core_argument"),
+                strongest_evidence=parsed.get("strongest_evidence", []),
+                counterpoints=parsed.get("counterpoints", []),
                 context_summary=None,  # Lazy — generated on first Q&A access
                 industry_context=industry,
                 specialization_context=specialization,
@@ -133,6 +138,77 @@ class RichSummaryService:
             article, industry, specialization, related_article_titles
         )
     
+    def regenerate_rich_content(
+        self,
+        article: Article,
+        industry: str,
+        specialization: str,
+        existing: Optional[ArticleRichContent] = None,
+    ) -> Optional[ArticleRichContent]:
+        """
+        Re-run the SAME single-pass generation and update the existing row
+        in place (GUR-231 crux backfill). Preserves context_summary (which is
+        lazily generated and expensive) and avoids delete-then-insert, so a
+        failed LLM call never destroys an existing row.
+
+        Falls back to generate_rich_content() if no row exists yet.
+        """
+        if existing is None:
+            existing = self.db.query(ArticleRichContent).filter(
+                ArticleRichContent.article_id == article.id
+            ).first()
+        if existing is None:
+            return self.generate_rich_content(article, industry, specialization)
+
+        try:
+            article_text = self._get_article_text(article)
+            if not article_text:
+                logger.warning(f"No text available for article {article.id}")
+                return None
+
+            prompt = self._build_prompt(
+                article_title=article.title,
+                article_text=article_text,
+                article_source=article.source,
+                industry=industry,
+                specialization=specialization,
+                related_articles=[]
+            )
+
+            from app.config import settings
+            response = self.claude.client.messages.create(
+                model=settings.CLAUDE_HAIKU_MODEL,
+                max_tokens=1300,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            parsed = self._parse_response(response.content[0].text)
+            if not parsed:
+                logger.warning(f"Failed to parse regenerated rich content for article {article.id}")
+                return None
+
+            existing.summary_whats_in = parsed.get("whats_in", "")
+            existing.summary_why_matters = parsed.get("why_matters", "")
+            existing.summary_between_lines = parsed.get("between_lines", "")
+            existing.spotlight_quotes = parsed.get("spotlight_quotes", [])
+            existing.socratic_prompts = parsed.get("socratic_prompts", [])
+            existing.core_argument = parsed.get("core_argument")
+            existing.strongest_evidence = parsed.get("strongest_evidence", [])
+            existing.counterpoints = parsed.get("counterpoints", [])
+            existing.industry_context = industry
+            existing.specialization_context = specialization
+            existing.model_used = settings.CLAUDE_HAIKU_MODEL
+            # context_summary intentionally untouched — lazily generated, still valid
+
+            self.db.commit()
+            self.db.refresh(existing)
+            logger.info(f"Regenerated rich content (crux backfill) for article {article.id}")
+            return existing
+
+        except Exception as e:
+            logger.error(f"Error regenerating rich content for article {article.id}: {e}")
+            self.db.rollback()
+            return None
+
     def ensure_context_summary(self, article: Article) -> Optional[str]:
         """
         Lazily generate the dense Q&A context summary on first access.
@@ -245,13 +321,22 @@ Generate the following components in JSON format:
    - Prompt deeper thinking about implications
    - Be specific to {specialization} context
 
-Return ONLY valid JSON with these 5 keys. Example format:
+6. "core_argument" (1-2 sentences): The article's thesis — what the author is really claiming, stated plainly.
+
+7. "strongest_evidence" (array of 2-3 short strings): The strongest support in the piece. Each bullet is one crisp sentence citing a specific fact, data point, or argument from the article.
+
+8. "counterpoints" (array of exactly 2 short strings): The strongest objections to the core argument — what a sharp skeptic would say, or what evidence would change the author's mind. One crisp sentence each.
+
+Return ONLY valid JSON with these 8 keys. Example format:
 {{
   "whats_in": "...",
   "why_matters": "...",
   "between_lines": "...",
   "spotlight_quotes": ["quote 1", "quote 2"],
-  "socratic_prompts": ["question 1?", "question 2?", "question 3?"]
+  "socratic_prompts": ["question 1?", "question 2?", "question 3?"],
+  "core_argument": "...",
+  "strongest_evidence": ["bullet 1", "bullet 2"],
+  "counterpoints": ["objection 1", "objection 2"]
 }}"""
     
     def _parse_response(self, content: str) -> Optional[Dict[str, Any]]:
@@ -279,7 +364,18 @@ Return ONLY valid JSON with these 5 keys. Example format:
                 parsed["spotlight_quotes"] = []
             if not isinstance(parsed.get("socratic_prompts"), list):
                 parsed["socratic_prompts"] = []
-            
+
+            # Crux fields (GUR-231) — soft validation: never fail the whole
+            # generation if the model omits or mistypes them.
+            if not isinstance(parsed.get("core_argument"), str):
+                parsed["core_argument"] = None
+            for crux_list in ("strongest_evidence", "counterpoints"):
+                value = parsed.get(crux_list)
+                if not isinstance(value, list):
+                    parsed[crux_list] = []
+                else:
+                    parsed[crux_list] = [str(item) for item in value if item]
+
             return parsed
             
         except json.JSONDecodeError as e:

@@ -104,6 +104,10 @@ def _run_column_migrations():
         # QA columns
         ("qa_exchanges", "conversation_id", "VARCHAR(36)"),
         ("qa_exchanges", "exchange_type", "VARCHAR(20) DEFAULT 'direct'"),
+        # Rich content crux columns (GUR-231)
+        ("article_rich_content", "core_argument", "TEXT"),
+        ("article_rich_content", "strongest_evidence", "JSON"),
+        ("article_rich_content", "counterpoints", "JSON"),
     ]
     import re
     _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')

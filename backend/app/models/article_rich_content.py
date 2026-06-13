@@ -26,7 +26,14 @@ class ArticleRichContent(Base):
     summary_why_matters = Column(Text)        # "Why it matters to you" - personalized relevance
     summary_between_lines = Column(Text)      # "Between the lines" - hidden context, connections
     spotlight_quotes = Column(JSON)           # Max 2-3 meaningful quotes (optional)
-    
+
+    # Crux fields (GUR-231) — generated in the SAME LLM pass as the summaries.
+    # Nullable: rows generated before GUR-231 won't have them; readers must
+    # tolerate None. Backfill via POST /api/v1/admin/backfill-crux.
+    core_argument = Column(Text)              # Article's thesis in 1-2 sentences
+    strongest_evidence = Column(JSON)         # Array of 2-3 short bullets: strongest support
+    counterpoints = Column(JSON)              # Array of 2 short bullets: strongest objections
+
     # Socratic Prompts (LLM-generated)
     socratic_prompts = Column(JSON)           # 2-4 thought-provoking questions
 

@@ -2,8 +2,9 @@
 Admin routes for ingestion management and monitoring
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from typing import Optional, Dict, Any, List
+from typing import Literal, Optional, Dict, Any, List
 import logging
 from datetime import datetime
 
@@ -274,6 +275,111 @@ async def generate_rich_content_for_articles(
         raise HTTPException(
             status_code=500,
             detail=f"Rich content generation error: {str(e)}"
+        )
+
+
+class BackfillCruxRequest(BaseModel):
+    """Request body for POST /admin/backfill-crux"""
+    limit: int = 10
+    scope: Literal["priority", "all"] = "priority"
+
+
+@router.post("/backfill-crux")
+async def backfill_crux(
+    request: BackfillCruxRequest = BackfillCruxRequest(),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Backfill GUR-231 crux fields (core_argument / strongest_evidence /
+    counterpoints) for articles whose rich_summary predates them.
+
+    Re-runs the single-pass rich summary generation in place for up to
+    `limit` articles whose rich content lacks core_argument.
+    scope='priority' processes saved / essential / AI-industry articles first;
+    scope='all' takes any (newest first).
+
+    Batch-callable: synchronous within the request (no background tasks —
+    they die on redeploy). Call repeatedly until `remaining` reaches 0.
+    """
+    try:
+        missing_crux = or_(
+            ArticleRichContent.core_argument.is_(None),
+            ArticleRichContent.core_argument == "",
+        )
+
+        # All candidates, newest articles first (raw_text is deferred, so this is cheap)
+        candidates = (
+            db.query(Article, ArticleRichContent)
+            .join(ArticleRichContent, ArticleRichContent.article_id == Article.id)
+            .filter(missing_crux)
+            .order_by(Article.created_at.desc())
+            .all()
+        )
+
+        if request.scope == "priority":
+            from app.models.interaction import UserSavedArticle
+            saved_ids = {r[0] for r in db.query(UserSavedArticle.article_id).distinct().all()}
+            essential_ids = {
+                r[0] for r in db.query(ExpertNote.article_id).filter(
+                    ExpertNote.priority == "Essential"
+                ).all()
+            }
+
+            def _is_priority(article: Article) -> bool:
+                if article.id in saved_ids or article.id in essential_ids:
+                    return True
+                industries = article.industries or []
+                return isinstance(industries, list) and "AI" in industries
+
+            # Stable sort: priority articles first, newest-first order preserved within groups
+            candidates.sort(key=lambda pair: 0 if _is_priority(pair[0]) else 1)
+
+        batch = candidates[: max(0, request.limit)]
+
+        from app.services.industries_config import IndustriesConfig
+        _defaults = IndustriesConfig.get_instance().get_defaults()
+        rich_service = RichSummaryService(db)
+        processed = 0
+
+        for article, rc in batch:
+            # Reuse the personalization context the row was originally built with;
+            # fall back to expert note, then config defaults.
+            industry = rc.industry_context
+            specialization = rc.specialization_context
+            if not industry or not specialization:
+                expert_note = db.query(ExpertNote).filter(
+                    ExpertNote.article_id == article.id
+                ).first()
+                if not industry:
+                    industry = (expert_note.expert_industry if expert_note else None) or _defaults['industry_name']
+                if not specialization:
+                    specs = expert_note.expert_specializations if expert_note else None
+                    specialization = (specs[0] if specs else None) or _defaults['specialization_name']
+
+            result = rich_service.regenerate_rich_content(
+                article=article,
+                industry=industry,
+                specialization=specialization,
+                existing=rc,
+            )
+            if result is not None and result.core_argument:
+                processed += 1
+
+        remaining = (
+            db.query(ArticleRichContent)
+            .filter(missing_crux)
+            .count()
+        )
+
+        logger.info(f"Crux backfill: processed={processed}, remaining={remaining} (scope={request.scope})")
+        return {"processed": processed, "remaining": remaining}
+
+    except Exception as e:
+        logger.error(f"Error in crux backfill: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Crux backfill error: {str(e)}"
         )
 
 

@@ -41,6 +41,10 @@ class RichSummaryResponse(BaseModel):
     between_the_lines: Optional[str] = None
     spotlight_quotes: Optional[List[str]] = None
     socratic_prompts: Optional[List[str]] = None
+    # Crux fields (GUR-231) — None for rows generated before the backfill
+    core_argument: Optional[str] = None
+    strongest_evidence: Optional[List[str]] = None
+    counterpoints: Optional[List[str]] = None
 
 
 class ArticleSummary(BaseModel):
@@ -380,6 +384,9 @@ def _build_article_summary(
             between_the_lines=rich_content.summary_between_lines,
             spotlight_quotes=rich_content.spotlight_quotes if rich_content.spotlight_quotes else None,
             socratic_prompts=rich_content.socratic_prompts if rich_content.socratic_prompts else None,
+            core_argument=rich_content.core_argument,
+            strongest_evidence=rich_content.strongest_evidence if rich_content.strongest_evidence else None,
+            counterpoints=rich_content.counterpoints if rich_content.counterpoints else None,
         )
 
     thumbnail_url = getattr(article, 'article_image_url', None)

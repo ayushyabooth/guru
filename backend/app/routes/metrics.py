@@ -66,6 +66,9 @@ class MetricsSummaryResponse(BaseModel):
     articles_saved: int = 0
     filters_explored: int = 0
     top_topics: list[dict] = Field(default_factory=list)
+    # GUR-231: notes the user wrote this week (annotations with note text).
+    # Defaults to 0 so older clients are unaffected.
+    notes_this_week: int = 0
 
 
 @router.post("/metrics/log-time", response_model=TimeLogResponse, status_code=status.HTTP_201_CREATED)
@@ -292,8 +295,9 @@ async def get_metrics_summary(
     articles_saved = 0
     filters_explored = 0
     top_topics: list[dict] = []
+    notes_this_week = 0
     try:
-        from app.models.interaction import UserSavedArticle
+        from app.models.interaction import UserSavedArticle, UserAnnotation
         read_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
             TimeLog.user_id == current_user.id,
             func.date(TimeLog.created_at) >= week_ago,
@@ -325,6 +329,15 @@ async def get_metrics_summary(
             topic_q = topic_q.filter(filter_match[0] == filter_match[1])
         topic_rows = topic_q.group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
         top_topics = [{"name": r[0], "count": int(r[1])} for r in topic_rows if r[0]]
+
+        # GUR-231: notes written this week (same window as the stats above).
+        # UserAnnotation rows with non-empty note_text (highlights-only excluded).
+        notes_this_week = db.query(func.count(UserAnnotation.id)).filter(
+            UserAnnotation.user_id == current_user.id,
+            func.date(UserAnnotation.created_at) >= week_ago,
+            UserAnnotation.note_text.isnot(None),
+            UserAnnotation.note_text != "",
+        ).scalar() or 0
     except Exception:
         # Never let stats computation break the metrics endpoint
         pass
@@ -356,4 +369,5 @@ async def get_metrics_summary(
         articles_saved=int(articles_saved),
         filters_explored=int(filters_explored),
         top_topics=top_topics,
+        notes_this_week=int(notes_this_week),
     )

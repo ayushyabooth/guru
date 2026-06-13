@@ -261,7 +261,11 @@ async def get_catchup_feed(
                         "whats_in_article": rc.summary_whats_in,
                         "why_it_matters": rc.summary_why_matters,
                         "between_the_lines": rc.summary_between_lines,
-                        "spotlight_quotes": rc.spotlight_quotes or []
+                        "spotlight_quotes": rc.spotlight_quotes or [],
+                        # Crux fields (GUR-231) — None/[] for pre-backfill rows
+                        "core_argument": rc.core_argument,
+                        "strongest_evidence": rc.strongest_evidence or [],
+                        "counterpoints": rc.counterpoints or []
                     }
                     narrative_socratic_prompts = rc.socratic_prompts or []
 
@@ -286,7 +290,11 @@ async def get_catchup_feed(
                     "whats_in_article": headline_rc.summary_whats_in,
                     "why_it_matters": headline_rc.summary_why_matters,
                     "between_the_lines": headline_rc.summary_between_lines,
-                    "spotlight_quotes": headline_rc.spotlight_quotes or []
+                    "spotlight_quotes": headline_rc.spotlight_quotes or [],
+                    # Crux fields (GUR-231) — None/[] for pre-backfill rows
+                    "core_argument": headline_rc.core_argument,
+                    "strongest_evidence": headline_rc.strongest_evidence or [],
+                    "counterpoints": headline_rc.counterpoints or []
                 }
                 socratic_prompts = headline_rc.socratic_prompts or []
 

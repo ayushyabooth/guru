@@ -229,7 +229,16 @@ CATCH-UP DEPTH (R20): the feed arrives PRE-PROCESSED with editorial nuance — u
 
 COMMITMENT WEAVING: if the user has a commitment, bias article choices toward it and set commitment_flag=true on qualifying article cards. Mention it naturally, don't preach.
 
-DEEP DIVE (goal mentions an article / "deep dive" / "go deeper"): call get_article_deep, then discuss the substance in a `text` block (specifics, not summary fluff) + a `quote` block for the line worth keeping + the article_card with the "open" action so they can read in full (their reader has highlighting/notes). After a meaningful exchange, OFFER to capture the takeaway via add_note — phrase the note in their words. Use ask_guru for their follow-up questions.
+DIVE-IN CRUX PROTOCOL (GUR-231 — dive-in mode, saved-queue walks, "build the crux", any dive-in journey): dive-in is NOT catch-up. Catch-up triages many stories; dive-in builds DETAILED UNDERSTANDING of few. The journey is a queue walk: plan 2-3 saved articles (by the session's time budget), each getting the full crux descent before moving on. Per article, across 1-2 turns:
+1. `article_card` (standard) to set the stage, then the DESCENT in order: `text` — the CORE ARGUMENT (the author's real claim, from `core_argument`, sharpened not quoted); `quote` — the strongest evidence line (from `strongest_evidence`/`spotlight_quotes`); `text` — the COUNTERPOINTS (from `counterpoints` + `between_the_lines`: what would change the author's mind, where the argument is weakest). You present all of this — the user's job is judgment, not recall.
+2. Then ask for THEIR TAKE — one pointed question ("Where do you land — does the evidence carry the claim?"), pills offering stances to react to. Engage with whatever they say; push back where their take skips the counterpoint.
+3. After their take: offer the CRUX NOTE via add_note — markdown structured exactly as: **Argument:** … / **Evidence:** … / **Counterpoint:** … / **My take:** <their words>. Title the note "Crux — <short article title>". One crux note per article.
+4. Update the `plan` block; next article is the next step. The outcome_summary tallies cruxes built.
+If crux fields are missing on an article (older content), call get_article_deep and compose the descent yourself from the full text — never skip the protocol. Use ask_guru for their follow-up questions. Deep-read option: the card keeps the "open" action — reading in full in the reader (highlights/notes) is always one tap.
+
+CAPTURE STEP (GUR-231, ALL journey modes): every plan's FINAL step is "Capture takeaways". When the journey reaches it, harvest 1-3 note candidates from the session — the user's own words where they contributed, the sharpest insight where they didn't — and offer them via add_note ONE at a time (each approval card is one offer). The outcome_summary must tally notes captured ("3 cruxes · 2 notes"). A journey that ends with zero capture offers is a failure.
+
+RECAP READINESS (GUR-231): get_metrics returns notes_this_week. Weave it in naturally where it motivates — after a capture ("that's four this week — Friday's recap will have real material"), or when proposing a journey ("no notes yet this week; let's fix that while we read"). Never nag; always tie it to the recap payoff.
 
 WEEKLY RECAP ("run my recap" / "what did I learn"): call get_recap_state, then start_recap if none active this week. Walk the stages conversationally, ONE question per turn:
 - Stage 1: present the week snapshot as `stats` + `text`.
@@ -323,8 +332,22 @@ def _slim_tool_result(name: str, status: int, data) -> str:
             sbs = data.get("storyboards") or data.get("items") or []
             return json.dumps({"storyboards": [_slim_storyboard(s) for s in sbs[:5]]})
         if name == "get_divein_feed":
+            # GUR-231: saved articles carry the full crux material (pre-processed
+            # at ingestion) — the dive-in journey is built on it.
+            def _crux(a: dict) -> dict:
+                rich = a.get("rich_summary") or {}
+                out = _slim_article(a)
+                out.update({
+                    "core_argument": (rich.get("core_argument") or "")[:300],
+                    "strongest_evidence": (rich.get("strongest_evidence") or [])[:3],
+                    "counterpoints": (rich.get("counterpoints") or [])[:2],
+                    "between_the_lines": (rich.get("between_the_lines") or "")[:300],
+                    "spotlight_quotes": (rich.get("spotlight_quotes") or [])[:3],
+                    "reflection_questions": (a.get("socratic_prompts") or [])[:2],
+                })
+                return out
             return json.dumps({
-                "saved": [_slim_article(a) for a in (data.get("saved_articles") or [])[:8]],
+                "saved": [_crux(a) for a in (data.get("saved_articles") or [])[:8]],
                 "expert_picks": [_slim_article(a) for a in (data.get("essential_articles") or [])[:5]],
                 "discovery": [_slim_article(a) for a in (data.get("discovery_articles") or [])[:5]],
             })
@@ -337,6 +360,7 @@ def _slim_tool_result(name: str, status: int, data) -> str:
                 "articles_saved": data.get("articles_saved"),
                 "top_topics": data.get("top_topics"),
                 "recap_status": data.get("recap_journey_status"),
+                "notes_this_week": data.get("notes_this_week", 0),
             })
         if name == "ask_guru":
             return json.dumps({

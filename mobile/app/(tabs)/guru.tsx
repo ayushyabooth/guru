@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform,
+  View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, AppState,
 } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL } from '../../constants/config';
 import { getAuthToken } from '../../utils/auth';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -28,12 +28,23 @@ const GOALS = [
   { label: 'What did I learn this week?', text: 'Synthesize what I learned this week from my reading', color: '#6366F1' },
 ];
 
+// GUR-231: journey mode — drives the time heartbeat's ring_type. 'progress'
+// is a valid journey mode but is NEVER logged (no ring for it).
+type JourneyMode = 'catchup' | 'divein' | 'recap' | 'progress';
+
+function classifyGoal(text: string): JourneyMode {
+  if (/dive|saved|crux|deep/i.test(text)) return 'divein';
+  if (/recap|what did i learn|synthesize/i.test(text)) return 'recap';
+  if (/track|progress|ring/i.test(text)) return 'progress';
+  return 'catchup';
+}
+
 // Persistent mode switcher — always one tap from any mode, never chat-trapped.
-const MODES = [
-  { label: 'Catch up', text: 'Switch modes: catch me up on my feed' },
-  { label: 'Dive in', text: 'Switch modes: dive into my saved articles and expert picks' },
-  { label: 'Recap', text: 'Switch modes: run my weekly recap' },
-  { label: 'Progress', text: 'Switch modes: show my progress and rings' },
+const MODES: { label: string; text: string; mode: JourneyMode }[] = [
+  { label: 'Catch up', text: 'Switch modes: catch me up on my feed', mode: 'catchup' },
+  { label: 'Dive in', text: 'Switch modes: dive into my saved articles and expert picks', mode: 'divein' },
+  { label: 'Recap', text: 'Switch modes: run my weekly recap', mode: 'recap' },
+  { label: 'Progress', text: 'Switch modes: show my progress and rings', mode: 'progress' },
 ];
 
 type TurnInput =
@@ -47,9 +58,12 @@ type TurnInput =
 // (The backend already persists the conversation per session_id — this keeps
 // the RENDERED journey in sync with it.)
 const JOURNEY_KEY = 'guru_agent_journey_v1';
-let journeyCache: { sessionId: string | null; blocks: AgentBlock[]; nextKey: number } | null = null;
+type JourneyPayload = { sessionId: string | null; blocks: AgentBlock[]; nextKey: number; mode: JourneyMode };
+let journeyCache: JourneyPayload | null = null;
 
-function loadJourney(): { sessionId: string | null; blocks: AgentBlock[]; nextKey: number } {
+const VALID_MODES: JourneyMode[] = ['catchup', 'divein', 'recap', 'progress'];
+
+function loadJourney(): JourneyPayload {
   if (journeyCache) return journeyCache;
   try {
     if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
@@ -57,16 +71,21 @@ function loadJourney(): { sessionId: string | null; blocks: AgentBlock[]; nextKe
       if (raw) {
         const j = JSON.parse(raw);
         if (j && Array.isArray(j.blocks)) {
-          return { sessionId: j.sessionId ?? null, blocks: j.blocks, nextKey: j.nextKey || j.blocks.length + 1 };
+          return {
+            sessionId: j.sessionId ?? null,
+            blocks: j.blocks,
+            nextKey: j.nextKey || j.blocks.length + 1,
+            mode: VALID_MODES.includes(j.mode) ? j.mode : 'catchup',
+          };
         }
       }
     }
   } catch {}
-  return { sessionId: null, blocks: [], nextKey: 0 };
+  return { sessionId: null, blocks: [], nextKey: 0, mode: 'catchup' };
 }
 
-function saveJourney(sessionId: string | null, blocks: AgentBlock[], nextKey: number) {
-  journeyCache = { sessionId, blocks, nextKey };
+function saveJourney(sessionId: string | null, blocks: AgentBlock[], nextKey: number, mode: JourneyMode) {
+  journeyCache = { sessionId, blocks, nextKey, mode };
   try {
     if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(JOURNEY_KEY, JSON.stringify(journeyCache));
@@ -95,6 +114,11 @@ export default function GuruAgentScreen() {
   const sessionIdRef = useRef<string | null>(restored.sessionId);
   const scrollRef = useRef<ScrollView>(null);
   const keyRef = useRef(restored.nextKey);
+  // GUR-231: journey mode + activity recency for the time heartbeat. Refs, not
+  // state — nothing renders off them, and the 60s interval reads them live.
+  const modeRef = useRef<JourneyMode>(restored.mode);
+  const lastActivityRef = useRef(Date.now());
+  const bumpActivity = () => { lastActivityRef.current = Date.now(); };
   // BUG 1 fix (web first-tap swallowed): RN-web's responder system can miss the
   // first press after hydration, so taps get BOTH onPress (responder) and a raw
   // DOM onClick on web. A single real tap fires both, so a shared ref-based
@@ -118,6 +142,7 @@ export default function GuruAgentScreen() {
   // onContentSizeChange (fires after layout) instead of a fragile timeout.
   const pinnedRef = useRef(true);
   const onThreadScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    bumpActivity(); // scrolling the thread counts as engagement (GUR-231)
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
     const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
     pinnedRef.current = distanceFromEnd < 120;
@@ -131,8 +156,62 @@ export default function GuruAgentScreen() {
   // captures the session_id (it arrives in the final 'done' event, after the
   // last block append).
   React.useEffect(() => {
-    saveJourney(sessionIdRef.current, blocks, keyRef.current);
+    saveJourney(sessionIdRef.current, blocks, keyRef.current, modeRef.current);
   }, [blocks, busy]);
+
+  // GUR-231 TASK 1: agent journey time heartbeat. Every 60s, while a journey
+  // is on screen (blocks > 0), the app is foreground/visible, and the user was
+  // active within the last 2 minutes, log one minute of ring time for the
+  // current mode. 'progress' journeys log nothing (no progress ring).
+  // Fire-and-forget: a failed beat must never disturb the journey UX.
+  const hasJourney = blocks.length > 0;
+  React.useEffect(() => {
+    if (!hasJourney) return; // entry screen logs nothing
+    const id = setInterval(() => {
+      try {
+        const visible = Platform.OS === 'web'
+          ? (typeof document !== 'undefined' && document.visibilityState === 'visible')
+          : AppState.currentState === 'active';
+        if (!visible) return;
+        if (Date.now() - lastActivityRef.current >= 120_000) return; // idle
+        const mode = modeRef.current;
+        if (mode !== 'catchup' && mode !== 'divein' && mode !== 'recap') return;
+        const now = Date.now();
+        (async () => {
+          const token = await getAuthToken();
+          await fetch(`${API_BASE_URL}/metrics/log-time`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ring_type: mode,
+              duration_seconds: 60,
+              context_id: sessionIdRef.current ?? undefined,
+              started_at: new Date(now - 60_000).toISOString(),
+              ended_at: new Date(now).toISOString(),
+              activity_type: 'agent',
+              idle_seconds: 0,
+            }),
+          });
+        })().catch(() => {});
+      } catch {}
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [hasJourney]);
+
+  // GUR-231 TASK 2: seeded goals via ?goal=<text> — other surfaces deep-link
+  // straight into a journey (e.g. Dive-in's "Build the crux →"). Auto-send
+  // exactly once, only onto a fresh thread, then strip the param.
+  const params = useLocalSearchParams<{ goal?: string }>();
+  const seededGoalRef = useRef(false);
+  React.useEffect(() => {
+    const raw = params.goal;
+    const goal = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
+    if (!goal || seededGoalRef.current || blocks.length > 0) return;
+    seededGoalRef.current = true;
+    onSend(goal);
+    try { router.setParams({ goal: undefined } as any); } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.goal]);
 
   const bg = isDark ? '#0A0E17' : '#F8FAFC';
   const tPrim = isDark ? '#F1F5F9' : '#0F172A';
@@ -179,6 +258,7 @@ export default function GuruAgentScreen() {
           if (!line) continue;
           let evt: any;
           try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+          bumpActivity(); // any SSE event = the journey is live (GUR-231)
           if (evt.event === 'status') setStatus(evt.text);
           else if (evt.event === 'block') {
             if (evt.block?.type === 'outcome_summary') sawOutcome = true;
@@ -207,13 +287,17 @@ export default function GuruAgentScreen() {
   const onSend = (text: string) => {
     const t = text.trim();
     if (!t) return;
+    bumpActivity();
     setInput('');
     // An explicit user send re-pins the thread so they see their own echo.
     pinnedRef.current = true;
+    // A journey STARTS here — classify the goal to set the heartbeat mode.
+    if (blocks.length === 0) modeRef.current = classifyGoal(t);
     sendTurn({ type: blocks.length === 0 ? 'goal' : 'message', text: t }, t);
   };
 
   const onDecision = (approvalId: string, approved: boolean) => {
+    bumpActivity();
     setBlocks(prev => prev.map(b =>
       b.type === 'approval' && b.approval_id === approvalId
         ? { ...b, _resolved: approved ? 'approved' : 'declined' }
@@ -232,6 +316,7 @@ export default function GuruAgentScreen() {
 
   const onNewGoal = () => {
     sessionIdRef.current = null;
+    modeRef.current = 'catchup'; // mode resets with the journey (GUR-231)
     clearJourney();
     setBlocks([]);
     setStatus(null);
@@ -249,7 +334,7 @@ export default function GuruAgentScreen() {
     }}>
       <TextInput
         value={input}
-        onChangeText={setInput}
+        onChangeText={(t) => { bumpActivity(); setInput(t); }}
         onSubmitEditing={() => onSend(input)}
         placeholder={blocks.length === 0 ? '…or type any goal or question' : busy ? 'Interrupt or redirect…' : 'Ask, redirect, or set a new goal…'}
         placeholderTextColor={tSec}
@@ -355,7 +440,7 @@ export default function GuruAgentScreen() {
         {MODES.map((m, i) => (
           <Pressable
             key={i}
-            {...tapProps(() => onSend(m.text))}
+            {...tapProps(() => { modeRef.current = m.mode; onSend(m.text); })}
             disabled={busy}
             accessibilityRole="button"
             style={({ pressed }) => ({ paddingHorizontal: 11, paddingVertical: 6, borderRadius: 13, backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.07)', borderWidth: 1, borderColor: isDark ? 'rgba(129,140,248,0.22)' : 'rgba(99,102,241,0.18)', opacity: busy ? 0.5 : pressed ? 0.7 : 1 })}
