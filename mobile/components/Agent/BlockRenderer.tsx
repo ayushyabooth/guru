@@ -41,7 +41,7 @@ interface Props {
   isDark: boolean;
   onSend: (text: string) => void;
   onDecision: (approvalId: string, approved: boolean) => void;
-  onOpenArticle: (id: string, url?: string) => void;
+  onOpenArticle: (id: string, url?: string, quote?: string) => void;
 }
 
 // R19: internal ids must never reach the user's eyes. The system prompt
@@ -183,7 +183,7 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
               </TouchableOpacity>
             )}
             {acts.includes('open') && !!block.article_id && (
-              <TouchableOpacity style={pill('rgba(56,189,248,0.16)', '#38BDF8')} onPress={() => onOpenArticle(block.article_id, block.url)} accessibilityRole="button">
+              <TouchableOpacity style={pill('rgba(56,189,248,0.16)', '#38BDF8')} onPress={() => onOpenArticle(block.article_id, block.url, block.quote || block.key_quote || block.spotlight_quote)} accessibilityRole="button">
                 <Text style={pillTxt('#38BDF8')}>Read →</Text>
               </TouchableOpacity>
             )}
@@ -235,14 +235,27 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ backgroundColor: 'rgba(251,146,60,0.10)', borderLeftWidth: 3, borderLeftColor: '#FB923C', borderRadius: 10, padding: 12, marginBottom: 12 }}>
           <Text style={{ color: isDark ? '#FCD34D' : '#92400E', fontSize: 13, fontStyle: 'italic' }}>"{block.text}"</Text>
-          <TouchableOpacity
-            onPress={() => onSend(`Keep this quote as a highlight: "${(block.text || '').slice(0, 300)}"`)}
-            accessibilityRole="button"
-            accessibilityLabel="Keep this quote as a highlight"
-            style={{ alignSelf: 'flex-start', marginTop: 9, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, borderWidth: 1, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)' }}
-          >
-            <Text style={{ fontSize: 11.5, fontWeight: '700', color: isDark ? '#FCD34D' : '#92400E' }}>Keep this quote</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 9 }}>
+            <TouchableOpacity
+              onPress={() => onSend(`Keep this quote as a highlight: "${(block.text || '').slice(0, 300)}"`)}
+              accessibilityRole="button"
+              accessibilityLabel="Keep this quote as a highlight"
+              style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, borderWidth: 1, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)' }}
+            >
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: isDark ? '#FCD34D' : '#92400E' }}>Keep this quote</Text>
+            </TouchableOpacity>
+            {/* GUR-237: jump to where this quote lives in the source article */}
+            {!!block.article_id && (
+              <TouchableOpacity
+                onPress={() => onOpenArticle(block.article_id, block.url, block.text)}
+                accessibilityRole="button"
+                accessibilityLabel="Read this quote in the source article"
+                style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, borderWidth: 1, backgroundColor: 'rgba(56,189,248,0.14)', borderColor: 'rgba(56,189,248,0.35)' }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: isDark ? '#7DD3FC' : '#0369A1' }}>Read in context ›</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       );
 

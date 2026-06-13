@@ -155,6 +155,17 @@ export default function RecapScreen() {
   // Derive stage completion for interactive stages
   const completedStages = hasCompletedRecap ? 4 : (journey?.stage_progress || 0);
 
+  // GUR-237: stage-aware, encouraging resume copy for a paused journey. Indexed
+  // by the stage the user is currently ON (completedStages = stages done, so the
+  // current stage is completedStages + 1). Tapping resumes precisely there.
+  const RESUME_CTA = [
+    { sub: 'Your reading snapshot is ready — pick up your reflection.', title: 'Resume Recap' },
+    { sub: 'A few guided questions are waiting — lock in what you learned.', title: 'Continue Reflecting' },
+    { sub: 'Keep tracing the connections in your Socratic dialogue.', title: 'Continue Exploring' },
+    { sub: 'Your audio recap is ready to wrap things up.', title: 'Finish Your Recap' },
+  ];
+  const resumeCta = RESUME_CTA[Math.min(Math.max(completedStages, 0), 3)];
+
   // Get current week date range (Monday–Sunday, matching backend Python weekday())
   const now = new Date();
   const day = now.getDay(); // 0=Sun..6=Sat
@@ -916,12 +927,12 @@ export default function RecapScreen() {
             <View style={styles.ctaSection}>
               <Text style={[styles.ctaText, { color: colors.textSecondary }]}>
                 {isInProgress
-                  ? 'Continue where you left off'
+                  ? resumeCta.sub
                   : 'Fill your last ring \u2014 consolidate what you learned since your last recap'
                 }
               </Text>
               <GlassButton
-                title={isInProgress ? 'Continue Journey' : 'Begin Journey'}
+                title={isInProgress ? resumeCta.title : 'Begin Journey'}
                 onPress={handleBeginJourney}
                 accentColor="#FB923C"
                 icon="play-circle"

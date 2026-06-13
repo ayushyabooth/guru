@@ -337,9 +337,12 @@ export default function GuruAgentScreen() {
   // "Read →" opens the SOURCE in a new tab immediately (same lesson as GUR-221:
   // never strand the user on an intermediary), then the in-app reader for
   // notes/highlights/Q&A via deferred navigation so the popup isn't cancelled.
-  const onOpenArticle = (id: string, url?: string) => {
+  const onOpenArticle = (id: string, url?: string, quote?: string) => {
     if (url) openExternalTab(url);
-    setTimeout(() => router.push(`/article/${id}?source=guru`), 0);
+    // GUR-237: deep-link to the exact passage when the card/quote references one
+    // — the reader scrolls to + highlights it (falls back to the top otherwise).
+    const q = quote ? `&highlightQuote=${encodeURIComponent(quote)}` : '';
+    setTimeout(() => router.push(`/article/${id}?source=guru${q}`), 0);
   };
 
   const onNewGoal = () => {
