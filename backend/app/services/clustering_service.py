@@ -33,6 +33,18 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+# ── Cohesion thresholds (GUR-236) ────────────────────────────────────────────
+# Articles only cluster together when genuinely similar — no more forcing a
+# fixed number of buckets. Calibrated against the reported bad cluster (Tesla
+# Robotaxi + lending/insurance): that junk topped out at cosine 0.20 to the
+# headline (avg pairwise 0.16), while genuinely-linked articles run ≳0.45. So a
+# 0.40 floor leans permissive — it keeps *reasonably*-linked articles together
+# while rejecting the forced padding with a 2× margin. distance = 1 - cosine,
+# so threshold 0.60 ⇒ merge while avg cosine ≳ 0.40. Per-cluster cohesion is
+# logged below for ongoing calibration.
+CLUSTER_DISTANCE_THRESHOLD = 0.60   # AgglomerativeClustering distance_threshold (avg cosine ≳ 0.40)
+RELATED_MIN_SIMILARITY = 0.40       # min cosine(headline, candidate) to pad "Also in this story"
+
 # Global embedding model (lazy loaded)
 _embedding_model = None
 
@@ -433,24 +445,19 @@ def cluster_articles_for_context(
         # Convert similarity to distance (1 - similarity)
         distance_matrix = 1 - similarity_matrix
         
-        # Perform hierarchical clustering
-        # Create more clusters for better storyboard diversity
-        if len(articles) <= 3:
-            n_clusters = 1  # Force single cluster for very small datasets
-        elif len(articles) <= 10:
-            n_clusters = min(3, len(articles) // 2)  # 2-5 clusters for small sets
-        else:
-            # For larger datasets, create more clusters (up to 8)
-            n_clusters = min(8, max(3, len(articles) // 5))
-        
+        # Cohesion-gated clustering (GUR-236): merge only genuinely-similar
+        # articles via a distance threshold, instead of forcing a fixed number
+        # of buckets. Dissimilar articles become their own (often singleton)
+        # clusters → clean single-article cards rather than fabricated "stories".
         clustering = AgglomerativeClustering(
-            n_clusters=n_clusters,
+            n_clusters=None,
+            distance_threshold=CLUSTER_DISTANCE_THRESHOLD,
             metric='precomputed',
-            linkage='average'
+            linkage='average',
         )
-        
+
         cluster_labels = clustering.fit_predict(distance_matrix)
-        
+
         # Group articles by cluster
         clusters = {}
         for i, article_id in enumerate(article_ids):
@@ -458,6 +465,22 @@ def cluster_articles_for_context(
             if cluster_id not in clusters:
                 clusters[cluster_id] = []
             clusters[cluster_id].append(article_id)
+
+        # Cohesion telemetry for threshold calibration: log min/avg pairwise
+        # cosine similarity for each multi-article cluster.
+        idx_of = {aid: i for i, aid in enumerate(article_ids)}
+        for cid, ids in clusters.items():
+            if len(ids) < 2:
+                continue
+            sims = [
+                float(similarity_matrix[idx_of[a]][idx_of[b]])
+                for x, a in enumerate(ids) for b in ids[x + 1:]
+            ]
+            if sims:
+                logger.info(
+                    f"[cohesion] {filter_context} cluster={cid} n={len(ids)} "
+                    f"min_sim={min(sims):.2f} avg_sim={sum(sims) / len(sims):.2f}"
+                )
         
         # Create storyboards for each cluster
         # Phase 1: Generate LLM content in parallel (summary, theme, narrative)
@@ -563,7 +586,8 @@ def cluster_articles_for_context(
             )
 
             _fill_related_articles(
-                storyboard, all_cluster_article_ids, filter_context, db
+                storyboard, all_cluster_article_ids, filter_context, db,
+                headline_embedding=embeddings.get(headline_article.id),
             )
 
             storyboards.append(storyboard)
@@ -913,12 +937,15 @@ def _fill_related_articles(
     existing_article_ids: List[uuid.UUID],
     filter_context: str,
     db: Session,
-    max_total: int = 5
+    max_total: int = 5,
+    headline_embedding=None,
 ):
-    """Fill storyboards with <3 related articles from same specialization.
+    """Pad a thin storyboard with related articles — gated by similarity (GUR-236).
 
-    Queries additional articles from the same expert_specializations that
-    haven't been assigned to any storyboard in this batch. Caps at max_total.
+    Candidates come from the same expert_specializations, but are only added when
+    their embedding is cosine-similar to the headline (>= RELATED_MIN_SIMILARITY).
+    If none qualify the storyboard stays lean rather than padding with unrelated
+    articles (which is how "lending stats" landed under a Tesla story).
     """
     # Count current related articles (excluding headline)
     current_count = db.query(StoryboardArticle).filter(
@@ -958,14 +985,39 @@ def _fill_related_articles(
     # Combine with existing_article_ids to exclude all already-assigned articles
     exclude_ids = storyboard_article_ids | set(existing_article_ids)
 
-    # Query candidates
-    candidates = db.query(Article).join(ExpertNote).filter(
+    # Without a headline embedding we can't verify relatedness — skip padding
+    # rather than risk unrelated "Also in this story" entries. (GUR-236)
+    if headline_embedding is None:
+        return
+
+    # Over-fetch same-specialization candidates, then keep only those genuinely
+    # similar to the headline, ranked by similarity (not raw quality/recency).
+    raw_candidates = db.query(Article).join(ExpertNote).filter(
         or_(*spec_conditions),
         ~Article.id.in_(exclude_ids)
     ).order_by(
         desc(Article.quality_score),
         desc(Article.created_at)
-    ).limit(needed).all()
+    ).limit(max(needed * 6, 12)).all()
+
+    cand_emb = compute_article_embeddings(raw_candidates) if raw_candidates else {}
+    scored = []
+    for a in raw_candidates:
+        v = cand_emb.get(a.id)
+        if v is None:
+            continue
+        sim = float(cosine_similarity([headline_embedding], [v])[0][0])
+        if sim >= RELATED_MIN_SIMILARITY:
+            scored.append((sim, a))
+    scored.sort(key=lambda t: t[0], reverse=True)
+    candidates = [a for _, a in scored[:needed]]
+
+    if not candidates:
+        logger.info(
+            f"[related-fill] storyboard {storyboard.id}: no candidate >= "
+            f"{RELATED_MIN_SIMILARITY} similarity — keeping it lean"
+        )
+        return
 
     # Add fill articles to storyboard
     current_max_rank = db.query(StoryboardArticle.rank).filter(
