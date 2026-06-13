@@ -20,12 +20,27 @@ import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
  * write → outcome tally. Free-form questions answered inline.
  */
 
-const GOALS = [
+// Entry chips. Two are time-scoped (GUR-232 R26): a single Today|Week toggle
+// above the chips rewords them, so both timeframes are one tap away without
+// adding chips. Default Today (daily-first). Non-scoped chips are time-neutral.
+type GoalChip = {
+  color: string;
+  label?: string;
+  text?: string;
+  scoped?: { today: { label: string; text: string }; week: { label: string; text: string } };
+};
+const GOALS: GoalChip[] = [
   { label: 'Catch me up', text: 'Catch me up on my feed', color: '#38BDF8' },
   { label: 'Dive into saved & expert picks', text: 'Dive-in mode: walk me through my saved-for-later queue and expert picks, deep-read style', color: '#EC4899' },
   { label: 'Run my recap', text: 'Run my recap', color: '#FB923C' },
-  { label: 'How am I tracking this week?', text: 'How am I tracking against my goals this week?', color: '#34D399' },
-  { label: 'What did I learn today?', text: 'Synthesize what I learned today from my reading', color: '#6366F1' },
+  { color: '#34D399', scoped: {
+    today: { label: 'How am I tracking today?', text: 'How am I tracking against my goals today?' },
+    week: { label: 'How am I tracking this week?', text: 'How am I tracking against my goals this week?' },
+  } },
+  { color: '#6366F1', scoped: {
+    today: { label: 'What did I learn today?', text: 'Synthesize what I learned today from my reading' },
+    week: { label: 'What did I learn this week?', text: 'Synthesize what I learned this week from my reading' },
+  } },
 ];
 
 // GUR-231: journey mode — drives the time heartbeat's ring_type. 'progress'
@@ -111,6 +126,8 @@ export default function GuruAgentScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [blobState, setBlobState] = useState<BlobState>('idle');
+  // R26: time window for the two time-scoped entry chips (default today).
+  const [entryWindow, setEntryWindow] = useState<'today' | 'week'>('today');
   const sessionIdRef = useRef<string | null>(restored.sessionId);
   const scrollRef = useRef<ScrollView>(null);
   const keyRef = useRef(restored.nextKey);
@@ -371,31 +388,54 @@ export default function GuruAgentScreen() {
     return (
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: bg }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 20, paddingTop: 70 }}>
-          <View style={{ alignItems: 'center', marginBottom: 26 }}>
+          <View style={{ alignItems: 'center', marginBottom: 22 }}>
             <GuruBlob size={64} state={busy ? 'thinking' : 'idle'} />
-            <Text accessibilityRole="header" style={{ color: tPrim, fontSize: 22, fontWeight: '800', marginTop: 20 }}>
-              What should we get done?
+            <Text accessibilityRole="header" style={{ color: tPrim, fontSize: 22, fontWeight: '800', marginTop: 20, textAlign: 'center' }}>
+              Where should we go deep today?
             </Text>
             <Text style={{ color: tSec, fontSize: 13, marginTop: 6, textAlign: 'center' }}>
-              I'll plan it, you approve it — we'll work through it together.
+              I'll bring the reading, you bring the thinking — that's how it sticks.
             </Text>
           </View>
-          {GOALS.map((g, i) => (
-            <Pressable
-              key={i}
-              {...tapProps(() => onSend(g.text))}
-              accessibilityRole="button"
-              style={({ pressed }) => ({
-                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                backgroundColor: `${g.color}1F`, borderColor: `${g.color}45`, borderWidth: 1,
-                borderRadius: 19, paddingHorizontal: 18, paddingVertical: 14, marginBottom: 12,
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Text style={{ color: tPrim, fontSize: 14, fontWeight: '600' }}>{g.label}</Text>
-              <Text style={{ color: g.color, fontSize: 15, fontWeight: '700' }}>→</Text>
-            </Pressable>
-          ))}
+          {/* R26: one Today|Week toggle rewords the two time-scoped chips below —
+              both timeframes one tap away, no extra chips. Mirrors Home. */}
+          <View style={{ flexDirection: 'row', alignSelf: 'flex-end', marginBottom: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.10)' }}>
+            {(['today', 'week'] as const).map((w) => {
+              const active = entryWindow === w;
+              return (
+                <Pressable
+                  key={w}
+                  {...tapProps(() => setEntryWindow(w))}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={{ paddingHorizontal: 14, paddingVertical: 6, backgroundColor: active ? (isDark ? 'rgba(99,102,241,0.28)' : 'rgba(99,102,241,0.14)') : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: active ? '700' : '600', color: active ? (isDark ? '#C7D2FE' : '#4338CA') : tSec }}>
+                    {w === 'today' ? 'Today' : 'Week'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {GOALS.map((g, i) => {
+            const c = g.scoped ? g.scoped[entryWindow] : { label: g.label!, text: g.text! };
+            return (
+              <Pressable
+                key={i}
+                {...tapProps(() => onSend(c.text))}
+                accessibilityRole="button"
+                style={({ pressed }) => ({
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  backgroundColor: `${g.color}1F`, borderColor: `${g.color}45`, borderWidth: 1,
+                  borderRadius: 19, paddingHorizontal: 18, paddingVertical: 14, marginBottom: 12,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text style={{ color: tPrim, fontSize: 14, fontWeight: '600' }}>{c.label}</Text>
+                <Text style={{ color: g.color, fontSize: 15, fontWeight: '700' }}>→</Text>
+              </Pressable>
+            );
+          })}
           {/* First-time users get the widget install path from the agentic
               experience too, not just Home (self-hides once installed). */}
           <View style={{ marginTop: 6 }}>
