@@ -172,6 +172,36 @@ thumbnails feed standard/mini.
 - **Intent bar** is persistent; sending while a journey is active = interrupt/redirect
   (message goes to the same session; the model decides to adjust the plan).
 
+### 3.1 The Learning Loop (GUR-231)
+
+- **Journey mode**: every journey carries `mode ∈ catchup|divein|recap|progress`,
+  set by goal chips (explicit), free-text classification (`dive|saved|crux` →
+  divein; `recap|what did i learn` → recap; `progress|ring` → progress; default
+  catchup), and updated by the MODES switcher. Persisted with the journey
+  (survives navigation/reload).
+- **Heartbeat → rings**: every 60s, IF tab visible AND a journey is live AND
+  last interaction < 2 min AND mode ≠ progress, fire-and-forget
+  `POST /metrics/log-time { ring_type: mode, duration_seconds: 60,
+  activity_type: 'agent', context_id: session_id, started_at, ended_at }`.
+  This is the SAME endpoint the reader uses — rings, weekly stats and the
+  per-filter scoping inherit agent time with zero new aggregation. The reader
+  clock runs on its own route, so no double counting.
+- **Capture discipline (prompt doctrines)**: every plan ends with a "Capture
+  takeaways" step (1-3 add_note offers, one approval card each; outcome
+  tallies them); moment-based offers throughout (R21); `notes_this_week`
+  (new field on /me/metrics, exposed in the metrics slimmer) powers
+  recap-readiness weaving.
+- **Dive-in Crux protocol**: dive-in journeys queue-walk saved articles
+  (2-3/session). Descent per article from pre-processed `rich_summary` crux
+  fields (`core_argument`, `strongest_evidence[]`, `counterpoints[]` —
+  generated in the same ingestion pass; `POST /admin/backfill-crux` for the
+  existing corpus; live fallback via get_article_deep when fields missing).
+  Rendered with EXISTING blocks (card → argument text → evidence quote →
+  counterpoints text → take prompt) — no new block types. Artifact: a crux
+  note ("Crux — <title>", Argument/Evidence/Counterpoint/My take) via the
+  standard add_note approval → article Notes tab → weekly recap. The dive-in
+  tab's saved cards deep-link in via `?goal=` seeding ("Build the crux →").
+
 ## 4. Cost & model
 
 Default `claude-sonnet-4-6`: with cached system+tools (~3–4K tokens) a typical 4-iteration
