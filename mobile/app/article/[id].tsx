@@ -9,6 +9,7 @@ import { openExternalTab } from '../../utils/openExternalTab';
 import GuruFormattedText, { cleanGuruResponse } from '../../components/ui/GuruFormattedText';
 import GuruBlob from '../../components/ui/GuruBlob';
 import { CatchupService } from '../../services/article-service';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTimeTracking } from '../../hooks/useTimeTracking';
 import DarkThemeColors from '../../constants/darkTheme';
 import {
@@ -131,6 +132,8 @@ export default function ArticleDetailScreen() {
   const thickGlass   = buildGlass('thick',   isDark);
   const thinGlass    = buildGlass('thin',    isDark);
   const regularGlass = buildGlass('regular', isDark);
+
+  const queryClient = useQueryClient();
 
   const [overlayArticle, setOverlayArticle] = useState<OverlayArticleData | null>(null);
   const [isSaved, setIsSaved] = useState(false);
@@ -402,10 +405,14 @@ export default function ArticleDetailScreen() {
 
   const handleSave = async (artId: string) => {
     await CatchupService.saveArticle(artId);
+    // Keep the Dive-in library in sync — see GUR-233. Without this the saved
+    // article won't surface in Dive-in until the 5-min feed cache expires.
+    queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
   };
 
   const handleUnsave = async (artId: string) => {
     await CatchupService.unsaveArticle(artId);
+    queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
   };
 
   const handleRelatedArticleClick = (relatedArticle: RelatedArticle | string) => {

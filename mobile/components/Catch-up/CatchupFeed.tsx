@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet, RefreshControl, Platform, Animated } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import Icon from '../ui/Icon';
 import { useCatchupFeed } from '../../hooks/useCatchupFeed';
 import { CatchupService } from '../../services/article-service';
@@ -56,6 +57,18 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
     removeStoryboard,
   } = useCatchupFeed(context);
 
+  const queryClient = useQueryClient();
+
+  // A save (or not-relevant) here changes what the Dive-in library should show.
+  // The Dive-in feed query lives behind a 5-min staleTime + localStorage-seeded
+  // initialData, so without an explicit signal it keeps serving the old list —
+  // newly-saved articles stay invisible until the cache expires. Invalidating
+  // forces the (always-mounted, on web) Dive-in observer to refetch in the
+  // background, which also rewrites its localStorage copy. (GUR-233)
+  const invalidateLibrary = () => {
+    queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
+  };
+
   // Scroll to top when the feed first populates so the hero image/headline of
   // card #1 is never hidden above the fold due to browser scroll restoration
   // on web. (GUR-168)
@@ -71,16 +84,18 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   const handleSaveArticle = async (articleId: string) => {
     try {
       await CatchupService.saveArticle(articleId);
+      invalidateLibrary();
       onArticleSave?.(articleId);
     } catch (error) {
       throw error; // Re-throw to let StoryboardCard handle the error display
     }
   };
-  
+
   const handleNotRelevant = async (storyboardId: string) => {
     try {
       await CatchupService.markNotRelevant(storyboardId, context);
       removeStoryboard(storyboardId);
+      invalidateLibrary();
       onNotRelevant?.(storyboardId);
     } catch (error) {
       throw error;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Alert, SafeAreaView, Platform, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { DiveinFeed, DiveinArticle } from '../../components/Divein/DiveinFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { userService, UserProfile } from '../../services/user-service';
@@ -53,7 +54,19 @@ export default function DiveinScreen() {
   const { isDark, colors } = useTheme();
   const router = useRouter();
 
+  const queryClient = useQueryClient();
   const { savedArticles: savedRaw, essentialArticles, discoveryArticles, isLoading, error, refresh, removeArticle } = useDiveinFeed(selectedContext);
+
+  // Universal freshness net: whenever Dive-in regains focus, revalidate the
+  // feed so saves made anywhere else (catch-up, the reader, or the agent's
+  // save tool) surface here — even though the tab stays mounted on web. Uses
+  // invalidateQueries, not refresh(), to avoid resetting the local not-relevant
+  // removed-set. (GUR-233)
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
+    }, [queryClient])
+  );
 
   // Map raw articles to DiveinArticle format, memoized
   const articles = useMemo(() => {

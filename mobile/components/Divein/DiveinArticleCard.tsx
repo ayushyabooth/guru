@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { getFilterColors } from '../../constants/theme';
 import { getIndustryConfig } from '../../constants/industryConfig';
 import {
@@ -67,6 +68,7 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
 }) => {
   const router = useRouter();
   const { isDark, colors } = useTheme();
+  const queryClient = useQueryClient();
 
   // R5A: wire the save/bookmark action (was a no-op placeholder).
   const [saved, setSaved] = React.useState(article.isSaved);
@@ -79,6 +81,10 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
     try {
       if (next) await CatchupService.saveArticle(article.id);
       else await CatchupService.unsaveArticle(article.id);
+      // Re-sort the library: the Saved/Discovery sections key off the feed's
+      // is_saved, not this local optimistic flag, so refetch to move the card
+      // into the right section. (GUR-233)
+      queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
     } catch {
       setSaved(!next); // revert on failure
     } finally {
