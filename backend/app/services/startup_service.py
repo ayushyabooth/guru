@@ -93,7 +93,7 @@ def _build_filter_contexts_for_user(profile: UserProfile) -> List[str]:
     if profile.specializations:
         try:
             specializations = json.loads(profile.specializations) if isinstance(profile.specializations, str) else profile.specializations
-            for spec in specializations[:2]:
+            for spec in specializations[:4]:
                 filter_contexts.append(f"specialization:{spec}")
         except (ValueError, TypeError):
             logger.warning(f"Could not parse specializations: {profile.specializations}")
@@ -101,7 +101,7 @@ def _build_filter_contexts_for_user(profile: UserProfile) -> List[str]:
     if profile.additional_interest_industries:
         try:
             interests = json.loads(profile.additional_interest_industries) if isinstance(profile.additional_interest_industries, str) else profile.additional_interest_industries
-            for interest in interests[:2]:
+            for interest in interests[:4]:
                 filter_contexts.append(f"interest:{interest}")
         except (ValueError, TypeError):
             logger.warning(f"Could not parse interests: {profile.additional_interest_industries}")

@@ -22,6 +22,7 @@ import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
 import { removeAuthToken, getAuthToken } from '../../utils/auth';
 import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
+import InterestsEditor from '../../components/Home/InterestsEditor';
 const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
 import { OrganicBackground, GlassButton } from '../../components/ui';
 import {
@@ -362,6 +363,7 @@ function HomeContent() {
   const queryClient = useQueryClient();
   const [showGoalEditor, setShowGoalEditor] = useState(false);
   const [showSettings, setShowSettings] = useState(false); // GUR-200: settings modal hosts logout
+  const [showInterests, setShowInterests] = useState(false); // GUR-235: interests & specializations editor
   const [debugMetrics, setDebugMetrics] = useState<MetricsData | null>(null);
   // GUR-232: Today | Week window toggle. Default = Today. Governs the rings,
   // the progress bars, the activity chips, and the section title together — no
@@ -846,6 +848,18 @@ function HomeContent() {
               <Text style={{ fontSize: 13, color: COLORS.textSecondary }}>{isDark ? 'Dark' : 'Light'}</Text>
             </TouchableOpacity>
             <View style={{ height: 1, backgroundColor: COLORS.glassBorder, marginVertical: 4 }} />
+            {/* GUR-235: edit interests & specializations */}
+            <TouchableOpacity onPress={() => { setShowSettings(false); setShowInterests(true); }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }} accessibilityRole="button" accessibilityLabel="Edit interests and specializations" accessibilityHint="Tune what Guru covers across your feeds">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Text style={{ fontSize: 16 }}>✦</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.textPrimary }}>Interests & specializations</Text>
+                  <Text style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 1 }}>Tune what Guru covers for you</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 18, color: COLORS.textSecondary }}>›</Text>
+            </TouchableOpacity>
+            <View style={{ height: 1, backgroundColor: COLORS.glassBorder, marginVertical: 4 }} />
             <TouchableOpacity onPress={() => { setShowSettings(false); handleLogout(); }} style={{ paddingVertical: 12 }} accessibilityRole="button" accessibilityLabel="Log out" accessibilityHint="Signs you out and returns to the login screen">
               <Text style={{ fontSize: 15, fontWeight: '600', color: '#EF4444' }}>Log out</Text>
             </TouchableOpacity>
@@ -870,6 +884,19 @@ function HomeContent() {
             catchupDailyGoal: displayMetrics.catchup.dailyGoal,
             diveinDailyGoal: displayMetrics.divein.dailyGoal,
           }}
+        />
+      </Modal>
+
+      {/* GUR-235: Interests & specializations editor */}
+      <Modal
+        visible={showInterests}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowInterests(false)}
+      >
+        <InterestsEditor
+          onClose={() => setShowInterests(false)}
+          onSaved={() => setShowInterests(false)}
         />
       </Modal>
     </View>

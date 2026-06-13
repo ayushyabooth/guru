@@ -65,6 +65,8 @@ export default function DiveinScreen() {
   useFocusEffect(
     useCallback(() => {
       queryClient.invalidateQueries({ queryKey: ['divein-feed'] });
+      // GUR-235: re-read the profile so edited interests/specializations rebuild the tabs.
+      loadUserProfile();
     }, [queryClient])
   );
 

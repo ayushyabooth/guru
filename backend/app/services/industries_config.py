@@ -220,8 +220,8 @@ class IndustriesConfig:
         Returns:
             Tuple of (is_valid, error_message)
         """
-        if len(interest_ids) > 2:
-            return False, "Maximum 2 additional interests allowed"
+        if len(interest_ids) > 4:
+            return False, "Maximum 4 additional interests allowed"
         
         for interest_id in interest_ids:
             if interest_id == core_industry_id:

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert, Platform, Animated, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { CatchupFeed } from '../../components/Catch-up/CatchupFeed';
 import { FilterTabBar } from '../../components/Catch-up/FilterTabBar';
 import { useScreenTimeTracking, useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
@@ -67,6 +67,14 @@ export default function CatchupScreen() {
       setLoading(false);
     }
   };
+
+  // GUR-235: re-read the profile on focus so newly-edited interests/specializations
+  // (from Settings) rebuild the tab list immediately.
+  useFocusEffect(
+    useCallback(() => {
+      loadUserProfile();
+    }, [])
+  );
 
   // Start tracking when profile is loaded (with industry context)
   useScreenTimeTracking('catchup', {

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import List
 from app.db.database import get_db
 from app.deps import get_current_user
 from app.models.user import User, UserProfile
@@ -178,4 +180,84 @@ async def update_current_user_profile(
         recap_weekly_goal_minutes=profile.recap_weekly_goal_minutes,
         created_at=profile.created_at,
         updated_at=profile.updated_at
+    )
+
+
+class TopicsUpdateRequest(BaseModel):
+    """Partial profile update for the Settings interests/specializations editor.
+    Accepts IDs; only these two fields change — everything else is preserved."""
+    specializations: List[str] = []                 # specialization IDs
+    additional_interest_industries: List[str] = []  # industry IDs (interests)
+
+
+@router.patch("/me/interests", response_model=UserProfileResponse)
+async def update_my_topics(
+    data: TopicsUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update ONLY the user's specializations + additional interests (GUR-235).
+
+    Used by the Settings → Interests & specializations editor. Core industry,
+    capacity and goals are left untouched. Validates against central config
+    (interest cap = 4), stores display names, and fires the same background
+    storyboard warming as onboarding so the new contexts' feeds fill in.
+    """
+    config = IndustriesConfig.get_instance()
+    profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    # The stored core_industry is a display name; validation needs its ID.
+    core_id = config.normalize_id(profile.core_industry, 'industry') or profile.core_industry
+
+    ok, err = config.validate_specializations(core_id, data.specializations)
+    if not ok:
+        raise HTTPException(status_code=400, detail=err)
+    ok, err = config.validate_additional_interests(core_id, data.additional_interest_industries)
+    if not ok:
+        raise HTTPException(status_code=400, detail=err)
+
+    # Store display names (consistent with onboarding / PUT /me).
+    profile.specializations = [
+        config.get_display_name(s, 'specialization') or s for s in data.specializations
+    ]
+    profile.additional_interest_industries = [
+        config.get_display_name(i, 'industry') or i for i in data.additional_interest_industries
+    ]
+    db.commit()
+    db.refresh(profile)
+
+    # Fire-and-forget: warm storyboard caches for the user's (now updated) filter
+    # contexts so a newly-added interest/specialization feed isn't empty.
+    import threading
+    from app.services.startup_service import warm_user_filters_sync
+    threading.Thread(
+        target=warm_user_filters_sync,
+        args=(str(current_user.id), None),
+        daemon=True,
+    ).start()
+    logger.info(f"Updated topics + triggered warming for user {current_user.id}")
+
+    return UserProfileResponse(
+        user_id=str(profile.user_id),
+        core_industry=profile.core_industry,
+        specializations=profile.specializations,
+        additional_interest_industries=profile.additional_interest_industries or [],
+        core_industry_display=_resolve_display_name(config, profile.core_industry, 'industry'),
+        specializations_display=[
+            _resolve_display_name(config, s, 'specialization')
+            for s in (profile.specializations or [])
+        ],
+        additional_interest_industries_display=[
+            _resolve_display_name(config, i, 'industry')
+            for i in (profile.additional_interest_industries or [])
+        ],
+        total_weekly_capacity_band=profile.total_weekly_capacity_band,
+        catchup_daily_goal_minutes=profile.catchup_daily_goal_minutes,
+        catchup_daily_max_minutes=profile.catchup_daily_max_minutes,
+        divein_weekly_goal_minutes=profile.divein_weekly_goal_minutes,
+        recap_weekly_goal_minutes=profile.recap_weekly_goal_minutes,
+        created_at=profile.created_at,
+        updated_at=profile.updated_at,
     )
