@@ -326,17 +326,28 @@ async def get_metrics_summary(
         if current_streak > 365:
             break
     
-    # Get current week's recap journey status
+    # Recap journey status for the ring's in-progress state. GUR-232: recap is
+    # decoupled from the calendar week, so journeys are no longer keyed on this
+    # Monday — take the user's MOST RECENT journey regardless of anchor.
     from app.models.recap import RecapJourney
-    from sqlalchemy import and_
-    week_start = today - timedelta(days=today.weekday())  # Monday
     recap_journey = db.query(RecapJourney).filter(
-        and_(
-            RecapJourney.user_id == current_user.id,
-            RecapJourney.week_start == week_start,
-        )
+        RecapJourney.user_id == current_user.id,
     ).order_by(RecapJourney.created_at.desc()).first()
     recap_journey_status = recap_journey.status if recap_journey else None
+
+    # GUR-232: recap ring follows the Home Today|Week toggle — "did the user
+    # complete a recap in this window?". The founder's "done" signal is a
+    # COMPLETED RecapJourney (not a time-log side effect).
+    recap_completed_today = db.query(RecapJourney.id).filter(
+        RecapJourney.user_id == current_user.id,
+        RecapJourney.status == 'completed',
+        func.date(RecapJourney.completed_at) == today,
+    ).first() is not None
+    recap_completed_this_week = db.query(RecapJourney.id).filter(
+        RecapJourney.user_id == current_user.id,
+        RecapJourney.status == 'completed',
+        func.date(RecapJourney.completed_at) >= week_ago,
+    ).first() is not None
 
     # GUR-13: weekly activity stats for Home dashboard (best-effort; 0 on error)
     articles_read = 0
@@ -458,6 +469,6 @@ async def get_metrics_summary(
         articles_read_today=int(articles_read_today),
         notes_today=int(notes_today),
         top_topics_today=top_topics_today,
-        recap_completed_today=bool(today_metric.recap_completed),
-        recap_completed_this_week=any(m.recap_completed for m in week_metrics),
+        recap_completed_today=recap_completed_today,
+        recap_completed_this_week=recap_completed_this_week,
     )
