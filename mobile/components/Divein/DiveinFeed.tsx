@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { DiveinArticleCard, DiveinArticleData } from './DiveinArticleCard';
 import { DiveinArticleSkeleton } from './DiveinArticleSkeleton';
 import Icon from '../ui/Icon';
@@ -51,6 +52,7 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
   isLoading,
   filterContext = 'core',
 }) => {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const numColumns = width >= 768 ? 2 : width >= 600 ? 2 : 1;
 
@@ -158,6 +160,16 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
                       <Text style={styles.sectionCountText}>{savedArticles.length}</Text>
                     </View>
                   </View>
+                  {/* R24 (founder): crux-building lives in the agent — ONE
+                      section-level door instead of per-card CTAs. */}
+                  <TouchableOpacity
+                    onPress={() => router.push(`/guru?goal=${encodeURIComponent('Dive-in crux: walk my saved queue and build the crux of each article')}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Build cruxes with Guru"
+                    style={{ marginLeft: 'auto', paddingHorizontal: 11, paddingVertical: 6, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(99,102,241,0.14)', borderColor: 'rgba(129,140,248,0.32)' }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#A5B4FC' }}>Build cruxes with Guru →</Text>
+                  </TouchableOpacity>
                 </View>
                 {renderGrid(savedArticles)}
               </>

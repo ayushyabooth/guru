@@ -235,6 +235,14 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ backgroundColor: 'rgba(251,146,60,0.10)', borderLeftWidth: 3, borderLeftColor: '#FB923C', borderRadius: 10, padding: 12, marginBottom: 12 }}>
           <Text style={{ color: isDark ? '#FCD34D' : '#92400E', fontSize: 13, fontStyle: 'italic' }}>"{block.text}"</Text>
+          <TouchableOpacity
+            onPress={() => onSend(`Keep this quote as a highlight: "${(block.text || '').slice(0, 300)}"`)}
+            accessibilityRole="button"
+            accessibilityLabel="Keep this quote as a highlight"
+            style={{ alignSelf: 'flex-start', marginTop: 9, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, borderWidth: 1, backgroundColor: 'rgba(251,146,60,0.14)', borderColor: 'rgba(251,146,60,0.35)' }}
+          >
+            <Text style={{ fontSize: 11.5, fontWeight: '700', color: isDark ? '#FCD34D' : '#92400E' }}>Keep this quote</Text>
+          </TouchableOpacity>
         </View>
       );
 

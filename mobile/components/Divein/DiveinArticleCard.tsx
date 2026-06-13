@@ -116,14 +116,6 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
     setTimeout(() => router.push(`/article/${article.id}?source=divein`), 0);
   };
 
-  // GUR-231: deep-link the agent into a crux-building journey for this saved
-  // article. The article id rides in the raw goal text — the thread's display
-  // layer already strips ids (R19 stripScaffolding).
-  const handleBuildCrux = () => {
-    const goal = `Dive-in crux: build the crux of "${article.headline}" (article ${article.id})`;
-    router.push(`/guru?goal=${encodeURIComponent(goal)}`);
-  };
-
   const getBadgeConfig = () => {
     if (article.isSaved) {
       return { icon: 'bookmark', label: 'SAVED', color: '#F59E0B' };
@@ -263,22 +255,6 @@ export const DiveinArticleCard: React.FC<DiveinArticleCardProps> = ({
               <Icon name="close" size={14} color={isDark ? colors.textTertiary : colors.textSecondary} />
             </TouchableOpacity>
           </View>
-
-          {/* GUR-231: saved articles get a one-tap path into an agent journey
-              that builds the crux. Glass pill matches the agent's pill language. */}
-          {article.isSaved && (
-            <TouchableOpacity
-              onPress={handleBuildCrux}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Build the crux of ${article.headline} with Guru`}
-              style={styles.cruxPill}
-            >
-              <Text style={[styles.cruxPillText, { color: isDark ? '#A5B4FC' : '#6366F1' }]}>
-                Build the crux →
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Small 52x52 thumbnail on the right */}
@@ -392,21 +368,6 @@ const styles = StyleSheet.create({
   dismissButton: {
     padding: 2,
     marginLeft: 'auto',
-  },
-  cruxPill: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 13,
-    borderWidth: 1,
-    backgroundColor: 'rgba(99,102,241,0.16)',
-    borderColor: 'rgba(129,140,248,0.35)',
-  },
-  cruxPillText: {
-    ...Typography.labelMedium,
-    fontSize: 12,
-    fontWeight: '600',
   },
   thumbnailContainer: {
     justifyContent: 'center',

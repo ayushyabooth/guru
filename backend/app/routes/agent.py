@@ -102,6 +102,19 @@ TOOLS = [
         },
     },
     {
+        "name": "save_highlight",
+        "description": "Save an exact quote from an article as a HIGHLIGHT (lands in the user's Notes tab alongside reader highlights, feeds recap). Executes IMMEDIATELY — call ONLY when the user just asked to highlight/keep a quote; never unprompted.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "article_id": {"type": "string"},
+                "quote": {"type": "string", "description": "The exact quote text"},
+                "title": {"type": "string", "description": "Article title"},
+            },
+            "required": ["article_id", "quote", "title"],
+        },
+    },
+    {
         "name": "mark_not_relevant",
         "description": "Mark a storyboard as not relevant, removing it from the user's feed. Executes IMMEDIATELY — call it ONLY when the user just asked to skip/remove it; never unprompted.",
         "input_schema": {
@@ -208,6 +221,7 @@ STATUS_TEXT = {
     "get_metrics": "checking your rings…",
     "get_recent_notes": "gathering your notes…",
     "get_commitment": "recalling your commitment…",
+    "save_highlight": "keeping that quote…",
     "ask_guru": "thinking it through…",
     "get_article_deep": "reading the article closely…",
     "get_recap_state": "checking your recap…",
@@ -240,6 +254,7 @@ DIVE-IN CRUX PROTOCOL (GUR-231 — dive-in mode, saved-queue walks, "build the c
 2. Then ask for THEIR TAKE — one pointed question ("Where do you land — does the evidence carry the claim?"), pills offering stances to react to. Engage with whatever they say; push back where their take skips the counterpoint.
 3. After their take: offer the CRUX NOTE via add_note — markdown structured exactly as: **Argument:** … / **Evidence:** … / **Counterpoint:** … / **My take:** <their words>. Title the note "Crux — <short article title>". One crux note per article.
 4. Update the `plan` block; next article is the next step. The outcome_summary tallies cruxes built.
+CRUX INTERACTION (R24): the descent must END in the user's thinking, not in your prose. After presenting argument/evidence/counterpoints, explicitly invite their response with ONE pointed question, and the closing pills must include: a stance to react to, "Keep that quote" (→ save_highlight with the exact quote you showed), and "Capture a note on this". When the user asks to highlight/keep a quote, call save_highlight immediately (their word is the consent). Their take always gets the VOICE counterargument, then the add_note offer.
 If crux fields are missing on an article (older content), call get_article_deep and compose the descent yourself from the full text — never skip the protocol. Use ask_guru for their follow-up questions. Deep-read option: the card keeps the "open" action — reading in full in the reader (highlights/notes) is always one tap.
 
 CAPTURE STEP (GUR-231, ALL journey modes): every plan's FINAL step is "Capture takeaways". When the journey reaches it, harvest 1-3 note candidates from the session — the user's own words where they contributed, the sharpest insight where they didn't — and offer them via add_note ONE at a time (each approval card is one offer). The outcome_summary must tally notes captured ("3 cruxes · 2 notes"). A journey that ends with zero capture offers is a failure.
@@ -461,6 +476,10 @@ async def _execute_tool(app, token: str, name: str, tool_input: dict) -> str:
                                        json_body={"article_id": tool_input["article_id"], "question": tool_input["question"]})
     elif name == "save_article":
         status, data = await _call_api(app, token, "POST", f"/api/v1/articles/{tool_input['article_id']}/save")
+    elif name == "save_highlight":
+        status, data = await _call_api(app, token, "POST", f"/api/v1/articles/{tool_input['article_id']}/annotations",
+                                       json_body={"highlighted_text": _trunc(tool_input.get("quote"), 500), "note_text": "",
+                                                  "color": "amber", "start_offset": 0, "end_offset": 0})
     elif name == "mark_not_relevant":
         status, data = await _call_api(app, token, "POST", f"/api/v1/storyboards/{tool_input['storyboard_id']}/not-relevant")
     elif name == "get_article_deep":

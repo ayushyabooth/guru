@@ -206,9 +206,18 @@ export default function GuruAgentScreen() {
   React.useEffect(() => {
     const raw = params.goal;
     const goal = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
-    if (!goal || seededGoalRef.current || blocks.length > 0) return;
+    if (!goal || seededGoalRef.current) return;
     seededGoalRef.current = true;
-    onSend(goal);
+    // R24: an explicit deep-linked goal supersedes any persisted journey —
+    // the user just asked for something specific; "doing nothing" (the old
+    // blocks.length guard) read as a broken button.
+    if (blocks.length > 0) {
+      sessionIdRef.current = null;
+      clearJourney();
+      setBlocks([]);
+      setStatus(null);
+    }
+    setTimeout(() => onSend(goal), 50);
     try { router.setParams({ goal: undefined } as any); } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.goal]);
