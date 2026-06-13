@@ -611,6 +611,34 @@ def _serialize_content(content) -> list:
     return out
 
 
+def _sanitize_history(msgs: list) -> list:
+    """Return a valid Claude conversation prefix. Bounded-history slicing
+    (messages[-MAX_HISTORY_MSGS:]) can cut a tool_use/tool_result pair, leaving
+    the saved list starting with an orphaned tool_result — the API then rejects
+    EVERY later turn ("messages.0.content.0: unexpected tool_use_id found in
+    tool_result blocks", GUR-231 catch-up break). We drop everything before the
+    first genuine user turn (string content, or a user message with no
+    tool_result block) so we never lead with an orphan. Applied on load (heals
+    already-corrupted sessions) and on save (prevents new corruption).
+
+    The TAIL is deliberately left intact: a WRITE turn ends with a dangling
+    assistant tool_use whose tool_result is appended by the next turn's
+    approval-resume — trimming it would re-break that flow.
+    """
+    def has_tool_result(m):
+        c = m.get("content")
+        return isinstance(c, list) and any(
+            isinstance(b, dict) and b.get("type") == "tool_result" for b in c
+        )
+
+    start = len(msgs)
+    for i, m in enumerate(msgs):
+        if m.get("role") == "user" and not has_tool_result(m):
+            start = i
+            break
+    return msgs[start:]
+
+
 def _approval_block(name: str, tool_input: dict, approval_id: str) -> dict:
     if name == "save_article":
         title, detail, confirm, cancel = "Save this article?", [tool_input.get("title", "")], "Save", "Keep as is"
@@ -669,7 +697,7 @@ async def agent_turn(
         db.commit()
         db.refresh(sess)
 
-    messages = json.loads(sess.messages or "[]")
+    messages = _sanitize_history(json.loads(sess.messages or "[]"))
     pending = json.loads(sess.pending_action) if sess.pending_action else None
 
     # Dynamic per-user context (second system block — static block stays cacheable)
@@ -817,8 +845,9 @@ async def agent_turn(
                     yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
                 break
 
-            # Persist (bounded) history
-            sess.messages = json.dumps(messages[-MAX_HISTORY_MSGS:])
+            # Persist (bounded) history — sanitize AFTER slicing so a cut
+            # tool_use/tool_result pair can never corrupt the next turn.
+            sess.messages = json.dumps(_sanitize_history(messages[-MAX_HISTORY_MSGS:]))
             db.commit()
             yield f"data: {json.dumps({'event': 'done', 'session_id': session_id})}\n\n"
         except Exception as e:
