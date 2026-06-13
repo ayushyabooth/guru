@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
 import { DiveinArticleCard, DiveinArticleData } from './DiveinArticleCard';
 import { DiveinArticleSkeleton } from './DiveinArticleSkeleton';
 import Icon from '../ui/Icon';
@@ -56,10 +57,20 @@ export const DiveinFeed: React.FC<DiveinFeedProps> = ({
   const { width } = useWindowDimensions();
   const numColumns = width >= 768 ? 2 : width >= 600 ? 2 : 1;
 
+  // Scrolling the library counts as engagement so the idle timer (90s) doesn't
+  // fire while the user is actively reading; throttled to once / 5s. (GUR-234)
+  const { recordInteraction } = useTimeTrackingContext();
+  const lastScrollInteractionRef = React.useRef(0);
+
   const handleScroll = (event: any) => {
+    const now = Date.now();
+    if (now - lastScrollInteractionRef.current > 5000) {
+      lastScrollInteractionRef.current = now;
+      recordInteraction();
+    }
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
-    
+
     if (isCloseToBottom && hasMore && !isLoading) {
       onLoadMore();
     }

@@ -3,6 +3,7 @@ import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet
 import { useQueryClient } from '@tanstack/react-query';
 import Icon from '../ui/Icon';
 import { useCatchupFeed } from '../../hooks/useCatchupFeed';
+import { useTimeTrackingContext } from '../../contexts/TimeTrackingContext';
 import { CatchupService } from '../../services/article-service';
 import { InFocusStoryboardCard } from './InFocusStoryboardCard';
 import { StoryboardSkeleton } from './StoryboardSkeleton';
@@ -58,6 +59,19 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   } = useCatchupFeed(context);
 
   const queryClient = useQueryClient();
+
+  // Reading the feed (scrolling) counts as engagement: without this the idle
+  // timer (90s) fires while the user is actively reading storyboards but not
+  // tapping, so catch-up time under-counts. Throttled to once / 5s. (GUR-234)
+  const { recordInteraction } = useTimeTrackingContext();
+  const lastScrollInteractionRef = useRef(0);
+  const handleFeedScroll = () => {
+    const now = Date.now();
+    if (now - lastScrollInteractionRef.current > 5000) {
+      lastScrollInteractionRef.current = now;
+      recordInteraction();
+    }
+  };
 
   // A save (or not-relevant) here changes what the Dive-in library should show.
   // The Dive-in feed query lives behind a 5-min staleTime + localStorage-seeded
@@ -144,6 +158,8 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
       ref={scrollViewRef}
       style={styles.container}
       contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}
+      onScroll={handleFeedScroll}
+      scrollEventThrottle={250}
       refreshControl={
         <RefreshControl
           refreshing={isLoading && storyboards.length > 0}
