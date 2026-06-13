@@ -17,6 +17,11 @@ from app.models.metric import TimeLog, DailyMetric
 
 router = APIRouter(prefix="/api/v1", tags=["metrics"])
 
+# A single logged reading/listening session can never legitimately exceed this.
+# Clamp every logged duration to it so one runaway client (e.g. a tab left open,
+# a tracker that doesn't pause) can't poison a day's rollup. (GUR-234)
+MAX_SESSION_SECONDS = 4 * 60 * 60  # 4 hours
+
 
 class LogTimeRequest(BaseModel):
     ring_type: str = Field(..., pattern="^(catchup|divein|recap)$")
@@ -103,18 +108,23 @@ async def log_time(
         if isinstance(specs, list) and len(specs) > 0:
             specialization = specs[0]
 
+    # Clamp client-reported durations (GUR-234): a single session can't exceed a
+    # sane cap, and never goes negative. Defends the rollup from buggy trackers.
+    dur = min(max(0, request.duration_seconds), MAX_SESSION_SECONDS)
+    idle = min(max(0, request.idle_seconds or 0), MAX_SESSION_SECONDS)
+
     # Create time log with enhanced fields
     time_log = TimeLog(
         user_id=current_user.id,
         ring_type=request.ring_type,
-        duration_seconds=request.duration_seconds,
+        duration_seconds=dur,
         context_id=request.context_id,
         started_at=request.started_at,
         ended_at=request.ended_at,
         industry=industry,
         specialization=specialization,
         activity_type=request.activity_type,
-        idle_seconds=request.idle_seconds,
+        idle_seconds=idle,
     )
     db.add(time_log)
     
@@ -143,7 +153,7 @@ async def log_time(
     ).group_by(TimeLog.ring_type).all()
 
     # Include the current (not yet committed) log
-    extra = {request.ring_type: request.duration_seconds}
+    extra = {request.ring_type: dur}
     for row in day_totals:
         extra[row.ring_type] = (extra.get(row.ring_type, 0) + (row.total_secs or 0))
 
@@ -216,6 +226,10 @@ async def get_metrics_summary(
         None,
         description="Scope the dashboard to a Home content filter: None/'all' = aggregate, 'core', 'specialization:<name>', or 'interest:<name>'",
     ),
+    tz: str | None = Query(
+        None,
+        description="Client IANA timezone (e.g. 'America/Los_Angeles'). 'Today'/'Week' are bucketed in this local day; defaults to UTC when absent/invalid. (GUR-234)",
+    ),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -228,11 +242,34 @@ async def get_metrics_summary(
     tagged with that industry/specialization. Recap status, streak and all-time
     totals stay cross-filter (they are habit/weekly concepts, not per-filter).
     """
-    today = date.today()
+    # ── User-local "today"/"week" (GUR-234) ───────────────────────────────
+    # The Home Today|Week toggle must reflect the USER's day, not the server's
+    # UTC day. The client sends its IANA timezone; we bucket every TimeLog into
+    # the user's local calendar day. Falls back to UTC when tz is absent/invalid.
+    def _safe_tz(tz_in: str | None) -> str:
+        if not tz_in:
+            return "UTC"
+        try:
+            db.query(func.timezone(tz_in, func.now())).scalar()
+            return tz_in
+        except Exception:
+            db.rollback()
+            return "UTC"
+
+    tzname = _safe_tz(tz)
+
+    def LD(col):
+        """Local calendar date of a tz-aware timestamp, in the user's zone."""
+        return func.date(func.timezone(tzname, col))
+
+    today = db.query(func.date(func.timezone(tzname, func.now()))).scalar()
     week_ago = today - timedelta(days=6)
+    week_dates = [week_ago + timedelta(days=i) for i in range(7)]
+
+    # Clamp every row's duration so one runaway log can't dominate a day total.
+    _secs = func.sum(func.least(TimeLog.duration_seconds, MAX_SESSION_SECONDS))
 
     # ── Resolve the Home content filter to a TimeLog column + value ──────
-    # Returns (column, value) or None for the aggregate ("all") view.
     def _resolve_filter():
         if not filter or filter == "all":
             return None
@@ -247,128 +284,132 @@ async def get_metrics_summary(
 
     filter_match = _resolve_filter()
 
-    # Per-day catch-up/dive-in minutes for the active filter, computed straight
-    # from TimeLogs (the DailyMetric rollup is aggregate-only). {date: {ring: min}}
-    filtered_day_minutes: dict = {}
-    if filter_match is not None:
-        col, val = filter_match
-        rows = db.query(
-            func.date(TimeLog.started_at).label("d"),
-            TimeLog.ring_type,
-            func.sum(TimeLog.duration_seconds).label("secs"),
-        ).filter(
-            TimeLog.user_id == current_user.id,
-            func.date(TimeLog.started_at) >= week_ago,
-            func.date(TimeLog.started_at) <= today,
-            col == val,
-        ).group_by(func.date(TimeLog.started_at), TimeLog.ring_type).all()
-        for r in rows:
-            day = filtered_day_minutes.setdefault(str(r.d), {})
-            day[r.ring_type] = (r.secs or 0) // 60
-
-    def _scoped(metric_date, ring: str, fallback: int) -> int:
-        """Filtered minutes for a day/ring, or the aggregate fallback."""
-        if filter_match is None:
-            return fallback
-        return filtered_day_minutes.get(str(metric_date), {}).get(ring, 0)
-    
-    # Get or create today's metric
-    today_metric = db.query(DailyMetric).filter(
-        DailyMetric.user_id == current_user.id,
-        DailyMetric.metric_date == today
-    ).first()
-    
-    if not today_metric:
-        today_metric = DailyMetric(
-            user_id=current_user.id,
-            metric_date=today,
-            catchup_minutes=0,
-            catchup_goal_met=False,
-            divein_minutes=0,
-            recap_completed=False,
-        )
-        db.add(today_metric)
-        db.commit()
-        db.refresh(today_metric)
-    
-    # Get week's metrics
-    week_metrics = db.query(DailyMetric).filter(
-        DailyMetric.user_id == current_user.id,
-        DailyMetric.metric_date >= week_ago,
-        DailyMetric.metric_date <= today
-    ).order_by(DailyMetric.metric_date).all()
-    
-    # Calculate totals (all time)
-    totals = db.query(
-        func.sum(DailyMetric.catchup_minutes).label("total_catchup"),
-        func.sum(DailyMetric.divein_minutes).label("total_divein"),
-        func.sum(func.cast(DailyMetric.recap_completed, Integer)).label("total_recaps")
+    # ── Per-local-day catch-up/dive-in minutes, straight from TimeLogs ─────
+    # Single source of truth (the legacy DailyMetric rollup is UTC-keyed and no
+    # longer trusted for the toggle). {local_date_str: {ring: minutes}}
+    day_q = db.query(
+        LD(TimeLog.started_at).label("d"),
+        TimeLog.ring_type,
+        _secs.label("secs"),
     ).filter(
-        DailyMetric.user_id == current_user.id
-    ).first()
-    
-    # Calculate current streak (consecutive days with catchup goal met)
-    current_streak = 0
-    check_date = today
-    while True:
-        metric = db.query(DailyMetric).filter(
-            DailyMetric.user_id == current_user.id,
-            DailyMetric.metric_date == check_date
-        ).first()
-        
-        if metric and metric.catchup_goal_met:
-            current_streak += 1
-            check_date -= timedelta(days=1)
-        else:
-            break
-        
-        # Safety limit
-        if current_streak > 365:
-            break
-    
-    # Recap journey status for the ring's in-progress state. GUR-232: recap is
-    # decoupled from the calendar week, so journeys are no longer keyed on this
-    # Monday — take the user's MOST RECENT journey regardless of anchor.
+        TimeLog.user_id == current_user.id,
+        LD(TimeLog.started_at) >= week_ago,
+        LD(TimeLog.started_at) <= today,
+    )
+    if filter_match is not None:
+        day_q = day_q.filter(filter_match[0] == filter_match[1])
+    day_minutes: dict = {}
+    for r in day_q.group_by(LD(TimeLog.started_at), TimeLog.ring_type).all():
+        day_minutes.setdefault(str(r.d), {})[r.ring_type] = int(r.secs or 0) // 60
+
+    def _day_min(d, ring: str) -> int:
+        return day_minutes.get(str(d), {}).get(ring, 0)
+
+    # ── Recap completion by local day (drives the recap ring) ──────────────
     from app.models.recap import RecapJourney
-    recap_journey = db.query(RecapJourney).filter(
-        RecapJourney.user_id == current_user.id,
-    ).order_by(RecapJourney.created_at.desc()).first()
+    recap_dates = {
+        str(d)
+        for (d,) in db.query(LD(RecapJourney.completed_at))
+        .filter(
+            RecapJourney.user_id == current_user.id,
+            RecapJourney.status == "completed",
+            RecapJourney.completed_at.isnot(None),
+            LD(RecapJourney.completed_at) >= week_ago,
+            LD(RecapJourney.completed_at) <= today,
+        )
+        .distinct()
+        .all()
+    }
+    recap_completed_today = str(today) in recap_dates
+    recap_completed_this_week = len(recap_dates) > 0
+
+    def _daily(d) -> DailyMetricResponse:
+        cm = _day_min(d, "catchup")
+        return DailyMetricResponse(
+            metric_date=d,
+            catchup_minutes=cm,
+            catchup_goal_met=cm >= 20,
+            divein_minutes=_day_min(d, "divein"),
+            recap_completed=str(d) in recap_dates,
+        )
+
+    today_daily = _daily(today)
+    week_daily = [_daily(d) for d in week_dates]
+
+    # ── All-time totals (clamped, from TimeLogs) ───────────────────────────
+    tot_map = {
+        r.ring_type: int(r.secs or 0) // 60
+        for r in db.query(TimeLog.ring_type, _secs.label("secs"))
+        .filter(TimeLog.user_id == current_user.id)
+        .group_by(TimeLog.ring_type)
+        .all()
+    }
+    total_catchup_minutes = tot_map.get("catchup", 0)
+    total_divein_minutes = tot_map.get("divein", 0)
+    total_recap_sessions = (
+        db.query(func.count(RecapJourney.id))
+        .filter(
+            RecapJourney.user_id == current_user.id,
+            RecapJourney.status == "completed",
+        )
+        .scalar()
+        or 0
+    )
+
+    # ── Current streak: consecutive local days (ending today) that hit the
+    # catch-up goal, computed from TimeLogs over a bounded look-back. ──────
+    streak_start = today - timedelta(days=60)
+    catchup_by_date = {
+        str(r.d): int(r.secs or 0) // 60
+        for r in db.query(LD(TimeLog.started_at).label("d"), _secs.label("secs"))
+        .filter(
+            TimeLog.user_id == current_user.id,
+            TimeLog.ring_type == "catchup",
+            LD(TimeLog.started_at) >= streak_start,
+        )
+        .group_by(LD(TimeLog.started_at))
+        .all()
+    }
+    current_streak = 0
+    _cur = today
+    while catchup_by_date.get(str(_cur), 0) >= 20:
+        current_streak += 1
+        _cur = _cur - timedelta(days=1)
+
+    # Most-recent recap journey status for the ring's in-progress state.
+    recap_journey = (
+        db.query(RecapJourney)
+        .filter(RecapJourney.user_id == current_user.id)
+        .order_by(RecapJourney.created_at.desc())
+        .first()
+    )
     recap_journey_status = recap_journey.status if recap_journey else None
-
-    # GUR-232: recap ring follows the Home Today|Week toggle — "did the user
-    # complete a recap in this window?". The founder's "done" signal is a
-    # COMPLETED RecapJourney (not a time-log side effect).
-    recap_completed_today = db.query(RecapJourney.id).filter(
-        RecapJourney.user_id == current_user.id,
-        RecapJourney.status == 'completed',
-        func.date(RecapJourney.completed_at) == today,
-    ).first() is not None
-    recap_completed_this_week = db.query(RecapJourney.id).filter(
-        RecapJourney.user_id == current_user.id,
-        RecapJourney.status == 'completed',
-        func.date(RecapJourney.completed_at) >= week_ago,
-    ).first() is not None
-
-    # GUR-13: weekly activity stats for Home dashboard (best-effort; 0 on error)
-    articles_read = 0
-    articles_saved = 0
-    filters_explored = 0
+    
+    # ── Activity stats (week + today), bucketed in the user's local day ────
+    # TimeLog-derived stats key off started_at (matching the minutes above); note
+    # counts key off the annotation's created_at. (GUR-234 removes the prior
+    # started_at/created_at split that made "today" disagree across chips.)
+    articles_read = articles_saved = filters_explored = 0
+    notes_this_week = articles_read_today = notes_today = 0
     top_topics: list[dict] = []
-    notes_this_week = 0
-    articles_read_today = 0
-    notes_today = 0
     top_topics_today: list[dict] = []
     try:
         from app.models.interaction import UserSavedArticle, UserAnnotation
-        read_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
-            TimeLog.user_id == current_user.id,
-            func.date(TimeLog.created_at) >= week_ago,
-            TimeLog.context_id.isnot(None),
-            TimeLog.ring_type.in_(["catchup", "divein"]),
-        )
-        if filter_match is not None:
-            read_q = read_q.filter(filter_match[0] == filter_match[1])
-        articles_read = read_q.scalar() or 0
+
+        def _reads(lo, hi):
+            q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
+                TimeLog.user_id == current_user.id,
+                LD(TimeLog.started_at) >= lo,
+                LD(TimeLog.started_at) <= hi,
+                TimeLog.context_id.isnot(None),
+                TimeLog.ring_type.in_(["catchup", "divein"]),
+            )
+            if filter_match is not None:
+                q = q.filter(filter_match[0] == filter_match[1])
+            return q.scalar() or 0
+
+        articles_read = _reads(week_ago, today)
+        articles_read_today = _reads(today, today)
 
         articles_saved = db.query(func.count(UserSavedArticle.id)).filter(
             UserSavedArticle.user_id == current_user.id,
@@ -376,87 +417,54 @@ async def get_metrics_summary(
 
         filters_explored = db.query(func.count(func.distinct(TimeLog.industry))).filter(
             TimeLog.user_id == current_user.id,
-            func.date(TimeLog.created_at) >= week_ago,
+            LD(TimeLog.started_at) >= week_ago,
+            LD(TimeLog.started_at) <= today,
             TimeLog.industry.isnot(None),
         ).scalar() or 0
 
-        topic_q = db.query(
-            TimeLog.specialization, func.count(TimeLog.id).label("cnt")
-        ).filter(
-            TimeLog.user_id == current_user.id,
-            func.date(TimeLog.created_at) >= week_ago,
-            TimeLog.specialization.isnot(None),
-        )
-        if filter_match is not None:
-            topic_q = topic_q.filter(filter_match[0] == filter_match[1])
-        topic_rows = topic_q.group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
-        top_topics = [{"name": r[0], "count": int(r[1])} for r in topic_rows if r[0]]
+        def _topics(lo, hi):
+            q = db.query(
+                TimeLog.specialization, func.count(TimeLog.id).label("cnt")
+            ).filter(
+                TimeLog.user_id == current_user.id,
+                LD(TimeLog.started_at) >= lo,
+                LD(TimeLog.started_at) <= hi,
+                TimeLog.specialization.isnot(None),
+            )
+            if filter_match is not None:
+                q = q.filter(filter_match[0] == filter_match[1])
+            rows = q.group_by(TimeLog.specialization).order_by(
+                func.count(TimeLog.id).desc()
+            ).limit(3).all()
+            return [{"name": r[0], "count": int(r[1])} for r in rows if r[0]]
 
-        # GUR-231: notes written this week (same window as the stats above).
-        # UserAnnotation rows with non-empty note_text (highlights-only excluded).
-        notes_this_week = db.query(func.count(UserAnnotation.id)).filter(
-            UserAnnotation.user_id == current_user.id,
-            func.date(UserAnnotation.created_at) >= week_ago,
-            UserAnnotation.note_text.isnot(None),
-            UserAnnotation.note_text != "",
-        ).scalar() or 0
+        top_topics = _topics(week_ago, today)
+        top_topics_today = _topics(today, today)
 
-        # GUR-232: today-scoped versions for the Home Today|Week toggle.
-        read_today_q = db.query(func.count(func.distinct(TimeLog.context_id))).filter(
-            TimeLog.user_id == current_user.id,
-            func.date(TimeLog.created_at) == today,
-            TimeLog.context_id.isnot(None),
-            TimeLog.ring_type.in_(["catchup", "divein"]),
-        )
-        if filter_match is not None:
-            read_today_q = read_today_q.filter(filter_match[0] == filter_match[1])
-        articles_read_today = read_today_q.scalar() or 0
+        def _notes(lo, hi):
+            return db.query(func.count(UserAnnotation.id)).filter(
+                UserAnnotation.user_id == current_user.id,
+                LD(UserAnnotation.created_at) >= lo,
+                LD(UserAnnotation.created_at) <= hi,
+                UserAnnotation.note_text.isnot(None),
+                UserAnnotation.note_text != "",
+            ).scalar() or 0
 
-        notes_today = db.query(func.count(UserAnnotation.id)).filter(
-            UserAnnotation.user_id == current_user.id,
-            func.date(UserAnnotation.created_at) == today,
-            UserAnnotation.note_text.isnot(None),
-            UserAnnotation.note_text != "",
-        ).scalar() or 0
-
-        topic_today_q = db.query(
-            TimeLog.specialization, func.count(TimeLog.id).label("cnt")
-        ).filter(
-            TimeLog.user_id == current_user.id,
-            func.date(TimeLog.created_at) == today,
-            TimeLog.specialization.isnot(None),
-        )
-        if filter_match is not None:
-            topic_today_q = topic_today_q.filter(filter_match[0] == filter_match[1])
-        topic_today_rows = topic_today_q.group_by(TimeLog.specialization).order_by(func.count(TimeLog.id).desc()).limit(3).all()
-        top_topics_today = [{"name": r[0], "count": int(r[1])} for r in topic_today_rows if r[0]]
+        notes_this_week = _notes(week_ago, today)
+        notes_today = _notes(today, today)
     except Exception:
-        # Never let stats computation break the metrics endpoint
-        articles_read_today = 0
-        notes_today = 0
+        db.rollback()
+        articles_read = articles_saved = filters_explored = 0
+        notes_this_week = articles_read_today = notes_today = 0
+        top_topics = []
         top_topics_today = []
 
     return MetricsSummaryResponse(
-        today=DailyMetricResponse(
-            metric_date=today_metric.metric_date,
-            catchup_minutes=_scoped(today_metric.metric_date, "catchup", today_metric.catchup_minutes or 0),
-            catchup_goal_met=(_scoped(today_metric.metric_date, "catchup", 0) >= 20) if filter_match is not None else (today_metric.catchup_goal_met or False),
-            divein_minutes=_scoped(today_metric.metric_date, "divein", today_metric.divein_minutes or 0),
-            recap_completed=today_metric.recap_completed or False,
-        ),
-        week=[
-            DailyMetricResponse(
-                metric_date=m.metric_date,
-                catchup_minutes=_scoped(m.metric_date, "catchup", m.catchup_minutes or 0),
-                catchup_goal_met=(_scoped(m.metric_date, "catchup", 0) >= 20) if filter_match is not None else (m.catchup_goal_met or False),
-                divein_minutes=_scoped(m.metric_date, "divein", m.divein_minutes or 0),
-                recap_completed=m.recap_completed or False,
-            )
-            for m in week_metrics
-        ],
-        total_catchup_minutes=int(totals.total_catchup or 0),
-        total_divein_minutes=int(totals.total_divein or 0),
-        total_recap_sessions=int(totals.total_recaps or 0),
+        today=today_daily,
+        week=week_daily,
+        total_catchup_minutes=int(total_catchup_minutes),
+        total_divein_minutes=int(total_divein_minutes),
+        total_recap_sessions=int(total_recap_sessions),
         current_streak=current_streak,
         recap_journey_status=recap_journey_status,
         articles_read=int(articles_read),
@@ -464,8 +472,6 @@ async def get_metrics_summary(
         filters_explored=int(filters_explored),
         top_topics=top_topics,
         notes_this_week=int(notes_this_week),
-        # GUR-232 today-scoped stats + recap-by-window (recap ring follows the
-        # Home toggle: completed-today drives Today ring, this-week the Week ring).
         articles_read_today=int(articles_read_today),
         notes_today=int(notes_today),
         top_topics_today=top_topics_today,

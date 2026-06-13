@@ -117,10 +117,16 @@ class MetricService {
     try {
       const headers = await this.getAuthHeaders();
 
-      // Scope the dashboard to the selected Home content filter (omit for 'all').
-      const metricsUrl = filter && filter !== 'all'
-        ? `${this.baseUrl}/me/metrics?filter=${encodeURIComponent(filter)}`
-        : `${this.baseUrl}/me/metrics`;
+      // Scope the dashboard to the selected Home content filter (omit for 'all'),
+      // and pass the device timezone so the server buckets "today"/"week" in the
+      // user's LOCAL day rather than server UTC (GUR-234). Best-effort on tz.
+      let tz = '';
+      try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* tz best-effort */ }
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') params.set('filter', filter);
+      if (tz) params.set('tz', tz);
+      const qs = params.toString();
+      const metricsUrl = qs ? `${this.baseUrl}/me/metrics?${qs}` : `${this.baseUrl}/me/metrics`;
 
       // Profile: reuse the SWR-cached /me when fresh — it changes rarely and
       // was previously re-fetched on EVERY metrics call (60s polling included).

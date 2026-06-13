@@ -10,7 +10,7 @@ import GuruFormattedText, { cleanGuruResponse } from '../../components/ui/GuruFo
 import GuruBlob from '../../components/ui/GuruBlob';
 import { CatchupService } from '../../services/article-service';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTimeTracking } from '../../hooks/useTimeTracking';
+import { useScreenTimeTracking } from '../../contexts/TimeTrackingContext';
 import DarkThemeColors from '../../constants/darkTheme';
 import {
   DarkGlassMaterials,
@@ -285,11 +285,33 @@ export default function ArticleDetailScreen() {
 
   // Time logging stays a pillar concept — an agent-initiated deep read IS
   // dive-in time (BRD F.1); 'guru' is a navigation source, not a ring.
-  const { logTime } = useTimeTracking(sourceTab === 'catchup' ? 'catchup' : 'divein', {
-    interval: 60000,
-    contextId: articleId,
-    activityType: 'article',
-  });
+  // GUR-234: use the idle-aware context tracker (idle pause + hidden-tab pause +
+  // per-session cap) instead of the old wall-clock interval tracker, which kept
+  // logging "reading" minutes from a parked/backgrounded tab.
+  const { recordInteraction } = useScreenTimeTracking(
+    sourceTab === 'catchup' ? 'catchup' : 'divein',
+    { contextId: articleId, activityType: 'article' },
+  );
+
+  // Keep the reading session alive on genuine interaction (scroll/tap/key). With
+  // no interaction for 90s the context tracker goes idle and stops counting, so
+  // a parked reader tab can't inflate time. (GUR-234)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    let last = 0;
+    const onAct = () => {
+      const n = Date.now();
+      if (n - last > 5000) { last = n; recordInteraction(); }
+    };
+    window.addEventListener('scroll', onAct, true);
+    window.addEventListener('pointerdown', onAct, true);
+    window.addEventListener('keydown', onAct, true);
+    return () => {
+      window.removeEventListener('scroll', onAct, true);
+      window.removeEventListener('pointerdown', onAct, true);
+      window.removeEventListener('keydown', onAct, true);
+    };
+  }, [recordInteraction]);
 
   // GUR-205: restore prior Ask Guru Q&A for this article when the reader opens.
   // Best-effort + only seeds when the chat is empty, so it never clobbers a

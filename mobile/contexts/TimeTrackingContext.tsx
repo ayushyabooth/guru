@@ -362,6 +362,24 @@ export function TimeTrackingProvider({ children }: { children: React.ReactNode }
     };
   }, [state.activeSession]);
 
+  // Web: pause on tab-hidden (GUR-234). RN AppState doesn't reliably fire
+  // background on the web, so a hidden/backgrounded tab would otherwise keep
+  // accruing "active" time. Hiding banks active time up to now and stops the
+  // clock (SET_IDLE); becoming visible again resumes it.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onVisibility = () => {
+      if (!state.activeSession) return;
+      if (document.hidden) {
+        dispatch({ type: 'SET_IDLE', payload: true });
+      } else {
+        dispatch({ type: 'RECORD_INTERACTION' });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [state.activeSession]);
+
   const loadPendingSessions = async () => {
     try {
       const stored = await storage.getItem(STORAGE_KEY);
