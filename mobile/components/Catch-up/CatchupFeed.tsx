@@ -93,9 +93,13 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
   }, [recordInteraction]);
 
   // Feed-level dwell observer (web): watch every storyboard's DOM node (tagged
-  // via nativeID → id) and mark it read once it's ≥50% visible for 2.5s. Done at
-  // the feed level (querying the DOM by id) because a per-card View ref doesn't
-  // reliably resolve to a DOM node on RN-web. (GUR-234)
+  // via nativeID → id) and mark it read once it has dwelled in view for 2.5s.
+  // A storyboard card is often TALLER than the viewport, so "50% of the card"
+  // is unreachable — we treat a card as "being browsed" when ≥50% of the card
+  // OR ≥45% of the viewport is filled by it. Done at the feed level (querying the
+  // DOM by id) because a per-card View ref doesn't resolve to a DOM node on
+  // RN-web. Browser-throttled in hidden tabs (correct: only foreground reading
+  // counts). (GUR-234)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined' || typeof IntersectionObserver === 'undefined') return;
     if (storyboards.length === 0) return;
@@ -105,7 +109,11 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
         const id = (e.target as HTMLElement).id || '';
         if (!id.startsWith(SB_ID_PREFIX)) return;
         const articleId = id.slice(SB_ID_PREFIX.length);
-        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+        const viewportCover = e.rootBounds && e.rootBounds.height > 0
+          ? e.intersectionRect.height / e.rootBounds.height
+          : 0;
+        const browsing = e.isIntersecting && (e.intersectionRatio >= 0.5 || viewportCover >= 0.45);
+        if (browsing) {
           if (!timers.has(id)) {
             timers.set(id, setTimeout(() => { handleStoryboardRead(articleId); timers.delete(id); }, 2500));
           }
@@ -114,7 +122,7 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
           if (t) { clearTimeout(t); timers.delete(id); }
         }
       });
-    }, { threshold: [0, 0.5, 1] });
+    }, { threshold: [0, 0.25, 0.45, 0.5, 0.75, 1] });
     // Observe after paint so the nodes exist.
     const raf = requestAnimationFrame(() => {
       document.querySelectorAll(`[id^="${SB_ID_PREFIX}"]`).forEach((el) => obs.observe(el));
