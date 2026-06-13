@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { View, ScrollView, ActivityIndicator, Text, TouchableOpacity, StyleSheet, RefreshControl, Platform, Animated } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import Icon from '../ui/Icon';
@@ -16,6 +16,49 @@ import {
   RingColors,
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
+
+/**
+ * Marks a storyboard "read" once it has dwelled in the viewport (GUR-234).
+ * Browsing a storyboard in the feed should count toward "articles read", so we
+ * fire onRead after the card is ≥50% visible for 2.5s continuously. Web-only
+ * (IntersectionObserver); a no-op wrapper on native.
+ */
+function StoryboardViewTracker({
+  articleId,
+  onRead,
+  children,
+}: {
+  articleId?: string;
+  onRead: (articleId: string) => void;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<any>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !articleId) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const el = ref.current as unknown as Element | null;
+    if (!el || typeof (el as any).getBoundingClientRect !== 'function') return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+          if (!timer) timer = setTimeout(() => onRead(articleId), 2500);
+        } else if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      },
+      { threshold: [0, 0.5, 1] },
+    );
+    obs.observe(el);
+    return () => {
+      if (timer) clearTimeout(timer);
+      obs.disconnect();
+    };
+  }, [articleId, onRead]);
+  return <View ref={ref}>{children}</View>;
+}
 
 /** Lightweight stagger wrapper — fades + slides each card with a 50ms offset */
 function StaggeredCard({ children, index }: { children: React.ReactNode; index: number }) {
@@ -72,6 +115,16 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
       recordInteraction();
     }
   };
+
+  // Browsing a storyboard (dwelling on it) counts as reading its article — once
+  // per article per mount, deduped so a re-scroll doesn't re-log. (GUR-234)
+  const readMarkedRef = useRef<Set<string>>(new Set());
+  const handleStoryboardRead = useCallback((articleId: string) => {
+    if (!articleId || readMarkedRef.current.has(articleId)) return;
+    readMarkedRef.current.add(articleId);
+    CatchupService.markStoryboardRead(articleId);
+    recordInteraction();
+  }, [recordInteraction]);
 
   // A save (or not-relevant) here changes what the Dive-in library should show.
   // The Dive-in feed query lives behind a 5-min staleTime + localStorage-seeded
@@ -171,11 +224,16 @@ export const CatchupFeed: React.FC<CatchupFeedProps> = ({
     >
       {storyboards.map((storyboard, index) => (
         <StaggeredCard key={storyboard.id} index={index}>
-          <InFocusStoryboardCard
-            storyboard={storyboard}
-            onSave={handleSaveArticle}
-            onNotRelevant={handleNotRelevant}
-          />
+          <StoryboardViewTracker
+            articleId={storyboard.headline_article?.id}
+            onRead={handleStoryboardRead}
+          >
+            <InFocusStoryboardCard
+              storyboard={storyboard}
+              onSave={handleSaveArticle}
+              onNotRelevant={handleNotRelevant}
+            />
+          </StoryboardViewTracker>
         </StaggeredCard>
       ))}
       

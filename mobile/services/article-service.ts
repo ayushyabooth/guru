@@ -142,6 +142,33 @@ export class CatchupService {
     return response.json();
   }
 
+  /**
+   * Mark a storyboard as "read" by browsing it in the catch-up feed (GUR-234).
+   * Logs a ZERO-duration catch-up TimeLog carrying the storyboard's primary
+   * article id, so it counts toward "articles read" (distinct context_id)
+   * without adding any time. activity_type 'storyboard_view' lets the backend
+   * keep these out of the top-topics tally. Best-effort — never throws.
+   */
+  static async markStoryboardRead(articleId: string): Promise<void> {
+    try {
+      const token = await getAuthToken();
+      if (!token || !articleId) return;
+      const now = new Date().toISOString();
+      await fetch(`${API_BASE_URL}/metrics/log-time`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ring_type: 'catchup',
+          duration_seconds: 0,
+          context_id: articleId,
+          activity_type: 'storyboard_view',
+          started_at: now,
+          ended_at: now,
+        }),
+      });
+    } catch { /* best-effort read marker */ }
+  }
+
   static async markNotRelevant(
     storyboardId: string,
     filter: string

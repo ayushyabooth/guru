@@ -430,6 +430,9 @@ async def get_metrics_summary(
                 LD(TimeLog.started_at) >= lo,
                 LD(TimeLog.started_at) <= hi,
                 TimeLog.specialization.isnot(None),
+                # storyboard-view read-markers (0-duration) shouldn't skew topic
+                # ranking — they count toward articles_read only. (GUR-234)
+                TimeLog.activity_type.is_distinct_from("storyboard_view"),
             )
             if filter_match is not None:
                 q = q.filter(filter_match[0] == filter_match[1])
