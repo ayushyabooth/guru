@@ -149,7 +149,10 @@ Context:"""
                         temperature=0.5,
                         messages=[{"role": "user", "content": prompt}]
                     )
-                    
+
+                    from app.services.usage_logging import log_claude_usage  # GUR-238
+                    log_claude_usage(response, "cluster_narrative", model=settings.CLAUDE_HAIKU_MODEL)
+
                     context = response.content[0].text.strip()
                     
                     # Remove quotes if present

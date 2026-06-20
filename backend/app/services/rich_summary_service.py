@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.models.article import Article, ExpertNote
 from app.models.article_rich_content import ArticleRichContent
 from app.utils.llm_utils import get_claude_client
+from app.services.usage_logging import log_claude_usage
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,10 @@ class RichSummaryService:
                 max_tokens=1300,
                 messages=[{"role": "user", "content": prompt}]
             )
-            
+
+            # GUR-238: ground-truth cost attribution per rich-content call.
+            log_claude_usage(response, "rich_content", article_id=article.id, model=settings.CLAUDE_HAIKU_MODEL)
+
             # Parse response
             content = response.content[0].text
             parsed = self._parse_response(content)

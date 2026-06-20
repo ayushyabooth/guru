@@ -67,11 +67,20 @@ class Settings(BaseSettings):
 
     # Ingestion Settings (Tier 2=Luminary RSS, Tier 3=Web Discovery)
     TIER2_SCHEDULE_HOURS: int = 72  # Every 3 days (founder, Jun 2026; was weekly)
-    TIER3_SCHEDULE_HOURS: int = 72  # Every 3 days (founder, Jun 2026; was weekly)
+    # GUR-238: Tier 3 (paid web search) decoupled to weekly; Tier 2 (free RSS)
+    # stays at 72h so the feed stays fresh between the costlier discovery runs.
+    TIER3_SCHEDULE_HOURS: int = 168  # Weekly (founder, GUR-238; was 72h)
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
     TIER2_AGE_FILTER_DAYS: int = 30  # Only ingest articles from last N days
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization
     MAX_ARTICLES_PER_INGESTION_RUN: int = 50  # Hard cap on articles processed per ingestion run
+
+    # GUR-238: Tier 3 cost controls. Discovery is scoped to specializations that
+    # active users actually follow, then round-robined across runs so each run
+    # only pays for a subset (full coverage every TIER3_DISCOVERY_ROUNDS runs).
+    TIER3_DISCOVERY_ROUNDS: int = 2  # Cover all relevant specs over N runs (round-robin)
+    TIER3_WEB_SEARCH_MAX_USES: int = 3  # Cap searches per web_search call (surcharge guard)
+    TIER3_DISCOVERY_MAX_TOKENS: int = 1500  # Was 4096 — we only extract URLs/titles
 
     # Content Quality Pipeline
     QUALITY_GATE_TIER1: float = 0.35  # Legacy tier1 quality threshold (kept for existing tier1 rows)

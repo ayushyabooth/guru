@@ -680,7 +680,10 @@ Summary (2 sentences):"""
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
-        
+
+        from app.services.usage_logging import log_claude_usage  # GUR-238
+        log_claude_usage(response, "cluster_summary", model=claude_client.model)
+
         return response.content[0].text.strip()
         
     except Exception as e:
@@ -709,7 +712,10 @@ Theme name:"""
             temperature=0.4,
             messages=[{"role": "user", "content": prompt}]
         )
-        
+
+        from app.services.usage_logging import log_claude_usage  # GUR-238
+        log_claude_usage(response, "cluster_theme", model=claude_client.model)
+
         theme = response.content[0].text.strip()
         # Remove quotes if present
         theme = theme.strip('"\'')
