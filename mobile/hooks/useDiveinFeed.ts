@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../constants/config';
-import { getAuthToken } from '../utils/auth';
+import { authedFetch } from '../utils/authed-fetch';
 import { readCache, writeCache, userCacheKey } from '../utils/local-cache';
 
 export interface DiveinArticleRaw {
@@ -43,14 +43,10 @@ interface DiveinFeedResponse {
 }
 
 async function fetchDiveinFeed(filter: string): Promise<DiveinFeedResponse> {
-  const token = await getAuthToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const response = await fetch(
+  const response = await authedFetch(
     `${API_BASE_URL}/divein-feed?limit=10&offset=0&filter=${filter}`,
-    { headers: { 'Authorization': `Bearer ${token}` } }
+    {}
   );
-
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }

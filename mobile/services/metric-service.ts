@@ -1,4 +1,4 @@
-import { getAuthToken } from '../utils/auth';
+import { authedFetch, SessionExpiredError } from '../utils/authed-fetch';
 import { API_BASE_URL } from '../constants/config';
 import { userService, UserProfile } from './user-service';
 import { readCache, writeCache, userCacheKey } from '../utils/local-cache';
@@ -101,22 +101,8 @@ class MetricService {
     writeCache(metricsCacheKey(filter), result);
   }
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    const token = await getAuthToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
   async getMetrics(filter?: string): Promise<MetricsResponse> {
     try {
-      const headers = await this.getAuthHeaders();
-
       // Scope the dashboard to the selected Home content filter (omit for 'all'),
       // and pass the device timezone so the server buckets "today"/"week" in the
       // user's LOCAL day rather than server UTC (GUR-234). Best-effort on tz.
@@ -136,28 +122,16 @@ class MetricService {
 
       const profilePromise: Promise<UserProfile> = profileIsFresh
         ? Promise.resolve(cachedProfile!.data)
-        : userService.fetchUserProfileFresh().catch((err: unknown) => {
-            // Map user-service auth wording so existing auth handling
-            // (redirect-to-login on "Authentication failed") keeps working.
-            if (err instanceof Error && (err.message.includes('Session expired') || err.message.includes('Not authenticated'))) {
-              throw new Error('Authentication failed. Please log in again.');
-            }
-            throw err;
-          });
+        : userService.fetchUserProfileFresh();
 
-      // Fetch metrics and (when needed) profile in parallel
+      // Fetch metrics and (when needed) profile in parallel. authedFetch handles
+      // the 401 → login redirect centrally (GUR-240 D).
       const [metricsResponse, profileData] = await Promise.all([
-        fetch(metricsUrl, {
-          method: 'GET',
-          headers,
-        }),
+        authedFetch(metricsUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } }),
         profilePromise,
       ]);
 
       if (!metricsResponse.ok) {
-        if (metricsResponse.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
         const errorData = await metricsResponse.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${metricsResponse.status}: Failed to fetch metrics`);
       }
@@ -226,28 +200,19 @@ class MetricService {
   }
 
   async updateProgress(section: 'catchup' | 'divein' | 'recap', minutes: number): Promise<void> {
-    try {
-      const headers = await this.getAuthHeaders();
-      
-      const response = await fetch(`${this.baseUrl}/me/metrics/progress`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          section,
-          minutes,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+    const response = await authedFetch(`${this.baseUrl}/me/metrics/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section,
+        minutes,
+        timestamp: new Date().toISOString(),
+      }),
+    });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication failed. Please log in again.');
-        }
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP ${response.status}: Failed to update progress`);
-      }
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP ${response.status}: Failed to update progress`);
     }
   }
 
@@ -278,8 +243,9 @@ class MetricService {
     try {
       return await this.getMetrics(filter);
     } catch (error) {
-      // Propagate auth errors so the UI can redirect to login
-      if (error instanceof Error && error.message.includes('Authentication failed')) {
+      // Propagate auth errors so the UI can redirect to login (the redirect has
+      // already been triggered centrally by authedFetch / getAuthToken).
+      if (error instanceof SessionExpiredError || (error instanceof Error && error.message.includes('Authentication failed'))) {
         throw error;
       }
 

@@ -1,7 +1,7 @@
 /**
  * Recap Journey Service — connects to the 4-stage Recap API
  */
-import { getAuthToken } from '../utils/auth';
+import { authedFetch } from '../utils/authed-fetch';
 import { API_BASE_URL } from '../constants/config';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -128,20 +128,10 @@ export interface ScriptSegment {
 class RecapServiceClient {
   private baseUrl = API_BASE_URL;
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
-    const token = await getAuthToken();
-    if (!token) throw new Error('No authentication token found');
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-  }
-
   private async request<T>(method: string, path: string, body?: any): Promise<T> {
-    const headers = await this.getAuthHeaders();
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const response = await authedFetch(`${this.baseUrl}${path}`, {
       method,
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
     });
 

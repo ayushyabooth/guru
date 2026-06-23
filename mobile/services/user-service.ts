@@ -1,4 +1,4 @@
-import { getAuthToken } from '../utils/auth';
+import { authedFetch } from '../utils/authed-fetch';
 import { API_BASE_URL } from '../constants/config';
 import { readCache, writeCache, removeCache, userCacheKey, CachedEntry } from '../utils/local-cache';
 
@@ -47,24 +47,12 @@ class UserService {
   async fetchUserProfileFresh(): Promise<UserProfile> {
     if (this.inflightProfileFetch) return this.inflightProfileFetch;
     this.inflightProfileFetch = (async () => {
-      const token = await getAuthToken();
-
-      if (!token) {
-        throw new Error('Not authenticated. Please log in.');
-      }
-
-      const response = await fetch(`${API_BASE_URL}/me`, {
+      const response = await authedFetch(`${API_BASE_URL}/me`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Session expired. Please log in again.');
-        }
         throw new Error(`Failed to fetch user profile: ${response.statusText}`);
       }
 

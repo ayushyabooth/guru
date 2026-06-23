@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../constants/config';
 import { getAuthToken } from '../utils/auth';
+import { authedFetch } from '../utils/authed-fetch';
 
 export interface RichSummary {
   whats_in_article?: string;
@@ -69,49 +70,22 @@ export class CatchupService {
     limit: number = 5,
     offset: number = 0
   ): Promise<CatchupFeedResponse> {
-    const token = await getAuthToken();
-    
-    if (!token) {
-      throw new Error('Not authenticated. Please log in.');
-    }
-    
-    
-    const response = await fetch(
+    const response = await authedFetch(
       `${API_BASE_URL}/catchup-feed?filter=${encodeURIComponent(filter)}&limit=${limit}&offset=${offset}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
     );
 
-
     if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Unauthorized - Please log in again');
-      }
-      const errorText = await response.text();
       throw new Error(`Failed to fetch catchup feed: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return response.json();
   }
 
   static async saveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
-    const token = await getAuthToken();
-    
-    const response = await fetch(
+    const response = await authedFetch(
       `${API_BASE_URL}/articles/${articleId}/save`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
     );
 
     if (!response.ok) {
@@ -122,17 +96,9 @@ export class CatchupService {
   }
 
   static async unsaveArticle(articleId: string): Promise<{ message: string; is_saved: boolean }> {
-    const token = await getAuthToken();
-    
-    const response = await fetch(
+    const response = await authedFetch(
       `${API_BASE_URL}/articles/${articleId}/save`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+      { method: 'DELETE', headers: { 'Content-Type': 'application/json' } }
     );
 
     if (!response.ok) {
@@ -173,17 +139,9 @@ export class CatchupService {
     storyboardId: string,
     filter: string
   ): Promise<{ message: string }> {
-    const token = await getAuthToken();
-    
-    const response = await fetch(
+    const response = await authedFetch(
       `${API_BASE_URL}/storyboards/${storyboardId}/not-relevant?filter=${encodeURIComponent(filter)}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
     );
 
     if (!response.ok) {

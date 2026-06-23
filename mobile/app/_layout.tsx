@@ -35,6 +35,9 @@ import ThemeAwareNav from '../components/ThemeAwareNav';
 // authenticated", "Unauthorized…", "Session expired", "Authentication failed")
 // and the feed hooks throw `HTTP 401` — match them all.
 function isAuthError(error: unknown): boolean {
+  // Typed SessionExpiredError from authedFetch (GUR-240 D). Match by name to
+  // avoid importing across the bundle boundary.
+  if (error && typeof error === 'object' && (error as any).name === 'SessionExpiredError') return true;
   const msg = error instanceof Error ? error.message : String(error ?? '');
   return /not authenticated|unauthorized|session expired|authentication failed|\b401\b/i.test(msg);
 }
