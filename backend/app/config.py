@@ -39,8 +39,11 @@ class Settings(BaseSettings):
     # JWT Configuration
     JWT_SECRET_KEY: str = Field(..., env="JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_HOURS: int = 2  # 2 hours (industry standard for access tokens)
-    REFRESH_TOKEN_EXPIRATION_DAYS: int = 30  # 30 days for refresh tokens (industry standard)
+    JWT_EXPIRATION_HOURS: int = 2  # short-lived access token (prod env may override)
+    # GUR-239: refresh tokens slide on use (see /auth/refresh), so this is an
+    # *inactivity* timeout, not a hard cap from login. 7 days is a security-
+    # conscious standard (30 was too long). Prod sets this via env.
+    REFRESH_TOKEN_EXPIRATION_DAYS: int = 7
     
     # Claude API Configuration
     ANTHROPIC_API_KEY: str = Field(..., env="ANTHROPIC_API_KEY")

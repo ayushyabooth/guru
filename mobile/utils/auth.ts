@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import { API_BASE_URL } from '../constants/config';
 import { clearUserCaches } from './local-cache';
 
@@ -46,6 +47,12 @@ async function refreshAuthToken(): Promise<string | null> {
       const data = await response.json();
       if (data.access_token) {
         await setAuthToken(data.access_token);
+        // GUR-239: sliding session — persist the rotated refresh token so the
+        // window keeps extending for active users (older API returns only an
+        // access token, in which case the fixed window still applies).
+        if (data.refresh_token) {
+          await setRefreshToken(data.refresh_token);
+        }
         return data.access_token;
       }
     }
@@ -132,6 +139,25 @@ export async function removeAuthToken(): Promise<void> {
       await SecureStore.deleteItemAsync('refresh_token');
     } catch {
       // SecureStore not available
+    }
+  }
+}
+
+/**
+ * GUR-239: the session is fully expired (refresh token invalid). Clear creds and
+ * route the user to login instead of leaving them on a dead-end error. Mirrors
+ * the web/native redirect split in app/index.tsx (router.replace left a blank
+ * screen on web — GUR-166), so web does a hard location replace.
+ */
+export async function redirectToLogin(): Promise<void> {
+  await removeAuthToken();
+  if (typeof window !== 'undefined' && window.location) {
+    window.location.replace('/login');
+  } else {
+    try {
+      router.replace('/(auth)/login');
+    } catch {
+      // Router not ready — tokens are cleared, so the next app open gates to login.
     }
   }
 }

@@ -139,10 +139,16 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
                 detail="Invalid user"
             )
         
-        # Generate new access token
+        # Sliding session (GUR-239): issue a NEW refresh token alongside the
+        # access token. An actively-used session keeps extending its window, so a
+        # user is only asked to re-auth after a full inactivity period — not on a
+        # hard clock from their last login. The client must store this new
+        # refresh token (older clients that ignore it simply fall back to the
+        # fixed window, so this is backward-compatible).
         new_access_token = generate_jwt(user.id, token_type='access')
-        
-        return {"access_token": new_access_token}
+        new_refresh_token = create_refresh_token(user.id)
+
+        return {"access_token": new_access_token, "refresh_token": new_refresh_token}
         
     except JWTError:
         raise HTTPException(

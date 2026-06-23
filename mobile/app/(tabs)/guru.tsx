@@ -5,7 +5,7 @@ import {
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { API_BASE_URL } from '../../constants/config';
-import { getAuthToken } from '../../utils/auth';
+import { getAuthToken, redirectToLogin } from '../../utils/auth';
 import { useTheme } from '../../contexts/ThemeContext';
 import GuruBlob, { BlobState } from '../../components/ui/GuruBlob';
 import GuruWordmark from '../../components/ui/GuruWordmark';
@@ -267,6 +267,13 @@ export default function GuruAgentScreen() {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionIdRef.current, input: turnInput }),
       });
+      if (res.status === 401) {
+        // GUR-239: session expired — don't show a retry-able "snag" (retrying
+        // can't fix an expired session). Ask the user to sign in again.
+        append({ type: 'text', md: 'Your session expired. Taking you to sign in…' });
+        await redirectToLogin();
+        return;
+      }
       if (!res.ok || !res.body) {
         append({ type: 'text', md: `Hmm, I hit a snag (HTTP ${res.status}). Try again in a moment.` });
         return;
