@@ -1,6 +1,6 @@
 import '../utils/polyfills';
 import React from 'react';
-import { Platform, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Platform, View, Text, TouchableOpacity, StyleSheet, AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 
@@ -21,15 +21,35 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope';
 import { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query';
 
 import { DiveInProvider } from '../contexts/DiveInContext';
 import { TimeTrackingProvider } from '../contexts/TimeTrackingContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { loadVisualConfigFromAPI } from '../constants/industryConfig';
+import { getAuthToken, redirectToLogin } from '../utils/auth';
 import ThemeAwareNav from '../components/ThemeAwareNav';
 
+// GUR-240: recognise a session-expiry error from any service/hook so the global
+// caches below can route to login. Services throw varied strings ("Not
+// authenticated", "Unauthorized…", "Session expired", "Authentication failed")
+// and the feed hooks throw `HTTP 401` — match them all.
+function isAuthError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error ?? '');
+  return /not authenticated|unauthorized|session expired|authentication failed|\b401\b/i.test(msg);
+}
+
 const queryClient = new QueryClient({
+  // GUR-240: a single global "session expired → login" path. Any query OR
+  // mutation that errors with an auth failure (including the catch-up / dive-in
+  // feed refetches whose 401 was previously orphaned while cache rendered)
+  // redirects to login. redirectToLogin() is loop-guarded.
+  queryCache: new QueryCache({
+    onError: (error) => { if (isAuthError(error)) void redirectToLogin(); },
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => { if (isAuthError(error)) void redirectToLogin(); },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,    // 5 min — data is fresh, no refetch
@@ -170,6 +190,27 @@ export default function RootLayout() {
   // Sync industry visual config from backend (static fallback if unreachable)
   useEffect(() => {
     loadVisualConfigFromAPI();
+  }, []);
+
+  // GUR-240: validate the session on entry and whenever the app/tab regains
+  // focus. getAuthToken() self-redirects to login on a dead session (refresh
+  // failed), so a session that expired while backgrounded — or a deep-link
+  // straight into a tab that bypasses the root gate — routes to login instead
+  // of rendering cached authed content. No-op when logged out (no token).
+  useEffect(() => {
+    const revalidate = () => { void getAuthToken(); };
+    revalidate(); // entry check (covers deep links past app/index.tsx)
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const onVisible = () => { if (document.visibilityState === 'visible') revalidate(); };
+      window.addEventListener('focus', revalidate);
+      document.addEventListener('visibilitychange', onVisible);
+      return () => {
+        window.removeEventListener('focus', revalidate);
+        document.removeEventListener('visibilitychange', onVisible);
+      };
+    }
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') revalidate(); });
+    return () => sub.remove();
   }, []);
 
   // Set default document title on web so the browser tab + screen readers have

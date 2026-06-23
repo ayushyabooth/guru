@@ -3,6 +3,10 @@ import { router } from 'expo-router';
 import { API_BASE_URL } from '../constants/config';
 import { clearUserCaches } from './local-cache';
 
+// GUR-240: guards the global "session expired → login" redirect against loops
+// and concurrent 401s. Re-armed by setAuthToken() when a fresh session lands.
+let _redirectingToLogin = false;
+
 // Decode JWT without verification (for checking expiry only)
 function decodeJWT(token: string): { exp?: number } | null {
   try {
@@ -84,13 +88,21 @@ export async function getAuthToken(): Promise<string | null> {
   // Check if token is expiring soon and refresh if needed
   if (isTokenExpiringSoon(token)) {
     const newToken = await refreshAuthToken();
-    return newToken || token; // Return new token or fall back to old one
+    if (newToken) return newToken;
+    // GUR-240: refresh failed → the session is dead. Do NOT fall back to the
+    // stale access token (that produced 401-ing requests while pages still
+    // rendered from cache). Trigger the global expiry path and report no token
+    // so callers gate to login instead of firing doomed requests.
+    void redirectToLogin();
+    return null;
   }
 
   return token;
 }
 
 export async function setAuthToken(token: string): Promise<void> {
+  // A fresh/refreshed session re-arms the global expiry guard (GUR-240).
+  _redirectingToLogin = false;
   if (typeof window !== 'undefined' && window.localStorage) {
     localStorage.setItem('access_token', token);
   } else {
@@ -150,6 +162,14 @@ export async function removeAuthToken(): Promise<void> {
  * screen on web — GUR-166), so web does a hard location replace.
  */
 export async function redirectToLogin(): Promise<void> {
+  // GUR-240: guard against redirect loops and double-fires from concurrent 401s.
+  if (_redirectingToLogin) return;
+  // Already on an auth screen — nothing to do (prevents login→login loops).
+  if (typeof window !== 'undefined' && window.location) {
+    const p = window.location.pathname || '';
+    if (p.startsWith('/login') || p.startsWith('/signup') || p.includes('(auth)')) return;
+  }
+  _redirectingToLogin = true;
   await removeAuthToken();
   if (typeof window !== 'undefined' && window.location) {
     window.location.replace('/login');
