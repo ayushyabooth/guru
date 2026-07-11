@@ -482,6 +482,43 @@ def cluster_articles_for_context(
                     f"min_sim={min(sims):.2f} avg_sim={sum(sims) / len(sims):.2f}"
                 )
         
+        # GUR-241: cap storyboards per filter. Threshold clustering (GUR-236)
+        # makes most articles singleton clusters — 60+ cards per filter that
+        # users never scroll to (feed pages 5), each costing Haiku calls at
+        # build time and a per-user personal prompt later. Keep every
+        # multi-article story (biggest first), then the freshest singletons.
+        cap = settings.MAX_STORYBOARDS_PER_FILTER
+        if len(clusters) > cap:
+            art_by_id = {a.id: a for a in articles}
+            multi = [(cid, ids) for cid, ids in clusters.items() if len(ids) > 1]
+            singles = [(cid, ids) for cid, ids in clusters.items() if len(ids) == 1]
+            multi.sort(key=lambda x: len(x[1]), reverse=True)
+            singles.sort(
+                key=lambda x: (
+                    art_by_id[x[1][0]].created_at.timestamp()
+                    if art_by_id[x[1][0]].created_at else 0.0
+                ),
+                reverse=True,
+            )
+            kept = (multi + singles)[:cap]
+            logger.info(
+                f"[cap] {filter_context}: keeping {len(kept)} of {len(clusters)} clusters "
+                f"({len(multi)} multi, dropped {len(clusters) - len(kept)} stale singletons)"
+            )
+            clusters = dict(kept)
+
+        # GUR-241: prefetch rich content for the singleton fast-path below —
+        # a one-article "story" reuses its ingestion-time rich content instead
+        # of paying Haiku summary/theme calls that duplicate it.
+        from app.models.article_rich_content import ArticleRichContent
+        singleton_ids = [ids[0] for ids in clusters.values() if len(ids) == 1]
+        rich_by_article: Dict[Any, Any] = {}
+        if singleton_ids:
+            for rc in db.query(ArticleRichContent).filter(
+                ArticleRichContent.article_id.in_(singleton_ids)
+            ).all():
+                rich_by_article[rc.article_id] = rc
+
         # Create storyboards for each cluster
         # Phase 1: Generate LLM content in parallel (summary, theme, narrative)
         # Phase 2: Write to DB sequentially (SQLite single-writer constraint)
@@ -504,6 +541,31 @@ def cluster_articles_for_context(
                     for aid in cluster_article_ids
                 ]
                 headline_article = _select_headline_article(cluster_articles, db)
+
+                # GUR-241 singleton fast-path: a one-article "story" needs no
+                # LLM — its card IS the article. Summary comes from the
+                # ingestion-time rich content (which the old Haiku call merely
+                # paraphrased) and the theme from the title. This removes the
+                # ~2 Haiku calls × ~1,800 singletons that dominated the
+                # 66-minute warm pass.
+                if len(cluster_articles) == 1:
+                    art = cluster_articles[0]
+                    rc = rich_by_article.get(art.id)
+                    summary = (
+                        ((rc.summary_whats_in or '').strip() if rc else '')
+                        or (art.title or '').strip()
+                        or 'In focus'
+                    )
+                    theme = ' '.join((art.title or '').split()[:5]).rstrip(' :;,.—-') or 'In focus'
+                    return {
+                        'cluster_id': cluster_id,
+                        'cluster_articles': cluster_articles,
+                        'headline_article': headline_article,
+                        'summary': summary,
+                        'theme': theme,
+                        'cluster_narrative': None,
+                    }
+
                 summary = _generate_cluster_summary(cluster_articles)
                 theme = _generate_cluster_theme(cluster_articles)
 

@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization
     MAX_ARTICLES_PER_INGESTION_RUN: int = 50  # Hard cap on articles processed per ingestion run
 
+    # GUR-241: cap storyboards built per filter context. The feed pages 5 at a
+    # time; 60+ singleton cards per filter were invisible to users but multiplied
+    # warm-pass Haiku calls and per-user personal-prompt fan-out (cost audit).
+    MAX_STORYBOARDS_PER_FILTER: int = 20
+
     # GUR-238: Tier 3 cost controls. Discovery is scoped to specializations that
     # active users actually follow, then round-robined across runs so each run
     # only pays for a subset (full coverage every TIER3_DISCOVERY_ROUNDS runs).
