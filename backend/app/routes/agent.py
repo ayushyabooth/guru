@@ -38,7 +38,7 @@ from app.models.agent_session import AgentSession
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 
-AGENT_MODEL = getattr(settings, "AGENT_MODEL", None) or "claude-sonnet-4-6"
+AGENT_MODEL = getattr(settings, "AGENT_MODEL", None) or "claude-sonnet-5"
 MAX_ITERS = 8
 MAX_HISTORY_MSGS = 40  # keep sessions bounded
 

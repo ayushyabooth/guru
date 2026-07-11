@@ -50,8 +50,9 @@ class Settings(BaseSettings):
     CLAUDE_SONNET_MODEL: str = Field(default="claude-sonnet-4-5-20250929", env="CLAUDE_SONNET_MODEL")
     CLAUDE_HAIKU_MODEL: str = Field(default="claude-haiku-4-5-20251001", env="CLAUDE_HAIKU_MODEL")
     CLAUDE_OPUS_MODEL: str = Field(default="claude-opus-4-5-20251101", env="CLAUDE_OPUS_MODEL")
-    # Agentic tab loop model (GUR-228). Flip to "claude-opus-4-8" via env for smarter planning.
-    AGENT_MODEL: str = Field(default="claude-sonnet-4-6", env="AGENT_MODEL")
+    # Agentic tab loop model — Sonnet tier by founder decision (cost audit, Jul 2026):
+    # best speed/intelligence balance for the agent loop; do NOT bump to Opus/Fable.
+    AGENT_MODEL: str = Field(default="claude-sonnet-5", env="AGENT_MODEL")
 
     # ElevenLabs TTS Configuration (Phase 2 Audio Recap)
     ELEVENLABS_API_KEY: str = Field(default="", env="ELEVENLABS_API_KEY")
