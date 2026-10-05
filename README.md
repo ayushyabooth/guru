@@ -62,7 +62,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env — set ANTHROPIC_API_KEY and JWT_SECRET_KEY
+# Edit .env - set ANTHROPIC_API_KEY and JWT_SECRET_KEY
 
 # Run development server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
