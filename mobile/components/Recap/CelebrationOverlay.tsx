@@ -157,13 +157,14 @@ export default function CelebrationOverlay({
           </View>
         )}
 
-        {/* Audio / Text recap button */}
+        {/* Audio / Text recap button — indigo glass + contextual icon per GUR-147 */}
         <View style={styles.audioSection}>
           {audioStatus === 'idle' && onGenerateAudio && (
             <GlassButton
               title="Generate Your Recap"
               onPress={onGenerateAudio}
               accentColor="#6366F1"
+              icon="sparkle"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -180,6 +181,7 @@ export default function CelebrationOverlay({
               title="Listen to Audio Recap"
               onPress={onListenAudio}
               accentColor="#6366F1"
+              icon="headphones"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -190,6 +192,7 @@ export default function CelebrationOverlay({
               title="Read Your Recap"
               onPress={onReadRecap}
               accentColor="#6366F1"
+              icon="book-open-variant"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.xl }}
@@ -202,22 +205,25 @@ export default function CelebrationOverlay({
           )}
         </View>
 
-        {/* Actions */}
+        {/* Actions — visually differentiated per GUR-147: secondary vs tertiary */}
         <View style={styles.actionsRow}>
           {onViewConstellation && (
             <GlassButton
-              title="View Constellation"
+              title="View Insights"
               onPress={onViewConstellation}
               variant="secondary"
+              icon="star-four-points"
               fullWidth={false}
               size="md"
               style={{ paddingHorizontal: Spacing.lg }}
             />
           )}
+          {/* Back to Home: tertiary (minimal glass, no accent color) + home icon */}
           <GlassButton
             title="Back to Home"
             onPress={onBackToHome}
-            accentColor="#FB923C"
+            variant="tertiary"
+            icon="home-outline"
             fullWidth={false}
             size="md"
             style={{ paddingHorizontal: Spacing.lg }}

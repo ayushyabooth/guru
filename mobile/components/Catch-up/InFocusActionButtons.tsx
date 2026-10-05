@@ -24,34 +24,39 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
   isDark = false,
   accentColor,
 }) => {
-  // Derive button color from accent or fall back to indigo
-  const primaryBg = accentColor || '#6366F1';
-  const primaryBorder = accentColor ? `${accentColor}CC` : '#4F46E5';
+  // GUR-147: 18% translucent fill, not solid — catch-up blue (#38BDF8) default
+  const primaryBg = accentColor || '#38BDF8';
+  // 18% fill opacity for glass translucency
+  const primaryFill = `${primaryBg}2E`;  // 2E ≈ 18% in hex
+  // border at 40% accent opacity
+  const primaryBorder = `${primaryBg}66`;
+  // glow at 22% accent opacity
+  const primaryGlow = `${primaryBg}38`;
 
-  // Web glass shadow using accent color
+  // GUR-147: blur(24) glass with context-color glow
   const primaryWebStyle = Platform.OS === 'web' ? {
-    backdropFilter: 'blur(12px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-    boxShadow: `0 2px 12px ${primaryBg}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+    backdropFilter: 'blur(24px) saturate(200%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(200%)',
+    boxShadow: `0 0 28px ${primaryGlow}, inset 0 1px 0 rgba(255,255,255,0.18)`,
   } : {};
 
   return (
     <View style={styles.container}>
-      {/* Dive In — primary CTA with accent color glass */}
+      {/* Dive In — primary CTA: 18% glass fill + context-color glow per GUR-147 */}
       <TouchableOpacity
         style={[
           styles.primaryButton,
           {
-            backgroundColor: primaryBg,
-            borderWidth: 1,
+            backgroundColor: primaryFill,
+            borderWidth: 1.5,
             borderColor: primaryBorder,
           },
           Platform.select({
             ios: {
               shadowColor: primaryBg,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.22,
+              shadowRadius: 12,
             },
             android: { elevation: 4 },
             default: {},
@@ -61,8 +66,8 @@ export const InFocusActionButtons: React.FC<InFocusActionButtonsProps> = ({
         onPress={() => onStartReading(articleId)}
         activeOpacity={0.8}
       >
-        <Icon name="book-open-variant" size={18} color="#FFFFFF" />
-        <Text style={styles.primaryButtonText}>Dive In</Text>
+        <Icon name="book-open-variant" size={16} color={primaryBg} />
+        <Text style={[styles.primaryButtonText, { color: primaryBg }]}>Dive In</Text>
       </TouchableOpacity>
 
       {/* Save — neutral glass secondary button */}
@@ -124,8 +129,8 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    // color set dynamically to accent color
   },
   secondaryButton: {
     flex: 0.8,

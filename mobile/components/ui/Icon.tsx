@@ -34,6 +34,8 @@ import { Play } from 'phosphor-react-native';
 import { CaretRight } from 'phosphor-react-native';
 import { CaretLeft } from 'phosphor-react-native';
 import { PaperPlaneRight } from 'phosphor-react-native';
+import { PlayCircle } from 'phosphor-react-native';
+import { Archive } from 'phosphor-react-native';
 import { Headphones } from 'phosphor-react-native';
 import { Sparkle } from 'phosphor-react-native';
 import { LockOpen } from 'phosphor-react-native';
@@ -112,6 +114,10 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'check': Check,
   'check-circle': CheckCircle,
   'send': PaperPlaneTilt,
+  'arrow-up': PaperPlaneRight,      // send / submit actions
+  'open-in-new': ArrowSquareOut,    // external link open
+  'play-circle': PlayCircle,        // begin journey / start
+  'archive-outline': Archive,       // view past / archive
 
   // Navigation
   'arrow-left': ArrowLeft,

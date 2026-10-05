@@ -43,6 +43,7 @@ export default function CommitmentScreen({ onSave }: CommitmentScreenProps) {
             title="Save & Complete"
             onPress={() => canSave && onSave(text.trim())}
             accentColor="#FB923C"
+            icon="lock-open"
             disabled={!canSave}
             size="lg"
           />

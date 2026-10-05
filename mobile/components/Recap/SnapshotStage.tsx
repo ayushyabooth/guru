@@ -206,9 +206,10 @@ export default function SnapshotStage({ snapshot, onContinue }: SnapshotStagePro
       {/* Continue button */}
       <View style={styles.continueWrapper}>
         <GlassButton
-          title="Continue to Questions →"
+          title="Continue to Questions"
           onPress={onContinue}
           accentColor="#FB923C"
+          icon="chevron-right"
           size="lg"
         />
       </View>

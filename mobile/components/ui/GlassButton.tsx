@@ -28,6 +28,7 @@ import {
 } from '../../constants/liquidGlass';
 import DarkThemeColors from '../../constants/darkTheme';
 import { useTheme } from '../../contexts/ThemeContext';
+import Icon from './Icon';
 
 /** Convert a hex color (#RGB or #RRGGBB) to rgba string */
 function hexToRgba(hex: string, alpha: number): string {
@@ -72,6 +73,10 @@ interface GlassButtonProps {
   accessibilityLabel?: string;
   /** Optional supplemental hint for screen readers. */
   accessibilityHint?: string;
+  /** Phosphor/MCI icon name to render left of the label */
+  icon?: string;
+  /** Icon size in px — defaults to 16 per GUR-147 spec */
+  iconSize?: number;
 }
 
 export default function GlassButton({
@@ -88,6 +93,8 @@ export default function GlassButton({
   textStyle,
   accessibilityLabel,
   accessibilityHint,
+  icon,
+  iconSize = 16,
 }: GlassButtonProps) {
   const { isDark, colors } = useTheme();
   const palette = getPalette(filterContext);
@@ -99,17 +106,21 @@ export default function GlassButton({
 
   const isDisabled = disabled || loading;
 
-  // Primary button — interactive accent color with glass blur
+  // Primary button — translucent glass with 18% context-color fill per GUR-147 spec
   if (variant === 'primary') {
     const accent = accentColor || '#6366F1';
-    const lightenedAccent = lightenHex(accent, 0.2);
+    const lightenedAccent = lightenHex(accent, 0.25);
+    // GUR-147: 18% fill in dark, 22% in light (still translucent but visible on light bg)
+    const fillOpacity = isDark ? 0.18 : 0.22;
+    // Glow: 22% accent opacity shadow
+    const glowOpacity = isDark ? 0.22 : 0.28;
 
     const webGlassStyle = Platform.OS === 'web' ? {
-      backdropFilter: 'blur(16px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+      backdropFilter: 'blur(24px) saturate(200%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(200%)',
       boxShadow: isDark
-        ? `0 0 24px ${hexToRgba(accent, 0.25)}, inset 0 1px 0 rgba(255,255,255,0.12)`
-        : `0 4px 18px ${hexToRgba(accent, 0.30)}, inset 0 1px 0 rgba(255,255,255,0.22)`,
+        ? `0 0 32px ${hexToRgba(accent, glowOpacity)}, inset 0 1px 0 rgba(255,255,255,0.18)`
+        : `0 4px 20px ${hexToRgba(accent, glowOpacity)}, inset 0 1px 0 rgba(255,255,255,0.30)`,
     } : {};
 
     return (
@@ -127,8 +138,10 @@ export default function GlassButton({
             height,
             borderRadius: BorderRadius.lg,
             width: fullWidth ? '100%' : undefined,
-            backgroundColor: hexToRgba(accent, isDark ? 0.35 : 0.90),
-            borderColor: isDark ? hexToRgba(lightenedAccent, 0.45) : 'rgba(255,255,255,0.22)',
+            backgroundColor: hexToRgba(accent, fillOpacity),
+            borderColor: isDark
+              ? hexToRgba(lightenedAccent, 0.45)
+              : hexToRgba(accent, 0.40),
             shadowColor: accent,
           },
           webGlassStyle as any,
@@ -140,16 +153,27 @@ export default function GlassButton({
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text
-              style={[
-                styles.primaryText,
-                size === 'sm' && styles.smallText,
-                size === 'lg' && styles.largeText,
-                textStyle,
-              ]}
-            >
-              {title}
-            </Text>
+            <View style={styles.labelRow}>
+              {icon && (
+                <Icon
+                  name={icon}
+                  size={iconSize}
+                  color="#FFFFFF"
+                  weight="bold"
+                  style={styles.iconLeft}
+                />
+              )}
+              <Text
+                style={[
+                  styles.primaryText,
+                  size === 'sm' && styles.smallText,
+                  size === 'lg' && styles.largeText,
+                  textStyle,
+                ]}
+              >
+                {title}
+              </Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -207,7 +231,18 @@ export default function GlassButton({
       {loading ? (
         <ActivityIndicator size="small" color={palette.primary} />
       ) : (
-        <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        <View style={styles.labelRow}>
+          {icon && (
+            <Icon
+              name={icon}
+              size={iconSize}
+              color={palette.primary}
+              weight="regular"
+              style={styles.iconLeft}
+            />
+          )}
+          <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -228,6 +263,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  iconLeft: {
+    // slight shift up to optically align icon with cap-height of text
   },
   primaryText: {
     ...Typography.labelLarge,
