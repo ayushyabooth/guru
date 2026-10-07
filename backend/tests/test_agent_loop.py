@@ -248,7 +248,7 @@ TOOL_NAMES = [t["name"] for t in agent.TOOLS]
 
 
 def test_tool_registry_is_well_formed():
-    # Changing the count is a contract change: update CLAUDE.md and docs/agent-walkthrough.md too.
+    # Changing the count is a contract change: update CLAUDE.md and README.md too.
     assert len(agent.TOOLS) == 18
     assert len(set(TOOL_NAMES)) == len(TOOL_NAMES), "duplicate tool names"
     for t in agent.TOOLS:
