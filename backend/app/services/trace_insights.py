@@ -396,7 +396,7 @@ def _takeaways(turns, diags):
     for name, pairs in by_tool.items():
         bad = [t for t, x in pairs if _tool_failed(x)]
         if len(pairs) >= 3 and len(bad) / len(pairs) >= 0.2:
-            msgs = Counter((x.get("error_msg") or "error").split(" ")[0:2][-1] for t, x in pairs if _tool_failed(x))
+            msgs = Counter(" ".join((x.get("error_msg") or "error").split(" ")[:2]).rstrip(":") for t, x in pairs if _tool_failed(x))
             add(100, len(bad), "bad", f"{name} failed on {len(bad)} of {len(pairs)} calls "
                 f"({round(100 * len(bad) / len(pairs))}%), most often {msgs.most_common(1)[0][0]}.",
                 [t["id"] for t in bad])
@@ -462,14 +462,14 @@ def _takeaways(turns, diags):
     if len(builds) >= 2:
         order = sorted(builds.items(), key=lambda kv: min(x["created_at"] or datetime.min.replace(tzinfo=timezone.utc) for x in kv[1]))
         (old_b, old), (new_b, new) = order[-2], order[-1]
-        if len(old) >= 5 and len(new) >= 5:
+        if len(old) >= 10 and len(new) >= 10:  # one blip in a handful of turns is not a regression
             o, w = pct([t["first_block_ms"] for t in old], 50), pct([t["first_block_ms"] for t in new], 50)
             if o and w and w > o * 1.2:
                 add(60, len(new), "warn", f"Build {new_b} is slower to first content than {old_b} "
                     f"(p50 {_s(w)} vs {_s(o)}).", [t["id"] for t in new])
             oe = sum(t["outcome"] == "error" for t in old) / len(old)
             ne = sum(t["outcome"] == "error" for t in new) / len(new)
-            if ne > oe + 0.05:
+            if sum(t["outcome"] == "error" for t in new) >= 2 and ne > oe + 0.05:
                 add(200, len(new), "bad", f"Errors rose with build {new_b}: {round(100 * ne)}% of turns vs "
                     f"{round(100 * oe)}% on {old_b}.", [t["id"] for t in new])
 

@@ -125,7 +125,7 @@ def test_takeaways_rank_a_broken_tool_first_and_flag_small_samples():
     turns = [turn(tools=bad_tool, minutes_ago=i) for i in range(4)] + [turn(minutes_ago=10 + i) for i in range(6)]
     s = ti.summarize(turns, days=7, traffic="real")
     top = s["takeaways"][0]
-    assert top["severity"] == "bad" and top["text"].startswith("mark_not_relevant failed on 4 of 4 calls (100%)")
+    assert top["severity"] == "bad" and top["text"] == "mark_not_relevant failed on 4 of 4 calls (100%), most often HTTP 422."
     assert len(top["turn_ids"]) == 4
     assert s["takeaways"][-1]["text"] == "Only 10 turns in this window, so read the percentiles loosely."
     assert s["tiles"]["turns"] == 10 and s["tiles"]["outcomes"] == {"blocks": 10}
@@ -139,11 +139,17 @@ def test_a_quiet_window_says_what_is_healthy():
 
 
 def test_a_build_that_raises_errors_is_called_out():
-    old = [turn(build="old", minutes_ago=100 + i) for i in range(6)]
+    old = [turn(build="old", minutes_ago=100 + i) for i in range(10)]
     new = [turn(build="new", outcome="error", error="RuntimeError: x", minutes_ago=i) for i in range(3)] + \
-          [turn(build="new", minutes_ago=10 + i) for i in range(3)]
+          [turn(build="new", minutes_ago=10 + i) for i in range(7)]
     texts = [k["text"] for k in ti.summarize(old + new)["takeaways"]]
-    assert any(t.startswith("Errors rose with build new: 50% of turns vs 0% on old.") for t in texts)
+    assert any(t.startswith("Errors rose with build new: 30% of turns vs 0% on old.") for t in texts)
+
+
+def test_one_error_in_a_small_build_is_not_called_a_regression():
+    old = [turn(build="old", minutes_ago=100 + i) for i in range(10)]
+    new = [turn(build="new", outcome="error", error="RuntimeError: x")] + [turn(build="new", minutes_ago=10 + i) for i in range(15)]
+    assert not any("Errors rose" in k["text"] for k in ti.summarize(old + new)["takeaways"])
 
 
 def test_turn_rows_match_the_admin_contract():
