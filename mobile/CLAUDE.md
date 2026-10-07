@@ -2,6 +2,8 @@
 
 Read this before any change under `mobile/`. The root `CLAUDE.md` still applies.
 
+**Design first:** no UI code without a Figma frame I've approved. If there's no frame for the change, draft one in this design language, show it to me, and wait. Then build to it and iterate until a screenshot of the running app matches it. The `guru-feature` skill runs this, and a hook asks before any UI edit until the design is recorded (root `CLAUDE.md`, the pipeline).
+
 ## Sources
 - Code tokens are the truth: `constants/liquidGlass.ts`, `constants/darkTheme.ts`, `constants/lightTheme.ts`. Shared components: `components/ui/`.
 - Figma `CVsVL7zvjyO3yoLlUJqBxI`: "Agentic Blocks EDL v2" (node `9:2`, the block rules) and "Identity FINAL" (node `10:2`). The glass tiers are node `77:3` in `7sgEGG13BI0Vksrg4hzpoQ`. Read a frame through the Figma connector before you build from it.

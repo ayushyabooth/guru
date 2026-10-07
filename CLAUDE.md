@@ -13,6 +13,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 
 ## Commands
 - `make test-agent` - agent contract, admin access and trace-insights tests. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
+- `make evals` - agent evals through the real route, scripted model, offline, about a second. `make evals LIVE=1` adds the live-model cases, graded by the LLM judge too (about $1.35). Cases live in `backend/evals/cases.yaml`; see `backend/evals/README.md`.
 - `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. Both need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local` reads the local database instead.
 - `make test` (the legacy backend suite) and `cd mobile && npx tsc --noEmit` both fail today for old reasons (see `docs/known-gaps.md`). Run them before and after your change and compare the failures. `make test` also writes test users into the local database.
 - Web app: `cd mobile && npx expo start --web --port 8081`. Extension: `cd extension && npm run build`, then load `extension/` unpacked in Chrome.
@@ -27,7 +28,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 2. The agent can only do what the user can do. No delete, payments, account or auth changes, cross-user reads, raw database access or live web search.
 3. Writes come in two kinds:
    - Writes that put words in the user's name (`add_note`, `set_commitment`) live in `WRITE_TOOLS`. The loop shows an approval card with the full text, stores `pending_action`, ends the turn, and runs the tool only on an approved decision.
-   - Every other tool runs at once. That covers the writes the user just asked for (save, highlight, not relevant, a recap answer), where the tap or the message is the consent, and three tools that store as a side effect: `ask_guru` saves the Q&A, `start_recap` opens a journey, `recap_socratic` saves the exchange.
+   - Every other tool runs at once. That covers the writes the user just asked for (save, highlight, not relevant, a recap answer), where the tap or the message is the consent, and five tools that store as a side effect: `ask_guru` saves the Q&A, `start_recap` opens a journey, `recap_socratic` saves the exchange, and `get_recap_questions` and `get_recap_insights` generate and save on their first call.
    - Unsure which kind a new write is? Gate it. Moving a tool in or out of `WRITE_TOOLS` is my call, not yours.
 4. Every tool call must match its real route: the path exists and every required parameter is sent. A test that fakes `_call_api` can't prove that. `test_every_tool_call_matches_a_real_route` can, and a new or changed tool must pass it.
 5. A new block type ships as one unit: its line in `SYSTEM_STATIC`, a `case` in `BlockRenderer.tsx`, and a test. The model's final text is only `{"blocks":[...]}`. Don't add another raw-text fallback; the one in `_parse_blocks` is a known gap.
@@ -56,13 +57,22 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 ## Before a push: say what the restart will do
 Every backend restart (a deploy, a variable change, a rollback) deletes content older than 30 days with the saves and notes on it, adds missing columns, and restarts the ingestion clock. Before a push, tell me what the restart will do and how big, whether the schema changed (then it boots on a scratch Postgres 16 first), and how we roll back. After the deploy: `/health` answers 200 and one real agent turn is traced with the new build SHA.
 
+## New features and visible changes: the pipeline
+Every new feature, and any change a user can see, runs the `guru-feature` skill (`.claude/skills/guru-feature/`). It is a real team's order: product, design, tracking, then engineering.
+1. Requirement: vision, who, numbered requirements, what done means, what's out. I approve it.
+2. Design: IMPORTANT - no approved frame, no UI code. Draft the Figma frame in the app's design language (`mobile/CLAUDE.md`), show me a screenshot, wait for my yes.
+3. Tracking: the Linear issue and sub-issues, each with acceptance criteria and the frame link.
+4. Build to the frame: plan, tests and evals first, the smallest diff. 5. Verify: tests, evals, a screenshot of the running app next to the frame. 6. Ship: the pre-push checklist, on my go.
+
+This file explains the pipeline; hooks guarantee it. `.claude/hooks/stage_gate.py` asks before an edit to app code until the requirement is recorded, and before an edit to app UI until the design is. Approvals are recorded only with `.claude/hooks/feature_state.py approve`, which asks me first. A small fix still starts with a one-line requirement; it skips design only when nothing visible changes. After any edit to the agent, a second hook runs `make test-agent` and hands back a failure at once.
+
 ## How I brief work
 I give you three things, in order: the requirement (what the user sees change, and what must not), the rules that apply (sections of this file, a Figma frame), and the proof (the test or eval case, written before the code). Give me a plan - files, functions, tests - not code. I'll correct it. Then the smallest diff.
 
 ## Definition of done
 Show me the output of each:
 1. A test that fails without the change and passes with it. Then `make test-agent`, all green.
-2. A change to agent behavior gets a case that pins it: a scripted test now, an eval case once `make evals` exists.
-3. A visible change gets a screenshot of the running app next to its Figma frame.
+2. A change to agent behavior gets an eval case in `backend/evals/cases.yaml`, run before and after (`make evals`, plus `LIVE=1` for a prompt change). A red case that turns green gets its label updated in the same commit.
+3. A visible change gets a screenshot of the running app next to its approved Figma frame.
 4. If the contract moved (a tool, a gate, a block type, a limit), this file changes in the same commit, and so does `docs/known-gaps.md` when a gap opens or closes.
 5. Commits are small, one change each, `type(area): what changed`. Never write "tested" in a commit message unless the test is in that commit.

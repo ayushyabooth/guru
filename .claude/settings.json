@@ -12,7 +12,32 @@
       "Bash(vercel)",
       "Bash(vercel *)",
       "Bash(npx vercel *)",
-      "Bash(railway *)"
+      "Bash(railway *)",
+      "Bash(python3 .claude/hooks/feature_state.py approve *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/stage_gate.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_tests.py\""
+          }
+        ]
+      }
     ]
   }
 }
