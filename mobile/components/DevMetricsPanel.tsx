@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * Perf panel (admins only, every build). The home screen renders it only when
+ * GET /me/access says is_admin; every endpoint it reads checks admin again on
+ * the server.
+ *
+ * Tabs: Agent (traces, the default), API (latency + recent calls) and
+ * Ingestion. API and Ingestion share one /admin/perf-metrics fetch.
+ */
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,75 +15,35 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
-import { API_BASE_URL } from '../constants/config';
-import { getAuthToken } from '../utils/auth';
 import { Spacing } from '@/constants/liquidGlass';
-
-// --- Types matching /admin/perf-metrics response ---
-
-interface EndpointStats {
-  count: number;
-  p50_ms: number;
-  p95_ms: number;
-  max_ms: number;
-  avg_ms: number;
-}
-
-interface RecentCall {
-  method: string;
-  path: string;
-  status: number;
-  ms: number;
-  ago_s: number;
-}
-
-interface SlowestEndpoint extends EndpointStats {
-  path: string;
-}
-
-interface IngestionRun {
-  status: string;
-  started_at: string | null;
-  completed_at: string | null;
-  articles_found: number;
-  articles_ingested: number;
-  articles_rejected: number;
-  step_timings: Record<string, number> | null;
-}
-
-interface PerfMetrics {
-  api: {
-    endpoints: Record<string, EndpointStats>;
-    recent: RecentCall[];
-    slowest: SlowestEndpoint[];
-    total_requests: number;
-  };
-  ingestion: {
-    tiers: Record<string, Array<{ step: string; ms: number; detail: string; ago_s: number }>>;
-    total_steps: number;
-    last_runs: Record<string, IngestionRun>;
-  };
-  content: {
-    total_articles: number;
-    total_storyboards: number;
-  };
-}
+import { getPerfMetrics, toAdminError } from '../services/admin-service';
+import type { PerfMetrics } from '../services/admin-service';
+import { AdminPalette, AdminType, MONO, useAdminPalette, withAlpha } from './admin/adminTheme';
+import { Segmented, SegmentOption } from './admin/AdminUI';
+import AgentPerfTab from './admin/AgentPerfTab';
 
 // --- Helpers ---
 
-function msColor(ms: number): string {
-  if (ms < 100) return '#22C55E';   // green
-  if (ms < 300) return '#F59E0B';   // amber
-  if (ms < 1000) return '#F97316';  // orange
-  return '#EF4444';                  // red
+function msColor(ms: number, P: AdminPalette): string {
+  if (ms < 100) return P.good;
+  if (ms < 300) return P.warn;
+  if (ms < 1000) return P.orange;
+  return P.bad;
 }
 
-function statusColor(status: number): string {
-  if (status < 300) return '#22C55E';
-  if (status < 400) return '#3B82F6';
-  if (status < 500) return '#F59E0B';
-  return '#EF4444';
+function statusColor(status: number, P: AdminPalette): string {
+  if (status < 300) return P.good;
+  if (status < 400) return P.info;
+  if (status < 500) return P.warn;
+  return P.bad;
+}
+
+function runStatusColor(status: string, P: AdminPalette): string {
+  if (status === 'completed') return P.good;
+  if (status === 'running') return P.info;
+  return P.bad;
 }
 
 function formatAgo(seconds: number): string {
@@ -88,12 +56,38 @@ function shortPath(path: string): string {
   return path.replace('/api/v1/', '/');
 }
 
+// --- Layout ---
+
+type PanelTab = 'agent' | 'api' | 'ingestion';
+
+const TAB_OPTIONS: SegmentOption<PanelTab>[] = [
+  { value: 'agent', label: 'Agent' },
+  { value: 'api', label: 'API' },
+  { value: 'ingestion', label: 'Ingestion' },
+];
+
+const PANEL_TOP = 56;
+const PANEL_PADDING = 14;
+/** Keeps the panel clear of the floating tab bar (72px tall, 12px off the bottom). */
+const PANEL_BOTTOM_RESERVE = 100;
+
 // --- Sections ---
 
 type SectionKey = 'api' | 'recent' | 'ingestion' | 'content';
 
 export default function DevMetricsPanel() {
+  const P = useAdminPalette();
+  const s = useMemo(() => makeStyles(P), [P]);
+  const { height: windowHeight } = useWindowDimensions();
+
   const [isExpanded, setIsExpanded] = useState(false);
+  // Once opened, the panel stays mounted (hidden when closed) so the Agent
+  // tab keeps its filters, data and scroll position between opens.
+  const [hasOpened, setHasOpened] = useState(false);
+  const [tab, setTab] = useState<PanelTab>('agent');
+  const [agentRefresh, setAgentRefresh] = useState(0);
+  const [chromeHeight, setChromeHeight] = useState(84);
+
   const [data, setData] = useState<PerfMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,490 +102,561 @@ export default function DevMetricsPanel() {
     try {
       setLoading(true);
       setError(null);
-      const token = await getAuthToken();
-      const res = await fetch(`${API_BASE_URL}/admin/perf-metrics`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const json = await getPerfMetrics();
       setData(json);
-    } catch (e: any) {
-      setError(e.message || 'Failed to fetch');
+    } catch (e) {
+      setError(toAdminError(e).message);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // API and Ingestion load on first view. After an error, Refresh retries.
   useEffect(() => {
-    if (isExpanded && !data) {
+    if (isExpanded && tab !== 'agent' && !data && !loading && !error) {
       fetchMetrics();
     }
-  }, [isExpanded, data, fetchMetrics]);
+  }, [isExpanded, tab, data, loading, error, fetchMetrics]);
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  if (!isExpanded) {
-    return (
-      <TouchableOpacity
-        style={s.toggleButton}
-        onPress={() => setIsExpanded(true)}
-      >
-        <Text style={s.toggleText}>Perf</Text>
-      </TouchableOpacity>
-    );
-  }
+  const onRefresh = () => {
+    if (tab === 'agent') setAgentRefresh(n => n + 1);
+    else fetchMetrics();
+  };
+
+  const open = () => {
+    setHasOpened(true);
+    setIsExpanded(true);
+  };
+
+  const panelMaxHeight = Math.max(320, windowHeight - PANEL_TOP - PANEL_BOTTOM_RESERVE);
+  const bodyMaxHeight = Math.max(160, panelMaxHeight - chromeHeight - PANEL_PADDING * 2);
 
   return (
-    <View style={s.panel}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.title}>Dev Metrics</Text>
-        <View style={s.headerActions}>
-          <TouchableOpacity onPress={fetchMetrics} style={s.refreshBtn}>
-            <Text style={s.refreshText}>Refresh</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setIsExpanded(false)}>
-            <Text style={s.closeBtn}>X</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {loading && !data && (
-        <ActivityIndicator color="#38BDF8" style={{ marginVertical: 12 }} />
+    <>
+      {!isExpanded && (
+        <TouchableOpacity
+          style={s.toggleButton}
+          onPress={open}
+          accessibilityRole="button"
+          accessibilityLabel="Open performance panel"
+        >
+          <Text style={s.toggleText}>Perf</Text>
+        </TouchableOpacity>
       )}
-      {error && <Text style={s.errorText}>{error}</Text>}
 
-      {data && (
-        <ScrollView style={s.scroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-          {/* Content Stats (quick numbers at top) */}
-          <View style={s.statsRow}>
-            <View style={s.statBox}>
-              <Text style={s.statNum}>{data.content.total_articles}</Text>
-              <Text style={s.statLabel}>Articles</Text>
+      {hasOpened && (
+        <View style={[s.panel, { maxHeight: panelMaxHeight }, !isExpanded && s.hidden]}>
+          {/* Header + tabs */}
+          <View
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (h > 0) setChromeHeight(h);
+            }}
+          >
+            <View style={s.header}>
+              <Text style={s.title} accessibilityRole="header">Performance</Text>
+              <View style={s.headerActions}>
+                <TouchableOpacity
+                  onPress={onRefresh}
+                  style={s.refreshBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh this tab"
+                >
+                  <Text style={s.refreshText}>Refresh</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setIsExpanded(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close performance panel"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={s.closeBtn}>X</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={s.statBox}>
-              <Text style={s.statNum}>{data.content.total_storyboards}</Text>
-              <Text style={s.statLabel}>Storyboards</Text>
-            </View>
-            <View style={s.statBox}>
-              <Text style={s.statNum}>{data.api.total_requests}</Text>
-              <Text style={s.statLabel}>API Calls</Text>
+            <View style={s.tabsRow}>
+              <Segmented
+                options={TAB_OPTIONS}
+                value={tab}
+                onChange={setTab}
+                P={P}
+                role="tab"
+                accessibilityLabel="Performance sections"
+              />
             </View>
           </View>
 
-          {/* API Performance */}
-          <TouchableOpacity onPress={() => toggleSection('api')} style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>
-              {expandedSections.api ? '>' : '>'} API Performance
-            </Text>
-            {data.api.slowest.length > 0 && (
-              <Text style={[s.badge, { backgroundColor: msColor(data.api.slowest[0].p95_ms) }]}>
-                P95: {Math.round(data.api.slowest[0].p95_ms)}ms
-              </Text>
-            )}
-          </TouchableOpacity>
-          {expandedSections.api && (
-            <View style={s.sectionContent}>
-              {data.api.slowest.map((ep, i) => (
-                <View key={i} style={s.endpointRow}>
-                  <Text style={s.endpointPath} numberOfLines={1}>{shortPath(ep.path)}</Text>
-                  <View style={s.timingRow}>
-                    <Text style={[s.timingVal, { color: msColor(ep.p50_ms) }]}>
-                      P50:{Math.round(ep.p50_ms)}
-                    </Text>
-                    <Text style={[s.timingVal, { color: msColor(ep.p95_ms) }]}>
-                      P95:{Math.round(ep.p95_ms)}
-                    </Text>
-                    <Text style={[s.timingVal, { color: msColor(ep.max_ms) }]}>
-                      Max:{Math.round(ep.max_ms)}
-                    </Text>
-                    <Text style={s.countBadge}>{ep.count}x</Text>
-                  </View>
-                </View>
-              ))}
-              {Object.keys(data.api.endpoints).length > 5 && (
-                <Text style={s.moreText}>
-                  +{Object.keys(data.api.endpoints).length - 5} more endpoints
-                </Text>
+          {/* Agent: stays mounted so its filters and list survive tab switches */}
+          <View style={tab === 'agent' ? null : s.hidden}>
+            <AgentPerfTab refreshSignal={agentRefresh} maxHeight={bodyMaxHeight} />
+          </View>
+
+          {tab !== 'agent' && (
+            <>
+              {loading && !data && (
+                <ActivityIndicator color={P.accent} style={{ marginVertical: 12 }} />
               )}
-            </View>
-          )}
+              {error && <Text style={s.errorText}>{error}</Text>}
 
-          {/* Recent API Calls */}
-          <TouchableOpacity onPress={() => toggleSection('recent')} style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>
-              {expandedSections.recent ? '>' : '>'} Recent Calls ({data.api.recent.length})
-            </Text>
-          </TouchableOpacity>
-          {expandedSections.recent && (
-            <View style={s.sectionContent}>
-              {data.api.recent.slice(0, 15).map((call, i) => (
-                <View key={i} style={s.recentRow}>
-                  <View style={s.recentLeft}>
-                    <Text style={[s.methodBadge, { color: statusColor(call.status) }]}>
-                      {call.method}
-                    </Text>
-                    <Text style={s.recentPath} numberOfLines={1}>{shortPath(call.path)}</Text>
-                  </View>
-                  <View style={s.recentRight}>
-                    <Text style={[s.recentMs, { color: msColor(call.ms) }]}>
-                      {Math.round(call.ms)}ms
-                    </Text>
-                    <Text style={s.recentAgo}>{formatAgo(call.ago_s)}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Ingestion */}
-          <TouchableOpacity onPress={() => toggleSection('ingestion')} style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>
-              {expandedSections.ingestion ? '>' : '>'} Ingestion
-            </Text>
-          </TouchableOpacity>
-          {expandedSections.ingestion && (
-            <View style={s.sectionContent}>
-              {Object.entries(data.ingestion.last_runs).map(([tier, run]) => (
-                <View key={tier} style={s.ingestionTier}>
-                  <View style={s.ingestionHeader}>
-                    <Text style={s.tierName}>{tier.replace('tier', 'T').replace('_', ' ')}</Text>
-                    <Text style={[
-                      s.statusBadge,
-                      { backgroundColor: run.status === 'completed' ? 'rgba(34,197,94,0.2)' : run.status === 'running' ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)' },
-                      { color: run.status === 'completed' ? '#22C55E' : run.status === 'running' ? '#3B82F6' : '#EF4444' },
-                    ]}>
-                      {run.status}
-                    </Text>
-                  </View>
-                  <View style={s.ingestionStats}>
-                    <Text style={s.ingestionStat}>Found: {run.articles_found}</Text>
-                    <Text style={s.ingestionStat}>In: {run.articles_ingested}</Text>
-                    <Text style={s.ingestionStat}>Out: {run.articles_rejected}</Text>
-                  </View>
-                  {run.step_timings && (
-                    <View style={s.stepTimings}>
-                      {Object.entries(run.step_timings).map(([step, ms]) => (
-                        <View key={step} style={s.stepRow}>
-                          <Text style={s.stepName}>{step.replace(/_ms$/, '')}</Text>
-                          <Text style={[s.stepMs, { color: msColor(ms as number) }]}>
-                            {ms >= 1000 ? `${((ms as number) / 1000).toFixed(1)}s` : `${Math.round(ms as number)}ms`}
-                          </Text>
+              {data && (
+                <ScrollView
+                  style={[s.scroll, { maxHeight: bodyMaxHeight }]}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {tab === 'api' ? (
+                    <>
+                      {/* Content Stats (quick numbers at top) */}
+                      <View style={s.statsRow}>
+                        <View style={s.statBox}>
+                          <Text style={s.statNum}>{data.content.total_articles}</Text>
+                          <Text style={s.statLabel}>Articles</Text>
                         </View>
-                      ))}
-                    </View>
+                        <View style={s.statBox}>
+                          <Text style={s.statNum}>{data.content.total_storyboards}</Text>
+                          <Text style={s.statLabel}>Storyboards</Text>
+                        </View>
+                        <View style={s.statBox}>
+                          <Text style={s.statNum}>{data.api.total_requests}</Text>
+                          <Text style={s.statLabel}>API Calls</Text>
+                        </View>
+                      </View>
+
+                      {/* API Performance */}
+                      <TouchableOpacity onPress={() => toggleSection('api')} style={s.sectionHeader}>
+                        <Text style={s.sectionTitle}>
+                          {expandedSections.api ? '▾' : '▸'} API Performance
+                        </Text>
+                        {data.api.slowest.length > 0 && (
+                          <Text style={[s.badge, { backgroundColor: msColor(data.api.slowest[0].p95_ms, P) }]}>
+                            P95: {Math.round(data.api.slowest[0].p95_ms)}ms
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                      {expandedSections.api && (
+                        <View style={s.sectionContent}>
+                          {data.api.slowest.map((ep, i) => (
+                            <View key={i} style={s.endpointRow}>
+                              <Text style={s.endpointPath} numberOfLines={1}>{shortPath(ep.path)}</Text>
+                              <View style={s.timingRow}>
+                                <Text style={[s.timingVal, { color: msColor(ep.p50_ms, P) }]}>
+                                  P50:{Math.round(ep.p50_ms)}
+                                </Text>
+                                <Text style={[s.timingVal, { color: msColor(ep.p95_ms, P) }]}>
+                                  P95:{Math.round(ep.p95_ms)}
+                                </Text>
+                                <Text style={[s.timingVal, { color: msColor(ep.max_ms, P) }]}>
+                                  Max:{Math.round(ep.max_ms)}
+                                </Text>
+                                <Text style={s.countBadge}>{ep.count}x</Text>
+                              </View>
+                            </View>
+                          ))}
+                          {Object.keys(data.api.endpoints).length > 5 && (
+                            <Text style={s.moreText}>
+                              +{Object.keys(data.api.endpoints).length - 5} more endpoints
+                            </Text>
+                          )}
+                        </View>
+                      )}
+
+                      {/* Recent API Calls */}
+                      <TouchableOpacity onPress={() => toggleSection('recent')} style={s.sectionHeader}>
+                        <Text style={s.sectionTitle}>
+                          {expandedSections.recent ? '▾' : '▸'} Recent Calls ({data.api.recent.length})
+                        </Text>
+                      </TouchableOpacity>
+                      {expandedSections.recent && (
+                        <View style={s.sectionContent}>
+                          {data.api.recent.slice(0, 15).map((call, i) => (
+                            <View key={i} style={s.recentRow}>
+                              <View style={s.recentLeft}>
+                                <Text style={[s.methodBadge, { color: statusColor(call.status, P) }]}>
+                                  {call.method}
+                                </Text>
+                                <Text style={s.recentPath} numberOfLines={1}>{shortPath(call.path)}</Text>
+                              </View>
+                              <View style={s.recentRight}>
+                                <Text style={[s.recentMs, { color: msColor(call.ms, P) }]}>
+                                  {Math.round(call.ms)}ms
+                                </Text>
+                                <Text style={s.recentAgo}>{formatAgo(call.ago_s)}</Text>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {/* Ingestion */}
+                      <TouchableOpacity onPress={() => toggleSection('ingestion')} style={s.sectionHeaderFirst}>
+                        <Text style={s.sectionTitle}>
+                          {expandedSections.ingestion ? '▾' : '▸'} Ingestion
+                        </Text>
+                      </TouchableOpacity>
+                      {expandedSections.ingestion && (
+                        <View style={s.sectionContent}>
+                          {Object.entries(data.ingestion.last_runs).map(([tier, run]) => {
+                            const runColor = runStatusColor(run.status, P);
+                            return (
+                              <View key={tier} style={s.ingestionTier}>
+                                <View style={s.ingestionHeader}>
+                                  <Text style={s.tierName}>{tier.replace('tier', 'T').replace('_', ' ')}</Text>
+                                  <Text style={[
+                                    s.statusBadge,
+                                    { backgroundColor: withAlpha(runColor, 0.18), color: runColor },
+                                  ]}>
+                                    {run.status}
+                                  </Text>
+                                </View>
+                                <View style={s.ingestionStats}>
+                                  <Text style={s.ingestionStat}>Found: {run.articles_found}</Text>
+                                  <Text style={s.ingestionStat}>In: {run.articles_ingested}</Text>
+                                  <Text style={s.ingestionStat}>Out: {run.articles_rejected}</Text>
+                                </View>
+                                {run.step_timings && (
+                                  <View style={s.stepTimings}>
+                                    {Object.entries(run.step_timings).map(([step, ms]) => (
+                                      <View key={step} style={s.stepRow}>
+                                        <Text style={s.stepName}>{step.replace(/_ms$/, '')}</Text>
+                                        <Text style={[s.stepMs, { color: msColor(ms as number, P) }]}>
+                                          {ms >= 1000 ? `${((ms as number) / 1000).toFixed(1)}s` : `${Math.round(ms as number)}ms`}
+                                        </Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                )}
+                                {run.started_at && (
+                                  <Text style={s.ingestionTime}>
+                                    {new Date(run.started_at).toLocaleString()}
+                                  </Text>
+                                )}
+                              </View>
+                            );
+                          })}
+                          {Object.keys(data.ingestion.last_runs).length === 0 && (
+                            <Text style={s.emptyText}>No ingestion runs recorded</Text>
+                          )}
+                        </View>
+                      )}
+                    </>
                   )}
-                  {run.started_at && (
-                    <Text style={s.ingestionTime}>
-                      {new Date(run.started_at).toLocaleString()}
-                    </Text>
-                  )}
-                </View>
-              ))}
-              {Object.keys(data.ingestion.last_runs).length === 0 && (
-                <Text style={s.emptyText}>No ingestion runs recorded</Text>
+                </ScrollView>
               )}
-            </View>
+            </>
           )}
-        </ScrollView>
+        </View>
       )}
-    </View>
+    </>
   );
 }
 
-// --- Styles ---
+// --- Styles (theme-aware: built from the admin palette) ---
 
-const s = StyleSheet.create({
-  toggleButton: {
-    position: 'absolute',
-    top: 62,
-    right: 70,
-    zIndex: 100,
-    backgroundColor: 'rgba(56, 189, 248, 0.85)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: Spacing.sm,
-  },
-  toggleText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  panel: {
-    position: 'absolute',
-    top: 56,
-    right: 12,
-    left: 12,
-    zIndex: 101,
-    backgroundColor: 'rgba(15, 15, 20, 0.95)',
-    borderRadius: Spacing.md,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    maxHeight: 500,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: Spacing.sm },
-    shadowOpacity: 0.4,
-    shadowRadius: Spacing.md,
-    elevation: 25,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-      } as any,
-    }),
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  title: {
-    color: '#38BDF8',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  refreshBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: 6,
-  },
-  refreshText: {
-    color: '#38BDF8',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  closeBtn: {
-    color: '#64748B',
-    fontSize: Spacing.md,
-    fontWeight: '700',
-    padding: Spacing.xs,
-  },
-  scroll: {
-    maxHeight: 420,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 11,
-    textAlign: 'center',
-    marginVertical: Spacing.sm,
-  },
+function makeStyles(P: AdminPalette) {
+  return StyleSheet.create({
+    hidden: {
+      display: 'none',
+    },
+    toggleButton: {
+      position: 'absolute',
+      top: 62,
+      right: 70,
+      zIndex: 100,
+      backgroundColor: P.toggleBg,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: Spacing.sm,
+    },
+    toggleText: {
+      color: P.onSolid,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    panel: {
+      position: 'absolute',
+      top: PANEL_TOP,
+      right: 12,
+      left: 12,
+      zIndex: 101,
+      backgroundColor: P.panelBg,
+      borderRadius: Spacing.md,
+      padding: PANEL_PADDING,
+      borderWidth: 1,
+      borderColor: P.panelBorder,
+      overflow: 'hidden',
+      shadowColor: P.shadow,
+      shadowOffset: { width: 0, height: Spacing.sm },
+      shadowOpacity: P.isDark ? 0.4 : 0.14,
+      shadowRadius: Spacing.md,
+      elevation: 25,
+      ...Platform.select({
+        web: {
+          backdropFilter: 'blur(40px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(190%)',
+        } as any,
+      }),
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    title: {
+      ...AdminType.title,
+      color: P.accent,
+      letterSpacing: 0.5,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    refreshBtn: {
+      backgroundColor: P.accentBg,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: Spacing.xs,
+      borderRadius: 6,
+    },
+    refreshText: {
+      color: P.accent,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    closeBtn: {
+      color: P.textTertiary,
+      fontSize: Spacing.md,
+      fontWeight: '700',
+      padding: Spacing.xs,
+    },
+    tabsRow: {
+      marginBottom: 10,
+    },
+    scroll: {
+      flexGrow: 0,
+    },
+    errorText: {
+      color: P.bad,
+      fontSize: 11,
+      textAlign: 'center',
+      marginVertical: Spacing.sm,
+    },
 
-  // Stats row
-  statsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: 12,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
-  },
-  statNum: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statLabel: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 2,
-  },
+    // Stats row
+    statsRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      marginBottom: 12,
+    },
+    statBox: {
+      flex: 1,
+      backgroundColor: P.surface,
+      borderRadius: 10,
+      padding: 10,
+      alignItems: 'center',
+    },
+    statNum: {
+      color: P.text,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    statLabel: {
+      color: P.textTertiary,
+      fontSize: 10,
+      fontWeight: '600',
+      marginTop: 2,
+    },
 
-  // Sections
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-  },
-  sectionTitle: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  sectionContent: {
-    marginBottom: Spacing.sm,
-  },
-  badge: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Spacing.xs,
-    overflow: 'hidden',
-  },
+    // Sections
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: P.divider,
+    },
+    sectionHeaderFirst: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.sm,
+    },
+    sectionTitle: {
+      color: P.text,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    sectionContent: {
+      marginBottom: Spacing.sm,
+    },
+    badge: {
+      color: P.onSolid,
+      fontSize: 10,
+      fontWeight: '700',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: Spacing.xs,
+      overflow: 'hidden',
+    },
 
-  // Endpoint rows
-  endpointRow: {
-    marginBottom: 6,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: Spacing.sm,
-    padding: Spacing.sm,
-  },
-  endpointPath: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 11,
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    marginBottom: Spacing.xs,
-  },
-  timingRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'center',
-  },
-  timingVal: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-  },
-  countBadge: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 10,
-    fontWeight: '600',
-    marginLeft: 'auto',
-  },
-  moreText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 10,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-  },
+    // Endpoint rows
+    endpointRow: {
+      marginBottom: 6,
+      backgroundColor: P.surface,
+      borderRadius: Spacing.sm,
+      padding: Spacing.sm,
+    },
+    endpointPath: {
+      color: P.textSecondary,
+      fontSize: 11,
+      fontFamily: MONO,
+      marginBottom: Spacing.xs,
+    },
+    timingRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      alignItems: 'center',
+    },
+    timingVal: {
+      fontSize: 10,
+      fontWeight: '700',
+      fontFamily: MONO,
+    },
+    countBadge: {
+      color: P.textTertiary,
+      fontSize: 10,
+      fontWeight: '600',
+      marginLeft: 'auto',
+    },
+    moreText: {
+      color: P.textTertiary,
+      fontSize: 10,
+      textAlign: 'center',
+      marginTop: Spacing.xs,
+    },
 
-  // Recent calls
-  recentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  recentLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-  methodBadge: {
-    fontSize: 9,
-    fontWeight: '800',
-    width: 30,
-  },
-  recentPath: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 10,
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    flex: 1,
-  },
-  recentRight: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'center',
-  },
-  recentMs: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-    width: 45,
-    textAlign: 'right',
-  },
-  recentAgo: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 9,
-    width: Spacing.xxl,
-    textAlign: 'right',
-  },
+    // Recent calls
+    recentRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: Spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: P.divider,
+    },
+    recentLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flex: 1,
+    },
+    methodBadge: {
+      fontSize: 9,
+      fontWeight: '800',
+      width: 30,
+    },
+    recentPath: {
+      color: P.textSecondary,
+      fontSize: 10,
+      fontFamily: MONO,
+      flex: 1,
+    },
+    recentRight: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+      alignItems: 'center',
+    },
+    recentMs: {
+      fontSize: 10,
+      fontWeight: '700',
+      fontFamily: MONO,
+      width: 45,
+      textAlign: 'right',
+    },
+    recentAgo: {
+      color: P.textTertiary,
+      fontSize: 9,
+      width: Spacing.xxl,
+      textAlign: 'right',
+    },
 
-  // Ingestion
-  ingestionTier: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: Spacing.sm,
-    padding: Spacing.sm,
-    marginBottom: 6,
-  },
-  ingestionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  tierName: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-  statusBadge: {
-    fontSize: 9,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Spacing.xs,
-    overflow: 'hidden',
-    textTransform: 'uppercase',
-  },
-  ingestionStats: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: Spacing.xs,
-  },
-  ingestionStat: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  stepTimings: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: Spacing.xs,
-    marginTop: Spacing.xs,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  stepName: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 10,
-  },
-  stepMs: {
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
-  },
-  ingestionTime: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 9,
-    marginTop: Spacing.xs,
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 11,
-    textAlign: 'center',
-    paddingVertical: Spacing.sm,
-  },
-});
+    // Ingestion
+    ingestionTier: {
+      backgroundColor: P.surface,
+      borderRadius: Spacing.sm,
+      padding: Spacing.sm,
+      marginBottom: 6,
+    },
+    ingestionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.xs,
+    },
+    tierName: {
+      color: P.text,
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'capitalize',
+    },
+    statusBadge: {
+      fontSize: 9,
+      fontWeight: '700',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: Spacing.xs,
+      overflow: 'hidden',
+      textTransform: 'uppercase',
+    },
+    ingestionStats: {
+      flexDirection: 'row',
+      gap: 12,
+      marginBottom: Spacing.xs,
+    },
+    ingestionStat: {
+      color: P.textSecondary,
+      fontSize: 10,
+      fontWeight: '600',
+    },
+    stepTimings: {
+      borderTopWidth: 1,
+      borderTopColor: P.divider,
+      paddingTop: Spacing.xs,
+      marginTop: Spacing.xs,
+    },
+    stepRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 2,
+    },
+    stepName: {
+      color: P.textSecondary,
+      fontSize: 10,
+    },
+    stepMs: {
+      fontSize: 10,
+      fontWeight: '700',
+      fontFamily: MONO,
+    },
+    ingestionTime: {
+      color: P.textTertiary,
+      fontSize: 9,
+      marginTop: Spacing.xs,
+    },
+    emptyText: {
+      color: P.textTertiary,
+      fontSize: 11,
+      textAlign: 'center',
+      paddingVertical: Spacing.sm,
+    },
+  });
+}

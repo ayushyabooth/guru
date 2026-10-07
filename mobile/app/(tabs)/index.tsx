@@ -23,7 +23,8 @@ import { removeAuthToken, getAuthToken } from '../../utils/auth';
 import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
 import InterestsEditor from '../../components/Home/InterestsEditor';
-const DevMetricsPanel = process.env.NODE_ENV !== 'production' ? require('../../components/DevMetricsPanel').default : null;
+import DevMetricsPanel from '../../components/DevMetricsPanel';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
 import { OrganicBackground, GlassButton } from '../../components/ui';
 import {
   Spacing,
@@ -389,6 +390,9 @@ function HomeContent() {
   }, []);
   const COLORS = useHomeColors();
   const { toggleTheme, isDark } = useTheme();
+  // Perf panel gate: true only when the server says this account is an admin
+  // (any build, production included). The server re-checks on every admin call.
+  const { isAdmin } = useAdminAccess();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
   const blurStyle16 = COLORS.isDark ? getDarkBackdropBlur(16) : getBackdropBlur(16);
   const containerBg = COLORS.isDark ? COLORS.background : 'transparent';
@@ -536,8 +540,8 @@ function HomeContent() {
         />
       )}
 
-      {/* Dev Metrics Panel - performance monitoring */}
-      {process.env.NODE_ENV !== 'production' && DevMetricsPanel && <DevMetricsPanel />}
+      {/* Perf panel (agent traces, API, ingestion) - admins only, in every build */}
+      {isAdmin && <DevMetricsPanel />}
 
       <ScrollView
         style={styles.scrollView}
