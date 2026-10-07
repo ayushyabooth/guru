@@ -15,7 +15,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
     datefmt="%H:%M:%S",
 )
-from app.routes import auth, articles, storyboards, users, admin, divein, qa, recap, metrics, config, article_reader, socratic_chat, custom_qa, reader, ingestion, interactions, agent
+from app.routes import auth, articles, storyboards, users, admin, divein, qa, recap, metrics, config, article_reader, socratic_chat, custom_qa, reader, ingestion, interactions, agent, admin_agent
 from app.routes import settings as settings_routes
 from app.db.database import create_tables
 
@@ -111,6 +111,7 @@ app.include_router(reader.router)
 app.include_router(ingestion.router)
 app.include_router(interactions.router)
 app.include_router(agent.router)  # Epic H: agentic Guru tab (GUR-228)
+app.include_router(admin_agent.router)  # admin Agent view: traces, takeaways, explain (GUR-243)
 
 # Import and include cache status router
 from app.routes import cache_status

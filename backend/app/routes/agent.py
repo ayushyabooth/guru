@@ -21,7 +21,7 @@ import logging
 import queue
 import threading
 import uuid
-from typing import Optional
+from typing import Literal, Optional
 
 import anthropic
 import httpx
@@ -36,13 +36,14 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.models.agent_session import AgentSession
 from app.services.access import is_synthetic
-from app.services.agent_trace import TurnTrace
+from app.services.agent_trace import TurnTrace, error_text
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
 
 AGENT_MODEL = getattr(settings, "AGENT_MODEL", None) or "claude-sonnet-5"
 MAX_ITERS = 8
+MODEL_TIMEOUT_S = 90  # no bytes for this long fails the call (the SDK default is 10 minutes, 2 retries)
 MAX_HISTORY_MSGS = 40  # keep sessions bounded
 
 # ── Tools (thin wrappers over existing endpoints) ────────────────────────────
@@ -704,7 +705,7 @@ def _client_kind(user_agent: str) -> str:
 # ── Route ────────────────────────────────────────────────────────────────────
 
 class AgentInput(BaseModel):
-    type: str  # "goal" | "message" | "decision"
+    type: Literal["goal", "message", "decision"]
     text: Optional[str] = None
     approval_id: Optional[str] = None
     approved: Optional[bool] = None
@@ -748,6 +749,10 @@ async def agent_turn(
                       traffic="synthetic" if is_synthetic(current_user) else "real",
                       client=_client_kind(request.headers.get("user-agent", "")),
                       decision=decision)
+    trace.note(history_msgs=len(messages))
+    if body.input.type == "decision":
+        trace.note(approval_id=body.input.approval_id,
+                   approval_matched=bool(pending) and body.input.approval_id == pending.get("approval_id"))
 
     # Dynamic per-user context (second system block — static block stays cacheable)
     profile = getattr(current_user, "profile", None)
@@ -774,8 +779,14 @@ async def agent_turn(
     inp = body.input
     if inp.type == "decision" and pending:
         if inp.approved:
-            trace.tool_started(pending["name"], pending.get("input"))
-            result = await _execute_tool(app, token, pending["name"], pending["input"])
+            trace.tool_started(pending["name"], pending.get("input"), pending.get("tool_use_id"))
+            try:
+                result = await _execute_tool(app, token, pending["name"], pending["input"])
+            except Exception as e:  # fails before the stream exists: still leave a trace
+                trace.fail(e)
+                db.rollback()
+                _save_trace(db, trace, "error", error_text(e))
+                raise
             trace.tool_done(pending["name"], result)
             tool_result_content = f"User APPROVED. Executed: {result}"
         else:
@@ -789,6 +800,8 @@ async def agent_turn(
         # An unresolved pending write + a fresh message: resolve the dangling
         # tool_use first (API requires a result for every tool_use).
         if pending:
+            trace.decision = "ignored"
+            trace.note(approval_id=pending.get("approval_id"))
             messages.append({"role": "user", "content": [
                 {"type": "tool_result", "tool_use_id": pending["tool_use_id"],
                  "content": "User did not decide; treat as declined."}
@@ -799,7 +812,8 @@ async def agent_turn(
     else:
         messages.append({"role": "user", "content": "Continue."})
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY,
+                                 timeout=MODEL_TIMEOUT_S, max_retries=1)
     session_id = str(sess.id)
 
     def _stream_model(q):
@@ -825,6 +839,7 @@ async def agent_turn(
         nonlocal messages
         minis_sent = False
         outcome = "max_iters"  # unless the loop ends on blocks or an approval pause
+        traced = False
 
         def sse_block(block):
             trace.block(block)
@@ -864,12 +879,12 @@ async def agent_turn(
                             "name": tool_use.name, "input": tool_use.input,
                         })
                         block = _approval_block(tool_use.name, tool_use.input, approval_id)
-                        trace.approval(tool_use.name)
+                        trace.approval(tool_use.name, approval_id)
                         outcome = "approval"
                         yield sse_block(block)
                         break
                     yield f"data: {json.dumps({'event': 'status', 'text': STATUS_TEXT.get(tool_use.name, 'working…')})}\n\n"
-                    trace.tool_started(tool_use.name, tool_use.input)
+                    trace.tool_started(tool_use.name, tool_use.input, tool_use.id)
                     result = await _execute_tool(app, token, tool_use.name, tool_use.input or {})
                     trace.tool_done(tool_use.name, result)
                     # R23 FAST FIRST CONTENT: the catch-up cold open measured 26s
@@ -919,12 +934,27 @@ async def agent_turn(
             sess.messages = json.dumps(_sanitize_history(messages[-MAX_HISTORY_MSGS:]))
             db.commit()  # the user's turn is safe before anything else happens
             _save_trace(db, trace, outcome)
+            traced = True
             yield f"data: {json.dumps({'event': 'done', 'session_id': session_id})}\n\n"
         except Exception as e:
             logger.exception("agent turn failed")
+            trace.fail(e)
             db.rollback()
-            _save_trace(db, trace, "error", str(e))
-            yield f"data: {json.dumps({'event': 'error', 'message': str(e)[:300]})}\n\n"
+            _save_trace(db, trace, "error", error_text(e))
+            traced = True
+            yield f"data: {json.dumps({'event': 'error', 'message': (str(e) or error_text(e))[:300]})}\n\n"
+        finally:
+            # The client went away mid-turn (Starlette cancels or closes the stream).
+            # The half-finished turn is NOT saved, since it could leave a tool call with
+            # no result and break the next turn. The trace still records it, because the
+            # turns users give up on are the slowest ones. Sync calls only: no await here.
+            if not traced:
+                trace.abandon()
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+                _save_trace(db, trace, "abandoned")
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

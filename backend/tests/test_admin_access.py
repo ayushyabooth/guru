@@ -7,6 +7,7 @@ signed-in admin holding an ACCESS token, or (for read-only endpoints) holds
 ADMIN_API_KEY. No network and no real database: an in-memory SQLite stands in,
 and no startup events run, so nothing is ingested.
 """
+import json
 import os
 import uuid
 from types import SimpleNamespace
@@ -145,3 +146,80 @@ async def test_me_access_tells_the_app_what_to_show(api):
     r = await api.call("GET", "/api/v1/me/access", token=api.admin_token)
     assert r.json() == {"is_admin": True, "is_beta": True}
     assert (await api.call("GET", "/api/v1/me/access")).status_code == 401
+
+
+# ── The admin Agent view (app/routes/admin_agent.py) ─────────────────────────
+
+def _seed_turns(api, n=3, outcome="blocks"):
+    from app.models.agent_turn_trace import AgentTurnTrace  # noqa: F401  (registers the table)
+    from app.services.agent_trace import TurnTrace
+    session = uuid.uuid4()
+    ids = []
+    for i in range(n):
+        t = TurnTrace(session, api.reader.id, "claude-sonnet-5", "goal", f"catch me up {i}", traffic="real")
+        t.model_started()
+        t.model_done(SimpleNamespace(stop_reason="end_turn", usage=SimpleNamespace(
+            input_tokens=1000, output_tokens=100, cache_read_input_tokens=5000, cache_creation_input_tokens=0)))
+        t.block({"type": "text", "md": "hello"})
+        row = t.to_row(outcome, "RuntimeError: boom" if outcome == "error" else None)
+        api.db.add(row)
+        ids.append(str(row.id))
+    api.db.commit()
+    return ids
+
+
+@pytest.mark.parametrize("path", ["/api/v1/admin/agent/summary", "/api/v1/admin/agent/turns",
+                                  f"/api/v1/admin/agent/turns/{uuid.uuid4()}"])
+async def test_agent_view_reads_need_an_admin_or_the_key(api, path):
+    assert (await api.call("GET", path)).status_code == 401
+    assert (await api.call("GET", path, token=api.reader_token)).status_code == 403
+    assert (await api.call("GET", path, key="wrong" * 10)).status_code == 403
+
+
+async def test_the_summary_leads_with_takeaways_and_names_the_user(api):
+    _seed_turns(api, 2, outcome="error")
+    r = await api.call("GET", "/api/v1/admin/agent/summary?days=7&traffic=real", key=KEY)
+    assert r.status_code == 200, r.text
+    s = r.json()
+    assert set(s) == {"window", "takeaways", "tiles", "tools", "builds", "flagged"}
+    assert s["tiles"]["turns"] == 2 and s["tiles"]["outcomes"] == {"error": 2}
+    assert s["takeaways"][0]["severity"] == "bad" and "ended in an error" in s["takeaways"][0]["text"]
+    assert s["flagged"][0]["user_email"] == READER_EMAIL and s["flagged"][0]["severity"] == "bad"
+    assert (await api.call("GET", "/api/v1/admin/agent/summary?traffic=synthetic", key=KEY)).json()["tiles"]["turns"] == 0
+
+
+async def test_a_turn_opens_with_its_diagnosis_timeline_and_neighbors(api):
+    ids = _seed_turns(api, 3)
+    r = await api.call("GET", f"/api/v1/admin/agent/turns/{ids[1]}", token=api.admin_token)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["diagnosis"]["headline"].startswith("Healthy")
+    assert [i["kind"] for i in d["timeline"]][:1] == ["model"]
+    assert d["session"]["turns_in_session"] == 3 and d["session"]["prev_id"] and d["session"]["next_id"]
+    assert (await api.call("GET", "/api/v1/admin/agent/turns/not-a-uuid", key=KEY)).status_code == 404
+    lst = (await api.call("GET", "/api/v1/admin/agent/turns?limit=2", key=KEY)).json()
+    assert lst["total"] == 3 and len(lst["turns"]) == 2
+
+
+async def test_explain_is_admin_only_and_cached(api, monkeypatch):
+    from app.routes import admin_agent
+    ids = _seed_turns(api, 1, outcome="error")
+    calls = []
+
+    class _Msgs:
+        def create(self, **kw):
+            calls.append(kw)
+            text = json.dumps({"summary": "The model call failed.", "likely_cause": "Upstream error.",
+                               "evidence": ["model_calls[0].status"], "confidence": "medium",
+                               "confirm_or_refute": "Check the request id.", "suggested_eval": "Replay with a fake error."})
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)])
+
+    monkeypatch.setattr(admin_agent.anthropic, "Anthropic", lambda **kw: SimpleNamespace(messages=_Msgs()))
+    path = f"/api/v1/admin/agent/turns/{ids[0]}/explain"
+    assert (await api.call("POST", path, key=KEY)).status_code == 401, "the key reads; it never spends"
+    assert (await api.call("POST", path, token=api.reader_token)).status_code == 403
+    r = await api.call("POST", path, token=api.admin_token)
+    assert r.status_code == 200, r.text
+    assert r.json()["hypothesis"]["confidence"] == "medium" and len(calls) == 1
+    cached = (await api.call("GET", f"/api/v1/admin/agent/turns/{ids[0]}", key=KEY)).json()["ai_hypothesis"]
+    assert cached["summary"] == "The model call failed." and cached["by"] == ADMIN_EMAIL

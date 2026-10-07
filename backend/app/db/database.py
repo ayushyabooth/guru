@@ -17,6 +17,7 @@ _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 if _is_sqlite:
     engine = create_engine(
         settings.DATABASE_URL,
+        hide_parameters=True,  # DB errors must never carry user text into logs or traces
         echo=False,  # Disabled during profiling (was settings.DEBUG)
         poolclass=NullPool,
         connect_args={"check_same_thread": False, "timeout": 30},
@@ -24,6 +25,7 @@ if _is_sqlite:
 else:
     engine = create_engine(
         settings.DATABASE_URL,
+        hide_parameters=True,  # DB errors must never carry user text into logs or traces
         echo=settings.DEBUG,
         poolclass=QueuePool,
         pool_pre_ping=True,
@@ -116,6 +118,7 @@ def _run_column_migrations():
         ("agent_turn_traces", "client", "VARCHAR(32)"),
         ("agent_turn_traces", "decision", "VARCHAR(16)"),
         ("agent_turn_traces", "ai_hypothesis", "TEXT"),
+        ("agent_turn_traces", "context", "TEXT"),
     ]
     import re
     _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')

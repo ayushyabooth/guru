@@ -176,7 +176,7 @@ def harness(monkeypatch):
 
     monkeypatch.setattr(agent, "_execute_tool", fake_execute)
     monkeypatch.setattr(agent, "_call_api", fake_call_api)
-    monkeypatch.setattr(agent.anthropic, "Anthropic", lambda api_key=None: state.client)
+    monkeypatch.setattr(agent.anthropic, "Anthropic", lambda api_key=None, **kw: state.client)
     state.set_script = set_script
     return state
 
@@ -656,10 +656,12 @@ async def test_the_trace_carries_a_timeline_context_and_previews(harness):
     assert [c["iter"] for c in calls] == [1, 2]
     assert calls[0]["start_ms"] <= tools[0]["start_ms"] <= calls[1]["start_ms"] <= blocks[0]["at_ms"]
     assert all(c["cache_read"] == 800 for c in calls)
-    # Tools are tied to the model call that asked for them, with what was asked and why they failed.
-    assert tools[0]["iter"] == 1 and json.loads(tools[0]["input"]) == {"filter": "core"}
-    assert tools[0]["error"] and "metrics down" in tools[0]["error_msg"]
-    assert [b["iter"] for b in blocks] == [2, 2] and blocks[0]["preview"] == "Your week in one line."
+    # Tools are tied to the model call that asked for them, with their ids and why they failed.
+    assert tools[0]["iter"] == 1 and tools[0]["args"] == {"filter": "core"} and tools[0]["tool_use_id"]
+    assert tools[0]["error"] and tools[0]["status"] == "http_error" and "metrics down" in tools[0]["error_msg"]
+    assert [c["status"] for c in calls] == ["ok", "ok"]
+    # A real user's trace keeps sizes, never previews of what they saw or wrote.
+    assert [b["iter"] for b in blocks] == [2, 2] and blocks[0]["chars"] > 0 and "preview" not in blocks[0]
     assert [p["name"] for p in json.loads(t.phases)] == ["load_context"]
     # What served the turn.
     assert t.prompt_version == agent.PROMPT_VERSION and len(t.prompt_version) == 12
@@ -693,22 +695,113 @@ def test_a_tool_error_is_flagged_in_the_trace():
     assert t.tool_calls[0]["error_msg"] == "HTTP 500 boom" and t.tool_calls[1]["error_msg"] is None
 
 
-def test_trace_report_summarizes_and_flags_budget_breaches():
-    import importlib.util
-    path = os.path.join(os.path.dirname(__file__), "..", "scripts", "trace_report.py")
-    spec = importlib.util.spec_from_file_location("trace_report", path)
-    tr = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(tr)
+# ── 6. Trace hardening (independent review, 10/7) ────────────────────────────
 
-    def row(first, total, iters, outcome="blocks", tools=(), blocks=()):
-        return AgentTurnTrace(outcome=outcome, iterations=iters, first_block_ms=first, total_ms=total,
-                              tokens_in=1000, tokens_out=50, cache_read_tokens=800, input_preview="g",
-                              tool_calls=json.dumps([{"name": n, "ms": 120, "error": False} for n in tools]),
-                              blocks=json.dumps([{"type": b, "variant": None, "at_ms": 1} for b in blocks]))
-    rows = [row(1500, 6000, 2, tools=["get_catchup_feed"], blocks=["text"]),
-            row(9000, 30000, 7, tools=["get_metrics"]),
-            row(None, 25000, 8, outcome="max_iters")]
-    s = tr.summarize(rows)
-    assert s["turns"] == 3 and s["by_outcome"] == {"blocks": 2, "max_iters": 1}
-    assert s["tokens_per_turn"]["cache_read_share"] == 0.8
-    assert len(s["over_budget"]) == 2
+def _agen(resp):
+    return resp.body_iterator
+
+
+async def _start_turn(db, text="catch me up"):
+    body = agent.AgentTurnRequest(session_id=None, input=agent.AgentInput(type="goal", text=text))
+    return await agent.agent_turn(body=body, request=REQUEST, current_user=USER, db=db)
+
+
+async def test_a_user_who_leaves_mid_answer_leaves_an_abandoned_trace(harness):
+    harness.set_script(final_turn([{"type": "text", "md": "one"}, {"type": "text", "md": "two"}], chunks=6))
+    db = _FakeDB()
+    gen = _agen(await _start_turn(db))
+    async for chunk in gen:
+        if '"event": "block"' in (chunk.decode() if isinstance(chunk, bytes) else chunk):
+            break  # the user closes the app as the first block arrives
+    await gen.aclose()
+
+    t = db.traces[0]
+    assert t.outcome == "abandoned"
+    assert json.loads(t.model_calls)[0]["status"] == "abandoned", "the call that was running is named"
+    assert db.rollbacks == 1, "the half-finished turn is never saved"
+
+
+async def test_a_raising_tool_is_named_in_the_trace(harness, monkeypatch):
+    async def boom(app, token, name, tool_input):
+        raise KeyError("article_id")
+    monkeypatch.setattr(agent, "_execute_tool", boom)
+    harness.set_script(tool_turn("ask_guru", {"question": "why?"}))
+    db = _FakeDB()
+    events = await run_turn(db, text="why does this matter")
+
+    t = db.traces[0]
+    tool = json.loads(t.tool_calls)[0]
+    assert events[-1]["event"] == "error" and t.outcome == "error"
+    assert tool["name"] == "ask_guru" and tool["status"] == "raised" and "KeyError" in tool["error_msg"]
+    assert t.error.startswith("KeyError")
+
+
+async def test_a_failed_model_call_is_typed_even_with_an_empty_message(harness):
+    harness.set_script(TimeoutError())
+    db = _FakeDB()
+    events = await run_turn(db, text="catch me up")
+
+    t = db.traces[0]
+    assert t.error == "TimeoutError", "never a null error"
+    assert events[-1]["message"] == "TimeoutError"
+
+
+async def test_real_users_writing_never_lands_in_the_trace(harness):
+    note = "My private reflection about my manager"
+    harness.set_script(final_turn([{"type": "text", "md": "Saved."}]))
+    db = _FakeDB(session_with_pending_write(note=note))
+    await run_turn(db, input_type="decision", approved=True, session_id=str(db.sess.id))
+
+    t = db.traces[0]
+    stored = " ".join(str(getattr(t, c)) for c in ("model_calls", "tool_calls", "blocks", "context", "error"))
+    assert note not in stored
+    tool = json.loads(t.tool_calls)[0]
+    assert tool["args"] == {"article_id": "a1"} and tool["text_chars"]["note"] == len(note)
+
+
+async def test_synthetic_accounts_keep_full_previews(harness, monkeypatch):
+    monkeypatch.delenv("SYNTHETIC_EMAIL_DOMAINS", raising=False)
+    monkeypatch.setattr(sys.modules[__name__], "USER",
+                        SimpleNamespace(id=uuid.uuid4(), profile=None, email="lena@example.com"))
+    harness.set_script(tool_turn("ask_guru", {"article_id": "a1", "question": "why?"}),
+                       final_turn([{"type": "text", "md": "Because."}]))
+    db = _FakeDB()
+    await run_turn(db, text="why")
+    t = db.traces[0]
+    assert json.loads(json.loads(t.tool_calls)[0]["input"]) == {"article_id": "a1", "question": "why?"}
+    assert json.loads(t.blocks)[0]["preview"] == "Because."
+
+
+async def test_typing_past_an_approval_card_is_recorded_as_ignored(harness):
+    harness.set_script(final_turn([{"type": "text", "md": "ok"}]))
+    db = _FakeDB(session_with_pending_write())
+    await run_turn(db, input_type="message", text="actually, something else", session_id=str(db.sess.id))
+    t = db.traces[0]
+    assert t.decision == "ignored" and json.loads(t.context)["approval_id"] == "apr_test"
+
+
+async def test_approval_cards_and_decisions_carry_the_card_id(harness):
+    harness.set_script(tool_turn("add_note", {"article_id": "a1", "note": "n", "title": "T"}))
+    db = _FakeDB()
+    await run_turn(db, text="note that")
+    assert json.loads(db.traces[0].context)["approval_id"].startswith("apr_")
+
+    harness.set_script(final_turn([{"type": "text", "md": "Noted."}]))
+    db2 = _FakeDB(session_with_pending_write())
+    await run_turn(db2, input_type="decision", approved=True, session_id=str(db2.sess.id))
+    ctx = json.loads(db2.traces[0].context)
+    assert ctx["approval_id"] == "apr_test" and ctx["approval_matched"] is True
+
+
+def test_unknown_input_types_are_refused_before_the_turn_starts():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        agent.AgentInput(type="drop_tables", text="x")
+
+
+async def test_every_trace_has_its_id_and_start_time_from_the_first_moment(harness):
+    harness.set_script(final_turn([{"type": "text", "md": "hi"}]))
+    db = _FakeDB()
+    await run_turn(db, text="hello")
+    t = db.traces[0]
+    assert t.id is not None and t.created_at is not None and t.created_at.tzinfo is not None

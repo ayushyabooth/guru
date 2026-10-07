@@ -25,7 +25,7 @@ class AgentTurnTrace(Base):
     input_type = Column(String(16))            # goal | message | decision
     input_preview = Column(String(200))        # first 200 chars of the user's text
 
-    outcome = Column(String(16))               # blocks | approval | max_iters | error
+    outcome = Column(String(16))               # blocks | approval | max_iters | error | abandoned
     iterations = Column(Integer, default=0)    # model calls in this turn
     first_block_ms = Column(Integer)           # time to first UI block (null if none)
     total_ms = Column(Integer)
@@ -49,5 +49,6 @@ class AgentTurnTrace(Base):
     prompt_version = Column(String(16))        # hash of the system prompt + tool schemas
     traffic = Column(String(16), index=True)   # real | synthetic (persona and test accounts)
     client = Column(String(32))                # web | ios | android | other, from the User-Agent
-    decision = Column(String(16))              # approved | declined | stale, on decision turns
+    decision = Column(String(16))              # approved | declined | stale | ignored (typed past the card)
     ai_hypothesis = Column(Text)               # JSON: cached LLM explanation from the admin view
+    context = Column(Text)                     # JSON: turn context, e.g. approval_id, approval_matched, history_msgs
