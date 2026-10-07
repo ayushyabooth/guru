@@ -35,7 +35,7 @@ from app.db.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
 from app.models.agent_session import AgentSession
-from app.services.access import is_synthetic
+from app.services.access import is_admin, is_synthetic
 from app.services.agent_trace import TurnTrace, error_text
 
 logger = logging.getLogger(__name__)
@@ -747,6 +747,7 @@ async def agent_turn(
     trace = TurnTrace(sess.id, current_user.id, AGENT_MODEL, body.input.type, body.input.text,
                       prompt_version=PROMPT_VERSION,
                       traffic="synthetic" if is_synthetic(current_user) else "real",
+                      full_previews=is_admin(current_user),
                       client=_client_kind(request.headers.get("user-agent", "")),
                       decision=decision)
     trace.note(history_msgs=len(messages))

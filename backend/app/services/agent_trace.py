@@ -13,8 +13,9 @@ account is real or a synthetic test persona.
 
 Privacy: for real users a trace keeps ids, enums, sizes and timings, never the
 user's own writing (notes, recap answers, reflections, quotes) beyond the
-typed input preview. Synthetic persona and test accounts keep full previews,
-because they hold no real person's data.
+typed input preview. Full previews are kept only where the person reading the
+trace is the person it is about: synthetic persona and test accounts, and the
+admin's own account.
 
 One AgentTurnTrace row per turn, plus one greppable log line:
 
@@ -86,7 +87,8 @@ def _block_preview(block: dict):
 
 class TurnTrace:
     def __init__(self, session_id, user_id, model: str, input_type: str, input_text: str = None,
-                 *, prompt_version: str = None, traffic: str = None, client: str = None, decision: str = None):
+                 *, prompt_version: str = None, traffic: str = None, client: str = None, decision: str = None,
+                 full_previews: bool = False):
         self.t0 = time.perf_counter()
         self.id = uuid.uuid4()
         self.started_at = datetime.now(timezone.utc)
@@ -94,7 +96,7 @@ class TurnTrace:
         self.input_type = input_type
         self.input_preview = _clean(input_text)[:INPUT_PREVIEW_CHARS]
         self.prompt_version, self.traffic, self.client, self.decision = prompt_version, traffic, client, decision
-        self.full = traffic == "synthetic"
+        self.full = traffic == "synthetic" or full_previews  # personas, and the owner's own account
         self.model_calls, self.tool_calls, self.blocks, self.phases = [], [], [], []
         self.context = {}
         self.tokens = {"in": 0, "out": 0, "cache_read": 0, "cache_write": 0}

@@ -805,3 +805,15 @@ async def test_every_trace_has_its_id_and_start_time_from_the_first_moment(harne
     await run_turn(db, text="hello")
     t = db.traces[0]
     assert t.id is not None and t.created_at is not None and t.created_at.tzinfo is not None
+
+
+async def test_the_admins_own_turns_keep_previews_and_count_as_real(harness, monkeypatch):
+    monkeypatch.setenv("ADMIN_EMAILS", "owner@example.com")
+    monkeypatch.delenv("SYNTHETIC_EMAIL_DOMAINS", raising=False)
+    monkeypatch.setattr(sys.modules[__name__], "USER",
+                        SimpleNamespace(id=uuid.uuid4(), profile=None, email="owner@example.com"))
+    harness.set_script(final_turn([{"type": "text", "md": "Your catch-up."}]))
+    db = _FakeDB()
+    await run_turn(db, text="catch me up")
+    t = db.traces[0]
+    assert t.traffic == "real" and json.loads(t.blocks)[0]["preview"] == "Your catch-up."

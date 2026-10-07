@@ -228,13 +228,16 @@ def diagnose(t: dict) -> dict:
                            f"{_s(total)} in total. {name.capitalize()} took {round(100 * ms / total)}%.",
                            total - BUDGET_TOTAL_MS, total_ms=total, budget_ms=BUDGET_TOTAL_MS, biggest=name))
 
-    # H10 cache miss on a warm call
-    for c in calls[1:]:
-        ctx, hit = _ctx_tokens(c), _hit(c)
-        if ctx >= 1024 and hit is not None and hit < 50:
+    # H10 cache miss on a warm call: the previous call's context should come back from
+    # the cache. New content (a fresh tool result) is never cached, so judge reuse of
+    # the prefix, not the share of all tokens.
+    for prev, c in zip(calls, calls[1:]):
+        prefix, read = _ctx_tokens(prev), c.get("cache_read") or 0
+        if prefix >= 1024 and c.get("status", "ok") == "ok" and read < 0.8 * prefix:
             findings.append(_f("CACHE_MISS", "medium", f"Cache miss on model call {c.get('iter')}",
-                               f"Model call {c.get('iter')} paid full price for {ctx:,} input tokens ({hit}% from cache).",
-                               0, call=c.get("iter"), context_tokens=ctx, cache_hit_pct=hit))
+                               f"Model call {c.get('iter')} re-read only {read:,} of the {prefix:,} tokens "
+                               f"model call {prev.get('iter')} had already sent, so it paid full price for the rest.",
+                               0, call=c.get("iter"), prefix_tokens=prefix, cache_read=read))
 
     # H11 thinking-heavy call
     visible = sum(b.get("chars") or 0 for b in blocks)
@@ -260,7 +263,8 @@ def diagnose(t: dict) -> dict:
 
     # H14 layout rules
     if outcome == "blocks":
-        broken = _layout_breaks(blocks)
+        last_iter = max((b.get("iter") or 0) for b in blocks) if blocks else 0
+        broken = _layout_breaks([b for b in blocks if (b.get("iter") or 0) == last_iter])
         if broken:
             findings.append(_f("LAYOUT", "low", "Broke a layout rule",
                                f"The turn broke a layout rule: {'; '.join(broken)}.", 0, rules=broken))

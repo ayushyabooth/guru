@@ -158,3 +158,24 @@ def test_turn_rows_match_the_admin_contract():
     assert set(row) == {"id", "created_at", "user_id", "user_email", "session_id", "input_type", "input_preview",
                         "outcome", "first_block_ms", "total_ms", "iterations", "tools", "severity", "headline",
                         "traffic", "build_sha"}
+
+
+def test_a_reused_prefix_is_not_a_cache_miss_even_when_a_big_tool_result_is_new():
+    # AA's first production turn (10/7): call 2 re-read call 1's 8,335 tokens from the
+    # cache; the rest was the fresh 25 KB feed result, which can never be cached.
+    t = turn(calls=[{"iter": 1, "start_ms": 20, "ms": 1580, "stop_reason": "tool_use", "status": "ok",
+                     "in": 8335, "out": 73, "cache_read": 0, "cache_write": 0},
+                    {"iter": 2, "start_ms": 1620, "ms": 9100, "first_text_ms": 1700, "stop_reason": "end_turn",
+                     "status": "ok", "in": 9619, "out": 1078, "cache_read": 8194, "cache_write": 0}])
+    assert "CACHE_MISS" not in codes(t)
+
+
+def test_layout_rules_judge_the_models_answer_not_the_servers_headline_strip():
+    minis = [{"type": "article_card", "variant": "mini", "at_ms": 1600, "iter": 1, "chars": 200} for _ in range(5)]
+    answer = [{"type": "article_card", "variant": "hero", "at_ms": 5800, "iter": 2, "chars": 900},
+              {"type": "text", "at_ms": 6600, "iter": 2, "chars": 400},
+              {"type": "quote", "at_ms": 7300, "iter": 2, "chars": 300},
+              {"type": "carousel", "at_ms": 10000, "iter": 2, "chars": 905},
+              {"type": "prompt_pills", "at_ms": 10700, "iter": 2, "chars": 200}]
+    t = turn(blocks=minis + answer, first=1600, total=10800)
+    assert "LAYOUT" not in codes(t)
