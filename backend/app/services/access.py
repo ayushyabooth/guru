@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.database import get_db
+from app.deps import get_current_user
 from app.models.user import User
 from app.utils.jwt_utils import decode_token
 
@@ -88,6 +89,14 @@ async def require_admin(
 ) -> User:
     """A signed-in human admin: an access token whose account is on ADMIN_EMAILS."""
     return _admin_from_token(credentials, db)
+
+
+async def require_beta(user: User = Depends(get_current_user)) -> User:
+    """A signed-in beta tester (BETA_EMAILS, or an admin). As a dependency it runs before
+    the body's fields are validated, so a non-beta account gets a 403, never a hint about the form."""
+    if not is_beta(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Beta only")
+    return user
 
 
 @dataclass
