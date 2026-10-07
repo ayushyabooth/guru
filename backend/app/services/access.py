@@ -55,7 +55,11 @@ def is_beta(user) -> bool:
 
 
 def is_synthetic(user) -> bool:
+    """Persona and test accounts, by email domain. Admins are never synthetic: the
+    owner's own account may sit on a test domain, and it is real use."""
     email = _email(user)
+    if not email or is_admin(user):
+        return False
     domains = {d.lstrip("@") for d in _allowlist("SYNTHETIC_EMAIL_DOMAINS", "example.com")}
     return "@" in email and email.rsplit("@", 1)[1] in domains
 

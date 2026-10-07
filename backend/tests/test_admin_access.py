@@ -96,6 +96,10 @@ def test_allowlist_rules(monkeypatch):
     assert access.is_synthetic(u("maya@example.com")) and not access.is_synthetic(u("maya@gmail.com"))
     monkeypatch.setenv("SYNTHETIC_EMAIL_DOMAINS", "personas.test")
     assert access.is_synthetic(u("lena@personas.test")) and not access.is_synthetic(u("maya@example.com"))
+    # The owner's own account can live on a test domain; an admin is real traffic.
+    monkeypatch.setenv("SYNTHETIC_EMAIL_DOMAINS", "example.com")
+    monkeypatch.setenv("ADMIN_EMAILS", "owner@example.com")
+    assert not access.is_synthetic(u("owner@example.com")) and access.is_synthetic(u("persona@example.com"))
 
 
 @pytest.mark.parametrize("path", ["/api/v1/admin/expiration-settings", "/api/v1/admin/perf-metrics",
