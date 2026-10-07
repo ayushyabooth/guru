@@ -96,3 +96,7 @@ backend/tests/screenshots/
 # Claude Code: personal settings and agent worktrees stay local
 .claude/settings.local.json
 .claude/worktrees/
+.claude/feature-state.json
+
+# Eval run reports (the committed baseline lives in backend/evals/baseline.json)
+backend/evals/out/

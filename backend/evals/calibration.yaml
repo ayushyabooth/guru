@@ -1,0 +1,14 @@
+# LLM judge calibration: your own pass/fail labels on judged live runs, and the gate.
+#
+#   make evals-calibrate            label the runs of the latest judged eval run: p pass, f fail, s skip, plus a note
+#   make evals-calibrate REPORT=1   agreement between these labels and the judge, per case, and the gate
+#
+# judge_gates: false keeps the judge report-only. Only the owner sets it to true, and only after the
+# report says the gate is met: at least 20 labels, at least 85% agreement with the judge. From then
+# on a live run passes only if the code check and the judge both pass.
+#
+# Each label keeps the judge's verdict and version from the run it labels, so labels made against
+# another judge version (a changed prompt, schema, model or effort) don't count toward the gate.
+# calibrate.py rewrites this file each time it saves a label: comments added here are not kept.
+judge_gates: false
+labels: []
