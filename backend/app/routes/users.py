@@ -15,6 +15,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["users"])
 
 
+@router.get("/me/access")
+async def get_my_access(current_user: User = Depends(get_current_user)):
+    """What this account may see. Drives the admin Perf tile and beta features in the
+    app. Only a UI hint: every admin and beta endpoint checks again on the server."""
+    from app.services.access import is_admin, is_beta
+    return {"is_admin": is_admin(current_user), "is_beta": is_beta(current_user)}
+
+
 def _resolve_display_name(config: IndustriesConfig, value: str, item_type: str) -> str:
     """Resolve a value (ID or display name) to its canonical display name from central config."""
     # Try as ID first (e.g., "consumer" → "Consumer")

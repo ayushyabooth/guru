@@ -13,7 +13,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.deps import get_current_user
+from app.services.access import require_admin, require_admin_reader
 from app.models.user import User
 
 from app.db.database import get_db
@@ -67,7 +67,7 @@ class TriggerResponse(BaseModel):
 
 
 @router.get("/status", response_model=IngestionStatusResponse)
-async def get_ingestion_status():
+async def get_ingestion_status(_admin=Depends(require_admin_reader)):
     """
     Get current ingestion orchestrator status.
 
@@ -91,6 +91,7 @@ async def get_ingestion_runs(
     tier: Optional[str] = Query(None, description="Filter by tier (tier1_expert, tier2_luminary, tier3_discovery)"),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    _admin=Depends(require_admin_reader),
 ):
     """
     Get recent ingestion run history.
@@ -130,7 +131,7 @@ async def get_ingestion_runs(
 
 
 @router.post("/trigger/{tier}", response_model=TriggerResponse)
-async def trigger_ingestion(tier: str, current_user: User = Depends(get_current_user)):
+async def trigger_ingestion(tier: str, current_user: User = Depends(require_admin)):  # paid run: admins only
     """
     Manually trigger an ingestion run for a specific tier.
 

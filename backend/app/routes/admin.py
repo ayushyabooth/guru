@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 
 from app.db.database import get_db
-from app.deps import get_current_user
+from app.services.access import require_admin  # admin-only: ADMIN_EMAILS + access token
 from app.models.user import User
 from app.services.ingestion_state_service import IngestionStateService
 from app.services.rich_summary_service import RichSummaryService
@@ -50,7 +50,7 @@ async def get_ingestion_status(
     file_path: Optional[str] = Query(None, description="Filter by file path"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> List[IngestionStatusResponse]:
     """
     Get ingestion history and status
@@ -92,7 +92,7 @@ async def get_ingestion_status(
 @router.get("/ingestion-stats", response_model=IngestionStatsResponse)
 async def get_ingestion_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> IngestionStatsResponse:
     """
     Get overall ingestion statistics
@@ -127,7 +127,7 @@ async def get_ingestion_logs(
     state_id: str,
     limit: int = Query(50, ge=1, le=500, description="Maximum number of log entries"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> List[Dict[str, Any]]:
     """
     Get detailed logs for a specific ingestion state
@@ -171,7 +171,7 @@ async def generate_rich_content_for_articles(
     limit: int = Query(10, ge=1, le=100, description="Max articles to process"),
     force: bool = Query(False, description="Regenerate even if exists"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Generate rich content (4-part summary + Socratic prompts) for existing articles.
@@ -288,7 +288,7 @@ class BackfillCruxRequest(BaseModel):
 async def backfill_crux(
     request: BackfillCruxRequest = BackfillCruxRequest(),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Backfill GUR-231 crux fields (core_argument / strongest_evidence /
@@ -387,7 +387,7 @@ async def backfill_crux(
 async def trigger_cleanup_expired(
     expiration_days: Optional[int] = Query(None, ge=1, le=365, description="Override expiration days (uses config if not specified)"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ) -> Dict[str, Any]:
     """
     Manually trigger cleanup of expired articles.
@@ -423,7 +423,7 @@ async def trigger_cleanup_expired(
 
 
 @router.get("/expiration-settings")
-async def get_expiration_settings(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_expiration_settings(current_user: User = Depends(require_admin)) -> Dict[str, Any]:
     """
     Get current article expiration settings from config.
 
@@ -449,7 +449,7 @@ async def get_expiration_settings(current_user: User = Depends(get_current_user)
 
 
 @router.get("/perf-metrics")
-async def get_perf_metrics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_perf_metrics(db: Session = Depends(get_db), current_user: User = Depends(require_admin)) -> Dict[str, Any]:
     """Dev Metrics Panel data: API response times, ingestion timings, content stats.
 
     Returns combined performance data for the frontend Dev Metrics Panel.
