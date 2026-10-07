@@ -660,8 +660,9 @@ async def test_the_trace_carries_a_timeline_context_and_previews(harness):
     assert tools[0]["iter"] == 1 and tools[0]["args"] == {"filter": "core"} and tools[0]["tool_use_id"]
     assert tools[0]["error"] and tools[0]["status"] == "http_error" and "metrics down" in tools[0]["error_msg"]
     assert [c["status"] for c in calls] == ["ok", "ok"]
-    # A real user's trace keeps sizes, never previews of what they saw or wrote.
-    assert [b["iter"] for b in blocks] == [2, 2] and blocks[0]["chars"] > 0 and "preview" not in blocks[0]
+    # Pre-beta, every user's trace keeps sizes and previews of what they saw.
+    assert [b["iter"] for b in blocks] == [2, 2] and blocks[0]["chars"] > 0
+    assert blocks[0]["preview"] == "Your week in one line."
     assert [p["name"] for p in json.loads(t.phases)] == ["load_context"]
     # What served the turn.
     assert t.prompt_version == agent.PROMPT_VERSION and len(t.prompt_version) == 12
@@ -746,7 +747,20 @@ async def test_a_failed_model_call_is_typed_even_with_an_empty_message(harness):
     assert events[-1]["message"] == "TimeoutError"
 
 
-async def test_real_users_writing_never_lands_in_the_trace(harness):
+async def test_every_users_trace_keeps_full_text_while_pre_beta(harness):
+    note = "My private reflection about my manager"
+    harness.set_script(final_turn([{"type": "text", "md": "Saved."}]))
+    db = _FakeDB(session_with_pending_write(note=note))
+    await run_turn(db, input_type="decision", approved=True, session_id=str(db.sess.id))
+
+    t = db.traces[0]
+    tool = json.loads(t.tool_calls)[0]
+    assert t.traffic == "real" and note in tool["input"]
+    assert json.loads(t.blocks)[0]["preview"] == "Saved."
+
+
+async def test_privacy_mode_keeps_real_users_writing_out_of_the_trace(harness, monkeypatch):
+    monkeypatch.setattr("app.services.agent_trace.FULL_TEXT_FOR_ALL", False)
     note = "My private reflection about my manager"
     harness.set_script(final_turn([{"type": "text", "md": "Saved."}]))
     db = _FakeDB(session_with_pending_write(note=note))
@@ -754,7 +768,7 @@ async def test_real_users_writing_never_lands_in_the_trace(harness):
 
     t = db.traces[0]
     stored = " ".join(str(getattr(t, c)) for c in ("model_calls", "tool_calls", "blocks", "context", "error"))
-    assert note not in stored
+    assert note not in stored and "preview" not in json.loads(t.blocks)[0]
     tool = json.loads(t.tool_calls)[0]
     assert tool["args"] == {"article_id": "a1"} and tool["text_chars"]["note"] == len(note)
 

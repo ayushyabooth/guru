@@ -11,11 +11,12 @@ off by the user leaving still shows up, with its status. Each turn also records
 the build and prompt version that served it, the client, and whether the
 account is real or a synthetic test persona.
 
-Privacy: for real users a trace keeps ids, enums, sizes and timings, never the
-user's own writing (notes, recap answers, reflections, quotes) beyond the
-typed input preview. Full previews are kept only where the person reading the
-trace is the person it is about: synthetic persona and test accounts, and the
-admin's own account.
+Text: while Guru is pre-beta, every trace keeps full previews (the typed input,
+tool inputs, block text), so a turn can be debugged and judged on real traffic
+as well as synthetic. TRACE_FULL_TEXT=false turns privacy mode back on: a real
+user's trace then keeps ids, enums, sizes and timings, never their own writing
+(notes, recap answers, reflections, quotes) beyond the typed input preview, and
+full previews stay only for synthetic accounts and the admin's own account.
 
 One AgentTurnTrace row per turn, plus one greppable log line:
 
@@ -39,9 +40,11 @@ from app.models.agent_turn_trace import AgentTurnTrace
 logger = logging.getLogger(__name__)
 
 INPUT_PREVIEW_CHARS = 200
-FULL_TOOL_INPUT_CHARS = 4000     # synthetic accounts only
+FULL_TOOL_INPUT_CHARS = 4000     # full-text traces only
 ERROR_CHARS = 300
-BLOCK_PREVIEW_CHARS = 160        # synthetic accounts only
+BLOCK_PREVIEW_CHARS = 160        # full-text traces only
+# Pre-beta: full text for every user. Set TRACE_FULL_TEXT=false for privacy mode.
+FULL_TEXT_FOR_ALL = os.getenv("TRACE_FULL_TEXT", "true").strip().lower() not in ("0", "false", "no", "off")
 # Tool arguments that identify things rather than carry the user's writing.
 SAFE_ARG_KEYS = {"article_id", "storyboard_id", "journey_id", "session_id", "question_index",
                  "filter", "days", "limit", "stage", "variant"}
@@ -96,7 +99,8 @@ class TurnTrace:
         self.input_type = input_type
         self.input_preview = _clean(input_text)[:INPUT_PREVIEW_CHARS]
         self.prompt_version, self.traffic, self.client, self.decision = prompt_version, traffic, client, decision
-        self.full = traffic == "synthetic" or full_previews  # personas, and the owner's own account
+        # Everyone while pre-beta; in privacy mode, only personas and the owner's own account.
+        self.full = FULL_TEXT_FOR_ALL or traffic == "synthetic" or full_previews
         self.model_calls, self.tool_calls, self.blocks, self.phases = [], [], [], []
         self.context = {}
         self.tokens = {"in": 0, "out": 0, "cache_read": 0, "cache_write": 0}
