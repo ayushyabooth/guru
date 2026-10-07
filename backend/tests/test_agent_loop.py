@@ -831,3 +831,16 @@ async def test_the_admins_own_turns_keep_previews_and_count_as_real(harness, mon
     await run_turn(db, text="catch me up")
     t = db.traces[0]
     assert t.traffic == "real" and json.loads(t.blocks)[0]["preview"] == "Your catch-up."
+
+
+async def test_done_and_error_events_carry_the_turns_trace_id(harness):
+    # The app attaches this id to a bug report, so it must be the id of the row the route saved.
+    harness.set_script(final_turn([{"type": "text", "md": "Here."}, {"type": "prompt_pills", "prompts": ["Next", "Stop"]}]))
+    db = _FakeDB()
+    events = await run_turn(db, text="catch me up")
+    assert events[-1]["event"] == "done" and events[-1]["trace_id"] == str(db.traces[0].id)
+
+    harness.set_script(RuntimeError("overloaded"))
+    db = _FakeDB()
+    events = await run_turn(db, text="catch me up")
+    assert events[-1]["event"] == "error" and events[-1]["trace_id"] == str(db.traces[0].id)

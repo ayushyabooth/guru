@@ -936,14 +936,15 @@ async def agent_turn(
             db.commit()  # the user's turn is safe before anything else happens
             _save_trace(db, trace, outcome)
             traced = True
-            yield f"data: {json.dumps({'event': 'done', 'session_id': session_id})}\n\n"
+            # trace_id lets the app attach this exact turn to a bug report (GUR-242).
+            yield f"data: {json.dumps({'event': 'done', 'session_id': session_id, 'trace_id': str(trace.id)})}\n\n"
         except Exception as e:
             logger.exception("agent turn failed")
             trace.fail(e)
             db.rollback()
             _save_trace(db, trace, "error", error_text(e))
             traced = True
-            yield f"data: {json.dumps({'event': 'error', 'message': (str(e) or error_text(e))[:300]})}\n\n"
+            yield f"data: {json.dumps({'event': 'error', 'message': (str(e) or error_text(e))[:300], 'trace_id': str(trace.id)})}\n\n"
         finally:
             # The client went away mid-turn (Starlette cancels or closes the stream).
             # The half-finished turn is NOT saved, since it could leave a tool call with
