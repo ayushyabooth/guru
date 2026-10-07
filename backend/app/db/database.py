@@ -8,7 +8,7 @@ from app.db.base import Base
 logger = logging.getLogger(__name__)
 
 # Import all models to ensure they are registered with SQLAlchemy
-from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content
+from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content, agent_session, agent_turn_trace  # every model registered here, so create_all never depends on import order
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
@@ -108,6 +108,14 @@ def _run_column_migrations():
         ("article_rich_content", "core_argument", "TEXT"),
         ("article_rich_content", "strongest_evidence", "JSON"),
         ("article_rich_content", "counterpoints", "JSON"),
+        # Agent turn trace context (for any database whose table predates these columns)
+        ("agent_turn_traces", "phases", "TEXT"),
+        ("agent_turn_traces", "build_sha", "VARCHAR(40)"),
+        ("agent_turn_traces", "prompt_version", "VARCHAR(16)"),
+        ("agent_turn_traces", "traffic", "VARCHAR(16)"),
+        ("agent_turn_traces", "client", "VARCHAR(32)"),
+        ("agent_turn_traces", "decision", "VARCHAR(16)"),
+        ("agent_turn_traces", "ai_hypothesis", "TEXT"),
     ]
     import re
     _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')

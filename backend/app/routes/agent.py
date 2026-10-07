@@ -15,6 +15,7 @@ executes (or declines) it and resumes.
 Architecture contract: docs/agentic-ui-architecture.md
 """
 import asyncio
+import hashlib
 import json
 import logging
 import queue
@@ -34,6 +35,8 @@ from app.db.database import get_db
 from app.deps import get_current_user
 from app.models.user import User
 from app.models.agent_session import AgentSession
+from app.services.access import is_synthetic
+from app.services.agent_trace import TurnTrace
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
@@ -122,6 +125,7 @@ TOOLS = [
             "properties": {
                 "storyboard_id": {"type": "string"},
                 "title": {"type": "string", "description": "Storyboard headline, shown on the approval card"},
+                "filter": {"type": "string", "description": "The feed filter the story was shown under. Default 'core'."},
             },
             "required": ["storyboard_id", "title"],
         },
@@ -485,7 +489,9 @@ async def _execute_tool(app, token: str, name: str, tool_input: dict) -> str:
                                        json_body={"highlighted_text": _trunc(tool_input.get("quote"), 500), "note_text": "",
                                                   "color": "amber", "start_offset": 0, "end_offset": 0})
     elif name == "mark_not_relevant":
-        status, data = await _call_api(app, token, "POST", f"/api/v1/storyboards/{tool_input['storyboard_id']}/not-relevant")
+        # The route requires ?filter= (the app's Skip passes its feed filter). Without it every agent Skip was a 422.
+        status, data = await _call_api(app, token, "POST", f"/api/v1/storyboards/{tool_input['storyboard_id']}/not-relevant",
+                                       params={"filter": f})
     elif name == "get_article_deep":
         status, data = await _call_api(app, token, "GET", f"/api/v1/articles/{tool_input['article_id']}/deep")
     elif name == "add_note":
@@ -664,6 +670,37 @@ def _approval_block(name: str, tool_input: dict, approval_id: str) -> dict:
     }
 
 
+def _save_trace(db, trace, outcome: str, error: str = None):
+    """Best-effort and isolated. Runs only after the user's turn is committed, in its
+    own transaction, so a tracing failure (even a database error on the trace row)
+    can never roll back or fail the turn."""
+    try:
+        db.add(trace.to_row(outcome, error))
+        db.commit()
+    except Exception:
+        logger.exception("agent trace not saved")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+# Which prompt and tool contract served a turn: a regression can be tied to a change.
+PROMPT_VERSION = hashlib.sha256(
+    (SYSTEM_STATIC + json.dumps(TOOLS, sort_keys=True)).encode("utf-8")).hexdigest()[:12]
+
+
+def _client_kind(user_agent: str) -> str:
+    ua = user_agent or ""
+    if "Mozilla" in ua:
+        return "web"
+    if "CFNetwork" in ua or "Darwin" in ua:
+        return "ios"
+    if "okhttp" in ua.lower():
+        return "android"
+    return "other" if ua else "unknown"
+
+
 # ── Route ────────────────────────────────────────────────────────────────────
 
 class AgentInput(BaseModel):
@@ -703,16 +740,25 @@ async def agent_turn(
 
     messages = _sanitize_history(json.loads(sess.messages or "[]"))
     pending = json.loads(sess.pending_action) if sess.pending_action else None
+    decision = None
+    if body.input.type == "decision":
+        decision = ("approved" if body.input.approved else "declined") if pending else "stale"
+    trace = TurnTrace(sess.id, current_user.id, AGENT_MODEL, body.input.type, body.input.text,
+                      prompt_version=PROMPT_VERSION,
+                      traffic="synthetic" if is_synthetic(current_user) else "real",
+                      client=_client_kind(request.headers.get("user-agent", "")),
+                      decision=decision)
 
     # Dynamic per-user context (second system block — static block stays cacheable)
     profile = getattr(current_user, "profile", None)
     commitment_text = None
-    try:
-        _, cdata = await _call_api(app, token, "GET", "/api/v1/me/commitment")
-        if isinstance(cdata, dict):
-            commitment_text = cdata.get("commitment") or cdata.get("text")
-    except Exception:
-        pass
+    with trace.span("load_context"):
+        try:
+            _, cdata = await _call_api(app, token, "GET", "/api/v1/me/commitment")
+            if isinstance(cdata, dict):
+                commitment_text = cdata.get("commitment") or cdata.get("text")
+        except Exception:
+            pass
     dyn_lines = ["USER CONTEXT:"]
     if profile is not None:
         dyn_lines.append(f"- Core industry: {getattr(profile, 'core_industry', None)}")
@@ -728,7 +774,9 @@ async def agent_turn(
     inp = body.input
     if inp.type == "decision" and pending:
         if inp.approved:
+            trace.tool_started(pending["name"], pending.get("input"))
             result = await _execute_tool(app, token, pending["name"], pending["input"])
+            trace.tool_done(pending["name"], result)
             tool_result_content = f"User APPROVED. Executed: {result}"
         else:
             tool_result_content = "User DECLINED this action. Do not retry it; adjust and continue."
@@ -766,6 +814,7 @@ async def agent_turn(
                 tool_choice={"type": "auto", "disable_parallel_tool_use": True},
                 messages=messages,
             ) as stream:
+                q.put(("request_id", getattr(stream, "request_id", None)))
                 for text in stream.text_stream:
                     q.put(("text", text))
                 q.put(("final", stream.get_final_message()))
@@ -775,22 +824,33 @@ async def agent_turn(
     async def gen():
         nonlocal messages
         minis_sent = False
+        outcome = "max_iters"  # unless the loop ends on blocks or an approval pause
+
+        def sse_block(block):
+            trace.block(block)
+            return f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
+
         try:
             yield f"data: {json.dumps({'event': 'status', 'text': 'thinking…'})}\n\n"
             for _ in range(MAX_ITERS):
                 # Stream the model call: emit each completed block as its JSON
                 # closes so content flows instead of bursting at end-of-turn.
                 q: "queue.Queue" = queue.Queue()
+                trace.model_started()
                 threading.Thread(target=_stream_model, args=(q,), daemon=True).start()
                 parser = _BlockStreamParser()
                 resp = None
                 while resp is None:
                     kind, payload = await asyncio.to_thread(q.get)
-                    if kind == "text":
+                    if kind == "request_id":
+                        trace.model_request_id(payload)
+                    elif kind == "text":
+                        trace.model_first_text()
                         for block in parser.feed(payload):
-                            yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
+                            yield sse_block(block)
                     elif kind == "final":
                         resp = payload
+                        trace.model_done(resp)
                     else:
                         raise payload
                 messages.append({"role": "assistant", "content": _serialize_content(resp.content)})
@@ -804,10 +864,14 @@ async def agent_turn(
                             "name": tool_use.name, "input": tool_use.input,
                         })
                         block = _approval_block(tool_use.name, tool_use.input, approval_id)
-                        yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
+                        trace.approval(tool_use.name)
+                        outcome = "approval"
+                        yield sse_block(block)
                         break
                     yield f"data: {json.dumps({'event': 'status', 'text': STATUS_TEXT.get(tool_use.name, 'working…')})}\n\n"
+                    trace.tool_started(tool_use.name, tool_use.input)
                     result = await _execute_tool(app, token, tool_use.name, tool_use.input or {})
+                    trace.tool_done(tool_use.name, result)
                     # R23 FAST FIRST CONTENT: the catch-up cold open measured 26s
                     # to first content. The instant fix is deterministic — as soon
                     # as the feed tool returns, the SERVER streams a headline strip
@@ -831,7 +895,7 @@ async def agent_turn(
                                     "image_url": art.get("image_url"),
                                     "reading_time": art.get("reading_time"),
                                 }
-                                yield f"data: {json.dumps({'event': 'block', 'block': mini})}\n\n"
+                                yield sse_block(mini)
                         except Exception:
                             pass
                     messages.append({"role": "user", "content": [
@@ -846,17 +910,20 @@ async def agent_turn(
                 # remainder (covers prose-fallback turns and parser misses).
                 final_text = "".join(b.text for b in resp.content if b.type == "text")
                 for block in _parse_blocks(final_text)[parser.emitted:]:
-                    yield f"data: {json.dumps({'event': 'block', 'block': block})}\n\n"
+                    yield sse_block(block)
+                outcome = "blocks"
                 break
 
             # Persist (bounded) history — sanitize AFTER slicing so a cut
             # tool_use/tool_result pair can never corrupt the next turn.
             sess.messages = json.dumps(_sanitize_history(messages[-MAX_HISTORY_MSGS:]))
-            db.commit()
+            db.commit()  # the user's turn is safe before anything else happens
+            _save_trace(db, trace, outcome)
             yield f"data: {json.dumps({'event': 'done', 'session_id': session_id})}\n\n"
         except Exception as e:
             logger.exception("agent turn failed")
             db.rollback()
+            _save_trace(db, trace, "error", str(e))
             yield f"data: {json.dumps({'event': 'error', 'message': str(e)[:300]})}\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream",
