@@ -22,8 +22,8 @@ backend/venv/
 *.secret
 
 # Node
-node_modules/
-mobile/node_modules/
+# No trailing slash, so a symlinked node_modules is ignored too (GUR-229 committed one by accident)
+node_modules
 mobile/dist/
 mobile/.expo/
 mobile/web-build/
