@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./backend/.env)",
+      "Read(./mobile/.env.local)",
+      "Read(./.secrets.local)"
+    ],
+    "ask": [
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(npx vercel *)",
+      "Bash(railway *)"
+    ]
+  }
+}

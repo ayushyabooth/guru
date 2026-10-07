@@ -92,3 +92,7 @@ WORKING_AUTH_SOLUTION.md
 # Debug & test screenshots
 mobile/*.png
 backend/tests/screenshots/
+
+# Claude Code: personal settings and agent worktrees stay local
+.claude/settings.local.json
+.claude/worktrees/
