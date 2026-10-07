@@ -402,6 +402,45 @@ async def test_the_detail_carries_the_reported_turn(api):
     assert (await api.call("GET", "/api/v1/admin/reports/not-a-uuid", key=KEY)).status_code == 404
 
 
+def test_make_reports_prints_what_the_admin_view_shows(api, monkeypatch, capsys):
+    """scripts/reports.py (make reports) reads through the admin routes themselves, so the terminal and the
+    admin view can't drift apart."""
+    import asyncio
+    import importlib.util
+    from app.db import database
+    scripts = os.path.join(os.path.dirname(__file__), "..", "scripts")
+    monkeypatch.syspath_prepend(scripts)
+    spec = importlib.util.spec_from_file_location("reports_cli", os.path.join(scripts, "reports.py"))
+    cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cli)
+    monkeypatch.setattr(database, "SessionLocal", api.Session)
+
+    trace_id, _ = _seed_trace(api, BETA)
+    filed = _seed_report(api, BETA, minutes_ago=5, status="filed", trace_id=trace_id, linear_identifier="GUR-300",
+                         linear_url="https://linear.app/guru/issue/GUR-300",
+                         hypothesis=json.dumps({"summary": "The feed failed.", "confidence": "medium", "severity": "high",
+                                                "evidence": ["trace.tool_errors[0]"],
+                                                "suggested_eval": "Fail get_catchup_feed once."}))
+    failed = _seed_report(api, BETA, minutes_ago=10, status="failed", error="HTTP 503 from Linear")
+
+    rows = cli._local("list", days=7, status=None, traffic="real", report_id=None)
+    assert json.loads(json.dumps(rows)) == asyncio.run(api.call("GET", "/api/v1/admin/reports", key=KEY)).json()
+    assert [r["id"] for r in cli._local("list", days=7, status="failed", traffic="real", report_id=None)["reports"]] == [failed]
+    cli.print_rows(rows["reports"])
+    out = capsys.readouterr().out
+    assert "GUR-300" in out and "not filed" in out and "Claude: The feed failed." in out
+    assert "get_catchup_feed returned an error" in out and f"id {filed}" in out
+
+    cli.print_report(cli._local("show", days=7, status=None, traffic="real", report_id=filed))
+    out = capsys.readouterr().out
+    assert "Linear GUR-300 https://linear.app/guru/issue/GUR-300" in out and "eval to add: Fail get_catchup_feed once." in out
+    assert f"make trace ID={trace_id}" in out
+    cli.print_report(cli._local("show", days=7, status=None, traffic="real", report_id=failed))
+    assert "error: HTTP 503 from Linear" in capsys.readouterr().out
+    with pytest.raises(SystemExit, match="Report not found"):
+        cli._local("show", days=7, status=None, traffic="real", report_id=str(uuid.uuid4()))
+
+
 async def test_retry_files_a_failed_or_stuck_report_again(api):
     api.linear.fail_issue = linear_client.LinearError("HTTP 503: Service Unavailable")
     report_id = (await api.call("POST", "/api/v1/reports", token=api.beta_token, body=BODY)).json()["id"]

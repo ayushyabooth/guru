@@ -14,7 +14,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 ## Commands
 - `make test-agent` - agent contract, admin access and trace-insights tests. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
 - `make evals` - agent evals through the real route, scripted model, offline, about a second. `make evals LIVE=1` adds the live-model cases, graded by the LLM judge too (about $1.35). Cases live in `backend/evals/cases.yaml`; see `backend/evals/README.md`.
-- `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. Both need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local` reads the local database instead.
+- `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. `make reports` - beta bug reports, each with its turn and Claude's hypothesis; `make report ID=<id>` - one in full. All need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local` and `make reports-local` read the local database instead.
 - `make test` (the legacy backend suite) and `cd mobile && npx tsc --noEmit` both fail today for old reasons (see `docs/known-gaps.md`). Run them before and after your change and compare the failures. `make test` also writes test users into the local database.
 - Web app: `cd mobile && npx expo start --web --port 8081`. Extension: `cd extension && npm run build`, then load `extension/` unpacked in Chrome.
 

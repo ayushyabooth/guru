@@ -27,3 +27,13 @@ traces-local: ## The same readout from the local database
 
 trace: ## One production turn in depth: make trace ID=<trace id>
 	cd backend && $(PY) scripts/traces.py show $(ID) --prod
+
+.PHONY: reports reports-local report
+reports: ## Beta bug reports in production, newest first, each with its turn and Claude's hypothesis (needs ADMIN_API_KEY in the shell)
+	cd backend && $(PY) scripts/reports.py list --prod --days $(DAYS) --traffic $(TRAFFIC)
+
+reports-local: ## The same list from the local database
+	cd backend && $(PY) scripts/reports.py list --days $(DAYS) --traffic $(TRAFFIC)
+
+report: ## One production report in full: make report ID=<report id>
+	cd backend && $(PY) scripts/reports.py show $(ID) --prod

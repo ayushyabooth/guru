@@ -118,7 +118,7 @@ Copy `backend/.env.example` to `backend/.env` and configure it. The template doe
 | `APP_ENV` | No | `development` or `production` |
 | `AGENT_MODEL` | No | The agent's model, `claude-sonnet-5` by default |
 | `ADMIN_EMAILS` | No | Comma-separated admin accounts. Admin screens and endpoints check it on the server |
-| `ADMIN_API_KEY` | No | Read-only key for `make traces`, at least 32 characters |
+| `ADMIN_API_KEY` | No | Read-only key for `make traces` and `make reports`, at least 32 characters |
 | `BETA_EMAILS` | No | Comma-separated beta testers |
 | `SYNTHETIC_EMAIL_DOMAINS` | No | Email domains whose traffic is labeled synthetic in traces, `example.com` by default |
 | `TRACE_FULL_TEXT` | No | `true` by default: while pre-beta, agent traces keep full text for every user. `false` turns privacy mode on |
