@@ -5,6 +5,7 @@ Provides:
 - Status polling for frontend progress display
 - Run history for observability
 - Admin trigger endpoints for manual tier runs
+- The health check: is ingestion keeping the feed alive (GUR-283, make ingestion-health)
 """
 import asyncio
 import logging
@@ -13,6 +14,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from app.services import ingestion_health
 from app.services.access import require_admin, require_admin_reader
 from app.models.user import User
 
@@ -21,7 +23,9 @@ from app.models.ingestion_run import IngestionRun
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/ingestion", tags=["ingestion"])
+# No prefix: the run routes live under /api/v1/ingestion and the health check under /api/v1/admin,
+# next to the other admin reads, all on the one router main.py includes.
+router = APIRouter(tags=["ingestion"])
 
 
 # ── Response Models ────────────────────────────────────────────
@@ -66,7 +70,7 @@ class TriggerResponse(BaseModel):
 # ── Status Endpoint ────────────────────────────────────────────
 
 
-@router.get("/status", response_model=IngestionStatusResponse)
+@router.get("/api/v1/ingestion/status", response_model=IngestionStatusResponse)
 async def get_ingestion_status(_admin=Depends(require_admin_reader)):
     """
     Get current ingestion orchestrator status.
@@ -86,7 +90,7 @@ async def get_ingestion_status(_admin=Depends(require_admin_reader)):
 # ── Run History ────────────────────────────────────────────────
 
 
-@router.get("/runs", response_model=List[IngestionRunResponse])
+@router.get("/api/v1/ingestion/runs", response_model=List[IngestionRunResponse])
 async def get_ingestion_runs(
     tier: Optional[str] = Query(None, description="Filter by tier (tier1_expert, tier2_luminary, tier3_discovery)"),
     limit: int = Query(20, ge=1, le=100),
@@ -130,7 +134,7 @@ async def get_ingestion_runs(
 # ── Admin Trigger Endpoints ────────────────────────────────────
 
 
-@router.post("/trigger/{tier}", response_model=TriggerResponse)
+@router.post("/api/v1/ingestion/trigger/{tier}", response_model=TriggerResponse)
 async def trigger_ingestion(tier: str, current_user: User = Depends(require_admin)):  # paid run: admins only
     """
     Manually trigger an ingestion run for a specific tier.
@@ -169,3 +173,18 @@ async def trigger_ingestion(tier: str, current_user: User = Depends(require_admi
     except Exception as e:
         logger.error(f"Failed to trigger {tier}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Health (GUR-283) ───────────────────────────────────────────
+
+
+@router.get("/api/v1/admin/ingestion/health")
+async def get_ingestion_health(db: Session = Depends(get_db), _reader=Depends(require_admin_reader)):
+    """
+    Is ingestion keeping the feed alive? The verdict (healthy, stale or failing) and its reasons, each
+    tier's last completed run against its window, failed and stuck runs among its last 10, when a restart
+    would start a paid run, the TIER2_RUN_AT one-off and content freshness (app/services/ingestion_health.py).
+
+    Read-only: a signed-in admin, or ADMIN_API_KEY for make ingestion-health.
+    """
+    return ingestion_health.report(db)

@@ -3,9 +3,11 @@ Tests for Ingestion Orchestrator
 
 Verifies:
 - Orchestrator starts without blocking
-- All 3 tiers are scheduled
+- Tiers 2 and 3 are scheduled; tier 1 is retired
 - Status reporting works
 - Ingestion routes function correctly
+
+Run lifecycles, the boot guard and the health check are in test_ingestion_health.py.
 """
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -80,15 +82,52 @@ class TestOrchestratorStatus:
 
 
 class TestTierWiring:
-    """Verify all 3 tiers are properly wired in the orchestrator."""
+    """Verify tiers 2 and 3 are properly wired in the orchestrator, and tier 1 is gone."""
 
-    def test_run_tier1_imports_expert_links(self):
-        """run_tier1 should import smart_ingest_expert_links (expert links)."""
-        from app.services.ingestion_orchestrator import IngestionOrchestrator
-        import inspect
+    def test_tier1_is_retired_never_scheduled_or_run(self, monkeypatch):
+        """Tier 1 (curated expert links) is retired: a boot schedules tiers 2 and 3 only, checks the boot
+        guard for those two only, and runs those two only. No tier 1 runner is left to call."""
+        import asyncio
+        import sys
+        import types
+        from app.services import ingestion_orchestrator as io
 
-        source = inspect.getsource(IngestionOrchestrator.run_tier1)
-        assert "smart_ingest_expert_links" in source
+        jobs, checked, ran = [], [], []
+
+        class _Scheduler:
+            """Stands in for APScheduler's AsyncIOScheduler: records each job, starts nothing."""
+            def add_job(self, func, trigger, **kw):
+                jobs.append(kw["id"])
+
+            def start(self):
+                pass
+
+        async def _run(tier):
+            ran.append(tier)
+            return 0
+
+        async def _warm(new_articles_ingested=0):
+            pass
+
+        # start() imports the scheduler itself; this stand-in also covers a venv without APScheduler.
+        scheduler_module = types.ModuleType("apscheduler.schedulers.asyncio")
+        scheduler_module.AsyncIOScheduler = _Scheduler
+        for name in ("apscheduler", "apscheduler.schedulers"):
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+        monkeypatch.setitem(sys.modules, "apscheduler.schedulers.asyncio", scheduler_module)
+        monkeypatch.setattr(io.settings, "TIER2_RUN_AT", "")
+        orchestrator = io.IngestionOrchestrator()
+        monkeypatch.setattr(orchestrator, "_should_run_tier", lambda tier, hours: checked.append(tier) or True)
+        monkeypatch.setattr(orchestrator, "_run_tier2_safe", lambda: _run("tier2_luminary"))
+        monkeypatch.setattr(orchestrator, "_run_tier3_safe", lambda: _run("tier3_discovery"))
+        monkeypatch.setattr(orchestrator, "_warm_content_safe", _warm)
+
+        asyncio.run(orchestrator.start())
+
+        assert jobs == ["tier2_luminary", "tier3_discovery"]
+        assert checked == ["tier2_luminary", "tier3_discovery"]
+        assert ran == ["tier2_luminary", "tier3_discovery"]
+        assert not any(hasattr(io.IngestionOrchestrator, name) for name in ("run_tier1", "_run_tier1_safe"))
 
     def test_run_tier2_imports_luminary_service(self):
         """run_tier2 should import Tier1LuminaryService (luminary RSS)."""
@@ -159,11 +198,13 @@ class TestIngestionRoutes:
         routes = [r.path for r in router.routes]
         assert "/api/v1/ingestion/trigger/{tier}" in routes
 
-    def test_router_has_correct_prefix(self):
-        """Router should use /api/v1/ingestion prefix."""
+    def test_health_route_sits_with_the_admin_reads(self):
+        """GET /api/v1/admin/ingestion/health (GUR-283) is on this router too. The router has no prefix,
+        so the run routes above keep their /api/v1/ingestion paths and main.py includes one router."""
         from app.routes.ingestion import router
 
-        assert router.prefix == "/api/v1/ingestion"
+        assert router.prefix == ""
+        assert "/api/v1/admin/ingestion/health" in [r.path for r in router.routes]
 
 
 # ── Ingestion Run Model Tests ──────────────────────────────────

@@ -117,11 +117,18 @@ class TestLuminariesMatchCentralConfig:
         assert len(phantom) == 0, f"Phantom specialization IDs: {phantom}"
 
     def test_total_count_reasonable(self):
-        """Should have ~40-65 luminaries total (2-3 per 21 sub-industries)."""
+        """Enough luminaries to seed the filters, and few enough for one run's time budget. Discovery fetches
+        every feed one after another, each allowed feed_timeout_seconds, so its worst case is count x timeout.
+        Keep that within an hour, so a run that also scrapes and enriches finishes well inside the 3 hours
+        after which the health check calls it stuck. 164 feeds x 15s is 41 minutes."""
         config = LuminariesConfig.get_instance()
         total = config.get_total_luminary_count()
+        worst_case_s = total * config.get_feed_timeout()
         assert total >= 30, f"Too few luminaries: {total}"
-        assert total <= 100, f"Too many luminaries: {total}"
+        assert worst_case_s <= 3600, (
+            f"Too many luminaries: {total} feeds x {config.get_feed_timeout()}s is {worst_case_s / 60:.0f} "
+            f"minutes of discovery at worst, over the one-hour budget"
+        )
 
 
 # ── Luminary Data Validation ────────────────────────────────────

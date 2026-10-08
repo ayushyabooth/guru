@@ -3,15 +3,26 @@ Tests for Tier 2 Web Discovery Service
 
 Verifies:
 - Service iterates IndustriesConfig, not hardcoded lists
+- Discovery is scoped to what users follow, one round-robin slice per run (GUR-238)
 - Query construction from sub-industry names (via central config)
 - Search result extraction from Claude API response
 - Domain filtering and dedup on results
 - Article data structure matches shared pipeline expectations
 """
+import re
+import uuid
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock, PropertyMock
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.config import settings
+from app.db import database
+from app.db.base import Base
+from app.models.ingestion_run import IngestionRun
 from app.services.industries_config import IndustriesConfig
 from app.services.deduplication_service import DeduplicationService
 
@@ -22,6 +33,34 @@ def reset_dedup():
     DeduplicationService.get_instance().clear_processing_urls()
     yield
     DeduplicationService.get_instance().clear_processing_urls()
+
+
+@pytest.fixture
+def cold_start(monkeypatch):
+    """A throwaway database, never the configured one: discovery reads users and finished runs from it to
+    pick what to search (GUR-238). Empty, it is a cold start: no users, so every specialization is eligible."""
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    monkeypatch.setattr(database, "SessionLocal", Session)
+    return Session
+
+
+def _specs(industry_name=None):
+    """Specialization names from the central config, for one industry or all of them."""
+    return [spec["name"] for ind in IndustriesConfig.get_instance()._config.get("industries", [])
+            if industry_name in (None, ind["name"]) for spec in ind.get("specializations", [])]
+
+
+def _searched(mock_client):
+    """The specialization each web search asked about, in call order."""
+    return [re.search(r'about "(.+?)" in the', c.kwargs["messages"][0]["content"]).group(1)
+            for c in mock_client.messages.create.call_args_list]
+
+
+def _slice_size(n):
+    """How many of n eligible specs one run searches: one TIER3_DISCOVERY_ROUNDS-th, rounded up."""
+    return -(-n // max(1, settings.TIER3_DISCOVERY_ROUNDS))
 
 
 # ── Service Structure Tests ────────────────────────────────────
@@ -49,8 +88,10 @@ class TestTier2ServiceStructure:
         assert service._dedup_service is not None
 
     @patch("app.services.tier2_discovery_service.anthropic")
-    def test_discover_iterates_all_specializations(self, mock_anthropic):
-        """discover_articles should attempt search for all 21 specializations."""
+    def test_discover_searches_one_round_robin_slice_per_run(self, mock_anthropic, cold_start):
+        """GUR-238: a run searches one slice of the eligible specializations (all of them on a cold start),
+        picked by how many tier 3 runs have completed, so the paid searches are spread over runs. Over
+        TIER3_DISCOVERY_ROUNDS runs every specialization is searched exactly once."""
         from app.services.tier2_discovery_service import Tier2DiscoveryService
 
         # Mock the Anthropic client to return empty responses
@@ -60,18 +101,50 @@ class TestTier2ServiceStructure:
         mock_client.messages.create.return_value = mock_response
         mock_anthropic.Anthropic.return_value = mock_client
 
+        slices = []
+        for _ in range(settings.TIER3_DISCOVERY_ROUNDS):
+            mock_client.messages.create.reset_mock()
+            service = Tier2DiscoveryService()
+            service._client = mock_client
+            assert service.discover_articles() == []
+            slices.append(_searched(mock_client))
+            with cold_start() as db:  # this run completed: the next one takes the next slice
+                db.add(IngestionRun(tier="tier3_discovery", status="completed", completed_at=datetime.utcnow()))
+                db.commit()
+
+        every_spec = _specs()
+        assert len(slices[0]) == _slice_size(len(every_spec))  # one slice, not every specialization
+        assert sorted(sum(slices, [])) == sorted(every_spec), "each specialization once over the rounds"
+
+    @patch("app.services.tier2_discovery_service.anthropic")
+    def test_discover_pays_only_for_what_active_users_follow(self, mock_anthropic, cold_start):
+        """GUR-238: once users exist, only what they follow is searched. A followed industry brings all of
+        its specializations, still one round-robin slice per run."""
+        from app.models.user import User, UserProfile
+        from app.services.tier2_discovery_service import Tier2DiscoveryService
+
+        with cold_start() as db:
+            user = User(id=uuid.uuid4(), email="reader@example.com", password_hash="x", is_active=True)
+            db.add(user)
+            db.flush()
+            db.add(UserProfile(user_id=user.id, core_industry="Finance", specializations=[],
+                               catchup_daily_goal_minutes=10, catchup_daily_max_minutes=20,
+                               divein_weekly_goal_minutes=30, recap_weekly_goal_minutes=15))
+            db.commit()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.content = []
+        mock_client.messages.create.return_value = mock_response
+        mock_anthropic.Anthropic.return_value = mock_client
+
         service = Tier2DiscoveryService()
         service._client = mock_client
-        articles = service.discover_articles()
+        service.discover_articles()
 
-        # Should have called the API for each specialization (21 total = 3 industries x 7 specs)
-        ind_config = IndustriesConfig.get_instance()
-        expected_specs = sum(
-            len(ind.get("specializations", []))
-            for ind in ind_config._config.get("industries", [])
-        )
-        assert mock_client.messages.create.call_count == expected_specs
-        assert expected_specs == 21  # 3 industries x 7 sub-industries
+        finance = _specs("Finance")
+        searched = _searched(mock_client)
+        assert set(searched) <= set(finance), f"searched outside what the user follows: {searched}"
+        assert len(searched) == _slice_size(len(finance))
 
     @patch("app.services.tier2_discovery_service.anthropic")
     def test_discover_returns_empty_for_no_results(self, mock_anthropic):
@@ -577,7 +650,7 @@ class TestFiltering:
         assert articles == []
 
     @patch("app.services.tier2_discovery_service.anthropic")
-    def test_discover_handles_partial_failures(self, mock_anthropic):
+    def test_discover_handles_partial_failures(self, mock_anthropic, cold_start):
         """discover_articles should continue even if some specializations fail."""
         from app.services.tier2_discovery_service import Tier2DiscoveryService
 
@@ -604,5 +677,5 @@ class TestFiltering:
         articles = service.discover_articles()
         assert isinstance(articles, list)
 
-        # Should have attempted all 21 specializations
-        assert call_count[0] == 21
+        # Should have attempted every specialization in this run's slice (cold start, GUR-238)
+        assert call_count[0] == _slice_size(len(_specs()))
