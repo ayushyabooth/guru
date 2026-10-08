@@ -207,6 +207,35 @@ async def base_01(h):
             f"the user saw {_types(t)} (error: {t.error!r})", [t], None)
 
 
+@scenario("RPT-01")
+async def rpt_01(h):
+    """Report a bug names the turn it's about: the id the app gets on `done` is the trace row's id, and the
+    report the app then sends stores that same turn and session. Nothing is filed: the job is queued, never run."""
+    from fastapi import BackgroundTasks
+    from app.models.bug_report import BugReport
+    from app.routes import reports
+    from app.services import bug_reports
+    from evals.harness import REQUEST, USER
+    h.script(tool_turn("get_metrics"), final_turn([{"type": "text", "md": "Twelve minutes today."}, PILLS]))
+    t = await h.turn("Show my progress")
+    done = next((e for e in t.events if e.get("event") == "done"), {})
+    sent, row = done.get("trace_id"), t.trace
+    if not sent or row is None:
+        return False, f"no trace id reached the app (done event: {done or 'none'})", [t], None
+    body = reports.ReportRequest(category="wrong_answer", expected="My progress for the week, not today's.",
+                                 trace_id=sent, session_id=done.get("session_id"))
+    sessions_for, bug_reports.sessions_for = bug_reports.sessions_for, lambda db: None  # the fake DB has no engine
+    try:
+        await reports.create_report(body=body, request=REQUEST, background_tasks=BackgroundTasks(), user=USER, db=h.db)
+    finally:
+        bug_reports.sessions_for = sessions_for
+    rep = next((o for o in h.db.added if isinstance(o, BugReport)), None)
+    ok = (rep is not None and str(rep.trace_id) == sent == str(row.id)
+          and str(rep.session_id) == str(row.session_id) and rep.status == "saved")
+    return (ok, "the report stores the turn and session the app was given" if ok else
+            f"the report stores trace {getattr(rep, 'trace_id', None)}, the turn's trace is {row.id}", [t], None)
+
+
 # ── T2: live model ───────────────────────────────────────────────────────────
 
 @scenario("QA-03")

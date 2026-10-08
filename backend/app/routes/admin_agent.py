@@ -8,7 +8,7 @@ action takes a signed-in admin only. A non-admin who finds these URLs gets a
 
     GET  /api/v1/admin/agent/summary            takeaways, tiles, tools, builds, flagged turns
     GET  /api/v1/admin/agent/turns              turns with a one-line hypothesis each, paged
-    GET  /api/v1/admin/agent/turns/{id}         one turn: trace, findings, timeline, neighbors
+    GET  /api/v1/admin/agent/turns/{id}         one turn: trace, findings, timeline, neighbors, its bug reports
     POST /api/v1/admin/agent/turns/{id}/explain Claude's hypothesis on top of the rules, cached
 """
 import asyncio
@@ -26,7 +26,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.database import get_db
 from app.models.agent_turn_trace import AgentTurnTrace
+from app.models.bug_report import BugReport
 from app.models.user import User
+from app.services import bug_reports as br
 from app.services import trace_insights as ti
 from app.services.access import require_admin, require_admin_reader
 
@@ -110,6 +112,16 @@ def _load(db: Session, trace_id: str) -> AgentTurnTrace:
     return row
 
 
+def reports_for(db: Session, row: AgentTurnTrace) -> list:
+    """Bug reports filed against this turn by the user who had it, oldest first: the link back from a
+    turn to its reports. A report naming someone else's turn is never linked, either way."""
+    reports = (db.query(BugReport).filter(BugReport.trace_id == row.id, BugReport.user_id == row.user_id)
+               .order_by(BugReport.created_at.asc()).all())
+    return [{"id": str(r.id), "reference": br.reference(r.id), "created_at": br.iso(r.created_at),
+             "category": r.category, "status": r.status, "linear_identifier": r.linear_identifier,
+             "linear_url": r.linear_url} for r in reports]
+
+
 @router.get("/turns/{trace_id}")
 async def agent_turn_detail(trace_id: str, db: Session = Depends(get_db), _reader=Depends(require_admin_reader)):
     row = _load(db, trace_id)
@@ -131,6 +143,7 @@ async def agent_turn_detail(trace_id: str, db: Session = Depends(get_db), _reade
         "session": {"turn_index": i + 1, "turns_in_session": len(ids),
                     "prev_id": ids[i - 1] if i > 0 else None, "next_id": ids[i + 1] if i + 1 < len(ids) else None},
         "ai_hypothesis": t["ai_hypothesis"],
+        "reports": reports_for(db, row),
     }
 
 

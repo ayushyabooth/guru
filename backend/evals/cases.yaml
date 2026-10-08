@@ -129,6 +129,14 @@
   grader: blocks the user sees
   label: GREEN
 
+- id: RPT-01
+  tier: T1
+  area: report a bug
+  title: A bug report carries the turn it's about
+  expect: After a scripted turn, the app sends a report with the trace id from the done event. The saved report stores that trace and session, and they are the turn's own. Nothing is filed to Linear in an eval.
+  grader: the saved report against the trace row
+  label: GREEN
+
 - id: QA-03
   tier: T2
   area: response quality

@@ -79,7 +79,8 @@ def _local(kind, **kw):
             d = ti.diagnose(t)
             return {"turn": {**ti.turn_row(t, d, aa._emails(db, [t]).get(t["user_id"])), **t,
                              "created_at": t["created_at"].isoformat() if t["created_at"] else None},
-                    "diagnosis": d, "timeline": ti.timeline(t), "session": None, "ai_hypothesis": t["ai_hypothesis"]}
+                    "diagnosis": d, "timeline": ti.timeline(t), "session": None, "ai_hypothesis": t["ai_hypothesis"],
+                    "reports": aa.reports_for(db, row)}
     except Exception as e:
         if "agent_turn_traces" in str(e):
             sys.exit("No agent_turn_traces table on this database yet. Start the backend once, run a turn, retry.")
@@ -160,6 +161,11 @@ def print_turn(d):
     if d.get("ai_hypothesis"):
         h = d["ai_hypothesis"]
         print(f"\nClaude's hypothesis ({h.get('confidence')}): {h.get('summary')}")
+    if d.get("reports"):
+        print("\nReported by the user")
+        for r in d["reports"]:
+            print(f"  {_when(r['created_at'])}  {r['status']:6s} {r['category']:12s} "
+                  f"{r.get('linear_identifier') or 'not filed':9s} ({r['reference']})  make report ID={r['id']}")
 
 
 def main():

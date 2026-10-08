@@ -402,6 +402,25 @@ async def test_the_detail_carries_the_reported_turn(api):
     assert (await api.call("GET", "/api/v1/admin/reports/not-a-uuid", key=KEY)).status_code == 404
 
 
+async def test_a_turn_links_back_to_the_reports_filed_against_it(api, monkeypatch, capsys):
+    """Report and trace link both ways: a turn's admin detail lists its own user's reports, and make trace prints them."""
+    trace_id, _ = _seed_trace(api, BETA)
+    mine = (await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "trace_id": trace_id})).json()
+    # A report naming someone else's turn is never linked to it
+    await api.call("POST", "/api/v1/reports", token=api.persona_token, body={**BODY, "trace_id": trace_id})
+
+    d = (await api.call("GET", f"/api/v1/admin/agent/turns/{trace_id}", key=KEY)).json()
+    assert [(r["id"], r["reference"], r["status"], r["linear_identifier"]) for r in d["reports"]] == \
+        [(mine["id"], mine["reference"], "filed", "GUR-261")]
+    other, _ = _seed_trace(api, BETA)
+    assert (await api.call("GET", f"/api/v1/admin/agent/turns/{other}", key=KEY)).json()["reports"] == []
+
+    monkeypatch.syspath_prepend(os.path.join(os.path.dirname(__file__), "..", "scripts"))
+    import traces
+    traces.print_turn(d)
+    assert f"make report ID={mine['id']}" in capsys.readouterr().out
+
+
 def test_make_reports_prints_what_the_admin_view_shows(api, monkeypatch, capsys):
     """scripts/reports.py (make reports) reads through the admin routes themselves, so the terminal and the
     admin view can't drift apart."""
