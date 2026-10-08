@@ -1,14 +1,19 @@
 """
-The boot cleanup (main._cleanup_stale_content) runs on every restart, and every
-deploy is a restart. It keeps any article that carries a user's own data (GUR-246):
-on 10/7 the first restart in months purged 11,022 articles, with the saves and
-notes on them.
+What a boot does on its own. Every deploy is a restart.
+
+- The boot cleanup (main._cleanup_stale_content) keeps any article that carries a
+  user's own data (GUR-246): on 10/7 the first restart in months purged 11,022
+  articles, with the saves and notes on them.
+- TIER2_RUN_AT schedules one paid tier 2 run at a set time (GUR-281), and nothing
+  when the time is unset, unreadable, without a zone, or past.
 
     cd backend && venv/bin/python -m pytest -q tests/test_cleanup.py
 """
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+import pytest
 
 _ENV = os.path.join(os.path.dirname(__file__), "..", ".env")
 if not os.path.exists(_ENV):
@@ -59,3 +64,40 @@ def test_the_cleanup_keeps_old_articles_a_user_saved_highlighted_or_asked_about(
         "only the old article nobody saved, highlighted, noted or asked about goes"
     assert (db.query(UserSavedArticle).count(), db.query(UserAnnotation).count(), db.query(QAExchange).count()) == (1, 1, 1)
     db.close()
+
+
+# ── TIER2_RUN_AT: one tier 2 run at a set time (GUR-281) ─────────────────────
+
+class _Scheduler:
+    """Stands in for APScheduler's AsyncIOScheduler: records each add_job."""
+    def __init__(self):
+        self.jobs = []
+
+    def add_job(self, func, trigger, **kw):
+        self.jobs.append((func, trigger, kw))
+
+
+def _job():
+    pass
+
+
+NOW = datetime(2026, 10, 8, 5, 0, tzinfo=timezone.utc)  # Wed 10/7 10pm PDT
+
+
+def test_a_future_time_schedules_exactly_one_tier2_run_then():
+    from app.services import ingestion_orchestrator as io
+    s = _Scheduler()
+    at = io.schedule_one_off_tier2(s, _job, "2026-10-08T01:00:00-07:00", now=NOW)
+    assert at == datetime(2026, 10, 8, 8, 0, tzinfo=timezone.utc), "1am PDT is 08:00 UTC"
+    [(func, trigger, kw)] = s.jobs
+    assert func is _job and trigger == "date" and kw["run_date"] == at
+    assert kw["id"] == "tier2_once" and kw["misfire_grace_time"] == io.ONE_OFF_GRACE_S
+    assert io.one_off_tier2_at("2026-10-08T08:00:00Z", now=NOW) == at, "a Z suffix reads as UTC"
+
+
+@pytest.mark.parametrize("raw", ["", "   ", "2026-10-07T21:00:00-07:00", "2026-10-08T01:00:00", "tomorrow 1am"],
+                         ids=["unset", "blank", "past", "no zone", "unreadable"])
+def test_anything_else_schedules_nothing(raw):
+    from app.services import ingestion_orchestrator as io
+    s = _Scheduler()
+    assert io.schedule_one_off_tier2(s, _job, raw, now=NOW) is None and s.jobs == []

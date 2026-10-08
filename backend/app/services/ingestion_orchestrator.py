@@ -11,7 +11,7 @@ Uses APScheduler (AsyncIOScheduler) for scheduling.
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -22,6 +22,39 @@ from app.models.ingestion_run import IngestionRun
 from app.services.deduplication_service import DeduplicationService
 
 logger = logging.getLogger(__name__)
+
+ONE_OFF_GRACE_S = 3600  # a one-off run that starts late still runs within the hour; later, it's skipped
+
+
+def one_off_tier2_at(raw: str, now: Optional[datetime] = None) -> Optional[datetime]:
+    """The time TIER2_RUN_AT asks for one tier 2 run (GUR-281), or None when it's unset, unreadable,
+    has no time zone, or has passed. Each refusal is logged, so a boot says why nothing was scheduled."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        at = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        logger.error(f"TIER2_RUN_AT={raw!r} is not an ISO time; no one-off tier 2 run scheduled")
+        return None
+    if at.tzinfo is None:
+        logger.error(f"TIER2_RUN_AT={raw!r} has no time zone; no one-off tier 2 run scheduled")
+        return None
+    if at <= (now or datetime.now(timezone.utc)):
+        logger.info(f"TIER2_RUN_AT {at.isoformat()} has passed; no one-off tier 2 run scheduled")
+        return None
+    return at
+
+
+def schedule_one_off_tier2(scheduler, job, raw: str, now: Optional[datetime] = None) -> Optional[datetime]:
+    """Add one date job running `job` at TIER2_RUN_AT. Every restart re-reads the setting, so a deploy
+    before the time keeps the run; a deploy after it schedules nothing, and a deploy during the run kills it."""
+    at = one_off_tier2_at(raw, now)
+    if at:
+        scheduler.add_job(job, "date", run_date=at, id="tier2_once", name="Tier 2: one-off (TIER2_RUN_AT)",
+                          misfire_grace_time=ONE_OFF_GRACE_S)
+        logger.info(f"Tier 2: one-off run scheduled for {at.isoformat()} (TIER2_RUN_AT)")
+    return at
 
 
 class IngestionOrchestrator:
@@ -72,6 +105,7 @@ class IngestionOrchestrator:
                 id="tier3_discovery",
                 name="Tier 3: Web Discovery",
             )
+            schedule_one_off_tier2(self._scheduler, self._scheduled_tier2, settings.TIER2_RUN_AT)
 
             self._scheduler.start()
             logger.info("APScheduler started with tier schedules")
