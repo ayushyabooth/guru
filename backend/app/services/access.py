@@ -6,7 +6,8 @@ Who may see what: admin, beta and synthetic accounts, decided on the server.
   a long-lived refresh token is never enough for admin.
 - Machine reader (ADMIN_API_KEY): read-only access to traces for Claude Code and
   scripts, sent as the X-Admin-Key header. Off unless the key is set and at
-  least 32 characters long.
+  least 32 characters long. It writes one thing: the eval runner's results
+  (admin_issues.py), which carry no user data and cost nothing to store.
 - Beta (BETA_EMAILS): early features such as Report a bug. Admins are beta too.
 - Synthetic (SYNTHETIC_EMAIL_DOMAINS, default example.com): persona and test
   accounts. Every agent trace is labeled with it, so real-user metrics can
@@ -111,7 +112,8 @@ async def require_admin_reader(
     db: Session = Depends(get_db),
 ) -> AdminReader:
     """Read-only admin access: a signed-in admin, or Claude Code and scripts holding
-    ADMIN_API_KEY. Use only on endpoints that read; writes take require_admin."""
+    ADMIN_API_KEY. Use only on endpoints that read; writes take require_admin. The one
+    exception is the eval-run upload (admin_issues.py): verdicts, no user data, free to store."""
     if x_admin_key is not None:
         key = os.getenv("ADMIN_API_KEY") or ""
         if len(key) >= MIN_API_KEY_LENGTH and hmac.compare_digest(x_admin_key.encode(), key.encode()):

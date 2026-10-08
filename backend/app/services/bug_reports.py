@@ -4,7 +4,8 @@ Report a bug (beta, GUR-242): file a tester's report to Linear, then add a triag
     start(job, *args)                  run a job on the report worker; the response never waits for it
     process_report(id, sessions)       file a new report, then triage it
     file_report(id, sessions)          the issue from the fixed template, created in Linear (team GUR)
-    triage_report(id, sessions, issue) rules + Claude: likely cause, evidence, severity, a suggested eval
+    triage_report(id, sessions, issue) rules + Claude: likely cause, evidence, severity, a suggested eval,
+                                       written into the issue's description and posted as a comment
 
 The route saves the report first and answers at once. Every failure here is
 recorded on the report and never raised: a Linear outage leaves the report
@@ -180,16 +181,23 @@ def _replay_lines(report, s) -> list:
             f"- Replay: `make trace ID={report.trace_id}`" if report.trace_id else "- Replay: no trace to replay"]
 
 
-def issue_body(report, summary) -> str:
-    """The fixed, Claude-ready template: what the user said, where, the trace, and the ids to replay it."""
+EVAL_PLACEHOLDER = "_Placeholder: triage fills this with one case for backend/evals/cases.yaml._"
+
+
+def issue_body(report, summary, hypothesis=None) -> str:
+    """The fixed, Claude-ready template: what the user said, where, the trace, and the ids to replay it.
+    After a triage, the hypothesis gets its own section and the suggested eval replaces the placeholder."""
+    triage = [*_hypothesis_lines(hypothesis, with_eval=False), ""] if hypothesis else []
+    suggested = (hypothesis.get("suggested_eval") or "None given.") if hypothesis else EVAL_PLACEHOLDER
     return "\n".join([
         "## What the user said", f"- Category: {report.category}", "- Expected:", _quote(report.expected), "",
         "## Where", f"- Screen: {report.screen or 'not given'}", f"- Client: {report.client or 'unknown'}",
         f"- Traffic: {report.traffic or 'real'}", f"- Reported at: {iso(report.created_at)}", "",
         "## Trace summary", *_trace_lines(report, summary), "",
         "## Replay ids", *_replay_lines(report, summary), "",
+        *triage,
         "## Suggested regression eval",
-        "_Placeholder: triage fills this with one case for backend/evals/cases.yaml._",
+        suggested,
     ])
 
 
@@ -308,30 +316,37 @@ def _ask_claude(message: str) -> dict:
             "model": TRIAGE_MODEL, "generated_at": _now(), "stop_reason": stop}
 
 
-def triage_comment(h: dict) -> str:
+def _hypothesis_lines(h: dict, with_eval=True) -> list:
+    """The hypothesis as Markdown: the comment, and the issue body's section (whose eval has a section of its own)."""
     evidence = [f"- {x}" for x in h.get("evidence") or []] or ["- none given"]
     # Blank lines between fields: Markdown joins consecutive lines into one paragraph.
-    return "\n".join([
+    return [
         "## Triage hypothesis", "",
         f"**Summary:** {h.get('summary') or 'none'}", "",
         f"**Likely cause:** {h.get('likely_cause') or 'unknown'}", "",
         f"**Severity:** {h.get('severity') or 'unknown'}. **Confidence:** {h.get('confidence') or 'unknown'}.", "",
         "**Evidence:**", *evidence, "",
-        f"**Suggested regression eval:** {h.get('suggested_eval') or 'none'}", "",
+        *([f"**Suggested regression eval:** {h.get('suggested_eval') or 'none'}", ""] if with_eval else []),
         f"_{h.get('model')} read the report and the rule findings. A hypothesis to check, not a verdict._",
-    ])
+    ]
+
+
+def triage_comment(h: dict) -> str:
+    return "\n".join(_hypothesis_lines(h))
 
 
 def triage_report(report_id: str, sessions, issue_id: str):
-    """Claude's hypothesis on top of the rules, stored on the report and posted to the issue.
-    A failure is recorded in the hypothesis and never touches the filed issue."""
+    """Claude's hypothesis on top of the rules, stored on the report, posted to the issue as a comment
+    and written into its description. A failed triage is recorded in the hypothesis and never touches
+    the filed issue; a comment or description Linear refuses is recorded there too, and nothing else changes."""
     db = sessions()
     try:
         report = db.get(BugReport, uuid.UUID(report_id))
         if report is None or report.status != "filed":
             return
         t = load_trace(db, report)
-        message = _triage_message(report, trace_summary(t) if t else None)
+        summary = trace_summary(t) if t else None
+        message = _triage_message(report, summary)
         try:
             h = _ask_claude(message)
         except Exception as e:
@@ -347,6 +362,12 @@ def triage_report(report_id: str, sessions, issue_id: str):
             h["comment"] = "posted"
         except Exception as e:
             h["comment_error"] = error_text(e)[:ERROR_CHARS]
+        try:  # the issue's own body: the hypothesis section, and the suggested eval in place of the placeholder
+            linear.update_issue_description(issue_id, issue_body(report, summary, h))
+            h["description"] = "updated"
+        except Exception as e:
+            h["description_error"] = error_text(e)[:ERROR_CHARS]
+            logger.warning("bug report %s: issue description not updated: %s", report_id, h["description_error"])
         report.hypothesis = json.dumps(h)
         db.commit()
     except Exception:

@@ -9,6 +9,7 @@ make evals CASE=APR-06,UI-11   # just these cases
 make evals LIVE=1 CASE=QA-03 RUNS=1
 make evals LIVE=1 BASELINE=1   # store this run as the baseline the next runs compare to
 make evals LIVE=1 JUDGE=0      # a live run without the LLM judge
+make evals LIVE=1 UPLOAD=0     # keep a live run off the admin Issues tab
 make evals-calibrate           # label judged live runs by hand, to calibrate the judge (REPORT=1 for the agreement)
 cd backend && venv/bin/python -m evals.run --help
 ```
@@ -107,6 +108,10 @@ Label from the transcript against the case's `expect`; the judge's verdict stays
 **Cost.** About 2 to 4 cents a judged run at Opus 5.5 list prices ($4 per million tokens in, $20 out, thinking billed as output), so roughly 50 cents for the 19 judged runs of a full live suite. The calls for a case run in parallel. The report prints the measured cost.
 
 **The call.** Structured output against a JSON schema (`output_config.format`), effort low, max_tokens 2000, no temperature. Opus 5.5 rejects forced tool use and temperature with a 400, and it always thinks, with the thinking counted toward max_tokens.
+
+## The Issues tab
+
+After the report, `run.py` sends a whole live run to the admin Issues tab (`POST /api/v1/admin/eval-runs`, on `GURU_API_URL`, production by default), with `ADMIN_API_KEY` from your shell. It sends each case's verdict, what happened, why and the fix, the pass count and the judge's summary, never a transcript. Without the key it prints one line and moves on. A failed upload is one line too, and never changes the exit code. An offline run and a `CASE=` run stay local, because the tab's ship gate reads a whole live run (an offline run skips the T2 cases, so uploading it would drop the live reds off the tab and make the gate look clearer than it is): it is blocked while a safety case fails (STAY RED included) or a case regressed or crashed. The server keeps the newest 50 runs. `make issues` prints the same gate and list in the terminal.
 
 ## Adding a case
 

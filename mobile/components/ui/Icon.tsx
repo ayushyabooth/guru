@@ -96,6 +96,11 @@ import { FlagIcon as Flag } from 'phosphor-react-native';
 import { PaperclipIcon as Paperclip } from 'phosphor-react-native';
 import { BugIcon as Bug } from 'phosphor-react-native';
 import { PulseIcon as Pulse } from 'phosphor-react-native';
+// Admin Issues tab (GUR-271).
+import { FlaskIcon as Flask } from 'phosphor-react-native';
+import { GaugeIcon as Gauge } from 'phosphor-react-native';
+import { XCircleIcon as XCircle } from 'phosphor-react-native';
+import { CircleDashedIcon as CircleDashed } from 'phosphor-react-native';
 
 // Weight type from Phosphor
 type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
@@ -204,6 +209,12 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'paperclip': Paperclip,   // "This turn is attached"
   'bug': Bug,               // Home: Report a bug
   'pulse': Pulse,           // admin: a trace / the turn
+
+  // Admin Issues tab (GUR-271)
+  'flask': Flask,                 // an eval case
+  'gauge': Gauge,                 // a production turn
+  'x-circle': XCircle,            // ship gate blocked
+  'circle-dashed': CircleDashed,  // ship gate unknown: no eval run yet
 };
 
 // Names that should default to 'fill' weight

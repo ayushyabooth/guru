@@ -39,6 +39,7 @@ export function Segmented<T extends string | number>({
   P,
   accessibilityLabel,
   role = 'radio',
+  dense = false,
 }: {
   options: SegmentOption<T>[];
   value: T;
@@ -47,10 +48,15 @@ export function Segmented<T extends string | number>({
   accessibilityLabel: string;
   /** 'tab' for the panel's tab bar, 'radio' for filters. */
   role?: 'tab' | 'radio';
+  /**
+   * Tighter padding, and segments that may shrink (ellipsized) rather than
+   * overflow: the panel's five tabs fit one row on a phone, no scrolling.
+   */
+  dense?: boolean;
 }) {
   return (
     <View
-      style={[ui.segWrap, { backgroundColor: P.surface, borderColor: P.border }]}
+      style={[ui.segWrap, dense && ui.segWrapDense, { backgroundColor: P.surface, borderColor: P.border }]}
       accessibilityRole={role === 'tab' ? 'tablist' : 'radiogroup'}
       accessibilityLabel={accessibilityLabel}
     >
@@ -64,9 +70,12 @@ export function Segmented<T extends string | number>({
             accessibilityState={{ selected: active, checked: role === 'radio' ? active : undefined }}
             accessibilityLabel={opt.label}
             hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-            style={[ui.seg, active && liquidGlassPill(P.accentHex, P.isDark)]}
+            style={[ui.seg, dense && ui.segDense, active && liquidGlassPill(P.accentHex, P.isDark)]}
           >
-            <Text style={[ui.segText, { color: active ? P.text : P.textSecondary }, active && ui.segTextActive]}>
+            <Text
+              style={[ui.segText, { color: active ? P.text : P.textSecondary }, active && ui.segTextActive]}
+              numberOfLines={dense ? 1 : undefined}
+            >
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -194,12 +203,20 @@ const ui = StyleSheet.create({
     padding: 2,
     gap: 2,
   },
+  segWrapDense: {
+    maxWidth: '100%',
+  },
   seg: {
     paddingHorizontal: 11,
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'transparent',
+  },
+  segDense: {
+    paddingHorizontal: 9,
+    flexShrink: 1,
+    minWidth: 0,
   },
   segText: {
     ...AdminType.small,

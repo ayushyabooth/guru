@@ -12,9 +12,9 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 - Read `mobile/CLAUDE.md` before app work, and `docs/known-gaps.md` before you fix anything that looks wrong. `docs/agentic-ui-architecture.md` is the agent design doc, and it has drifted.
 
 ## Commands
-- `make test-agent` - agent contract, admin access, trace insights, the LLM judge, Report a bug and the boot cleanup. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
-- `make evals` - agent evals through the real route, scripted model, offline, about a second. `make evals LIVE=1` adds the live-model cases, graded by the LLM judge too (about $1.35). Cases live in `backend/evals/cases.yaml`; see `backend/evals/README.md`.
-- `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. `make reports` - beta bug reports, each with its turn and Claude's hypothesis; `make report ID=<id>` - one in full. All need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local` and `make reports-local` read the local database instead.
+- `make test-agent` - agent contract, admin access, trace insights, the LLM judge, Report a bug, the Issues tab and the boot cleanup. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
+- `make evals` - agent evals through the real route, scripted model, offline, about a second. `make evals LIVE=1` adds the live-model cases, graded by the LLM judge too (about $1.35), and sends the whole run to the admin Issues tab (`UPLOAD=0` keeps it local; offline and `CASE=` runs never upload). Cases live in `backend/evals/cases.yaml`; see `backend/evals/README.md`.
+- `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. `make reports` - beta bug reports, each with its turn and Claude's hypothesis; `make report ID=<id>` - one in full. `make issues` - the Issues tab: the ship gate, then every open issue from evals, reports and production. All need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local`, `make reports-local` and `make issues-local` read the local database instead.
 - `make test` (the legacy backend suite) and `cd mobile && npx tsc --noEmit` both fail today for old reasons (see `docs/known-gaps.md`). Run them before and after your change and compare the failures. `make test` also writes test users into the local database.
 - Web app: `cd mobile && npx expo start --web --port 8081`. Extension: `cd extension && npm run build`, then load `extension/` unpacked in Chrome.
 
@@ -44,7 +44,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 ## Traces, privacy and admin
 - Tracing is best effort. It must never change or break a turn, and it writes in its own transaction after the turn commits.
 - While Guru is pre-beta, every trace keeps full text: what the user typed, tool inputs, block previews. That is on purpose, for debugging and for judging real traffic. `TRACE_FULL_TEXT=false` turns privacy mode back on, and a change to that policy is my call.
-- Admin data is checked on the server. Every admin route depends on `require_admin`, or `require_admin_reader` for read-only. Hiding a screen is never the security.
+- Admin data is checked on the server. Every admin route depends on `require_admin`, or `require_admin_reader` for read-only. The admin key's one write is the eval-run upload: verdicts, no user data. Hiding a screen is never the security.
 - Don't add an event to the stream the app reads without asking me.
 
 ## Never touch

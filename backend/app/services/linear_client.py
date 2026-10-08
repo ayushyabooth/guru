@@ -1,6 +1,7 @@
 """
 A small Linear client for Report a bug: find the team, find or create a label,
-create an issue, comment on it. Plain GraphQL over httpx, 10 seconds per call.
+create an issue, comment on it, rewrite its description. Plain GraphQL over
+httpx, 10 seconds per call.
 
 LINEAR_API_KEY is a personal API key, sent as the Authorization header with no
 "Bearer" (Linear's rule for personal keys). It is read at call time and never
@@ -8,7 +9,7 @@ logged; errors carry Linear's own message and code, with the key scrubbed out.
 Linear answers some failures with HTTP 200 and an "errors" list, and rate limits
 with HTTP 400 and code RATELIMITED, so every response body is checked.
 
-Tests swap _client() for an httpx.MockTransport, or patch the four functions.
+Tests swap _client() for an httpx.MockTransport, or patch the five functions.
 """
 import os
 
@@ -26,6 +27,8 @@ CREATE_ISSUE = ("mutation CreateIssue($input: IssueCreateInput!) "
                 "{ issueCreate(input: $input) { success issue { id identifier url } } }")
 CREATE_COMMENT = ("mutation CreateComment($input: CommentCreateInput!) "
                   "{ commentCreate(input: $input) { success comment { id url } } }")
+UPDATE_ISSUE = ("mutation UpdateIssue($id: String!, $input: IssueUpdateInput!) "
+                "{ issueUpdate(id: $id, input: $input) { success issue { id } } }")
 
 _team_ids = {}  # team key -> id, resolved once per process
 
@@ -106,3 +109,12 @@ def create_comment(issue_id: str, body: str) -> dict:
     if not out.get("success") or not comment.get("id"):
         raise LinearError("Linear did not create the comment")
     return {"id": comment["id"], "url": comment.get("url")}
+
+
+def update_issue_description(issue_id: str, description: str) -> dict:
+    """Replace the issue's whole description (Markdown)."""
+    out = _graphql(UPDATE_ISSUE, {"id": issue_id, "input": {"description": description}}).get("issueUpdate") or {}
+    issue = out.get("issue") or {}
+    if not out.get("success") or not issue.get("id"):
+        raise LinearError("Linear did not update the issue")
+    return {"id": issue["id"]}

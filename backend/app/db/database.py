@@ -8,7 +8,7 @@ from app.db.base import Base
 logger = logging.getLogger(__name__)
 
 # Import all models to ensure they are registered with SQLAlchemy
-from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content, agent_session, agent_turn_trace, bug_report  # every model registered here, so create_all never depends on import order
+from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content, agent_session, agent_turn_trace, bug_report, eval_run  # every model registered here, so create_all never depends on import order
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 

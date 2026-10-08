@@ -4,8 +4,10 @@
  * read of the reported turn, then Open turn (the Agent view's turn detail) and
  * Linear. A failed report, or one stuck unfiled, gets Retry.
  *
- * Also exports the small pieces the list shares: the status tag, the seconds
- * format and the budgets mirrored from the server.
+ * Also exports the small pieces the admin lists and detail views share (the
+ * Reports and Issues tabs, the eval case detail): the status tag, the big
+ * action button, the seconds and time formats, the link opener and the budgets
+ * mirrored from the server.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -88,6 +90,78 @@ const tagStyles = StyleSheet.create({
   },
 });
 
+/** A detail view's action button (frames 13:102 and 18:72): solid indigo for the main action, thin glass otherwise. */
+export function BigButton({
+  label,
+  icon,
+  variant,
+  onPress,
+  busy = false,
+  hint,
+  P,
+}: {
+  label: string;
+  icon?: string;
+  variant: 'primary' | 'glass';
+  onPress: () => void;
+  busy?: boolean;
+  hint?: string;
+  P: AdminPalette;
+}) {
+  const primary = variant === 'primary';
+  const fg = primary ? P.onSolid : P.text;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityState={{ busy }}
+      style={[primary ? { backgroundColor: P.accentHex } : glassSurface('thin', P.isDark), buttonStyles.button]}
+    >
+      {busy ? (
+        <ActivityIndicator size="small" color={fg} />
+      ) : icon ? (
+        <Icon name={icon} size={14} color={fg} weight="bold" />
+      ) : null}
+      <Text style={[buttonStyles.text, { color: fg }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const buttonStyles = StyleSheet.create({
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 14,
+    paddingVertical: 12,
+  },
+  text: {
+    ...FACE.bold,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+});
+
+/** "3:42 PM" today, "Oct 6, 3:42 PM" before. */
+export function fmtWhen(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toDateString() === new Date().toDateString() ? formatClock(ms) : fmtDateTime(iso);
+}
+
+/** Opens an https link: a new tab on web, the browser or app on native. Anything else is ignored. */
+export function openLink(url: string) {
+  if (!/^https:\/\//i.test(url)) return;
+  if (Platform.OS === 'web') openExternalTab(url);
+  else Linking.openURL(url).catch(() => {});
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 function canRetry(r: AdminReport): boolean {
@@ -97,24 +171,10 @@ function canRetry(r: AdminReport): boolean {
   return Number.isFinite(created) && Date.now() - created > STUCK_AFTER_MS;
 }
 
-/** "3:42 PM" today, "Oct 6, 3:42 PM" before. */
-function fmtWhen(iso: string | null): string | null {
-  if (!iso) return null;
-  const ms = Date.parse(iso);
-  if (!Number.isFinite(ms)) return null;
-  return new Date(ms).toDateString() === new Date().toDateString() ? formatClock(ms) : fmtDateTime(iso);
-}
-
 function severityColor(level: string | null | undefined, P: AdminPalette): string {
   if (level === 'high') return P.bad;
   if (level === 'medium') return P.warn;
   return P.muted;
-}
-
-function openLink(url: string) {
-  if (!/^https:\/\//i.test(url)) return;
-  if (Platform.OS === 'web') openExternalTab(url);
-  else Linking.openURL(url).catch(() => {});
 }
 
 function detailErrorText(e: AdminApiError): string | undefined {
@@ -134,12 +194,22 @@ interface Props {
   /** Bumped by the panel's Refresh button. */
   refreshSignal: number;
   onBack: () => void;
+  /** What Back says to a screen reader: the list it returns to. */
+  backLabel?: string;
   onOpenTurn: (traceId: string) => void;
   /** A retry changed the report, so the list can show its new status. */
   onChanged: (report: AdminReport) => void;
 }
 
-export default function ReportDetail({ reportId, reference, refreshSignal, onBack, onOpenTurn, onChanged }: Props) {
+export default function ReportDetail({
+  reportId,
+  reference,
+  refreshSignal,
+  onBack,
+  backLabel = 'Back to reports',
+  onOpenTurn,
+  onChanged,
+}: Props) {
   const P = useAdminPalette();
   const s = useMemo(() => makeStyles(P), [P]);
 
@@ -223,7 +293,7 @@ export default function ReportDetail({ reportId, reference, refreshSignal, onBac
         <TouchableOpacity
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel="Back to reports"
+          accessibilityLabel={backLabel}
           hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
         >
           <Icon name="chevron-left" size={18} color={P.textSecondary} weight="bold" />
@@ -316,7 +386,6 @@ export default function ReportDetail({ reportId, reference, refreshSignal, onBac
                 onPress={() => onOpenTurn(detail.trace!.id)}
                 hint="Opens the turn in the Agent view"
                 P={P}
-                s={s}
               />
             ) : null}
             {r.linear_url ? (
@@ -327,7 +396,6 @@ export default function ReportDetail({ reportId, reference, refreshSignal, onBac
                 onPress={() => openLink(r.linear_url!)}
                 hint="Opens the issue in Linear"
                 P={P}
-                s={s}
               />
             ) : null}
             {canRetry(r) ? (
@@ -338,7 +406,6 @@ export default function ReportDetail({ reportId, reference, refreshSignal, onBac
                 busy={retrying}
                 hint="Files the report to Linear again and runs a new triage"
                 P={P}
-                s={s}
               />
             ) : null}
           </View>
@@ -391,47 +458,6 @@ function Hypothesis({ h, status, P, s }: { h: ReportHypothesis | null; status: s
   // Triage runs only after the report files.
   if (status === 'failed') return <Text style={s.small}>Triage runs once the report files.</Text>;
   return <Text style={s.arriving}>Arriving...</Text>;
-}
-
-function BigButton({
-  label,
-  icon,
-  variant,
-  onPress,
-  busy = false,
-  hint,
-  P,
-  s,
-}: {
-  label: string;
-  icon?: string;
-  variant: 'primary' | 'glass';
-  onPress: () => void;
-  busy?: boolean;
-  hint?: string;
-  P: AdminPalette;
-  s: Styles;
-}) {
-  const primary = variant === 'primary';
-  const fg = primary ? P.onSolid : P.text;
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      accessibilityState={{ busy }}
-      style={[primary ? { backgroundColor: P.accentHex } : glassSurface('thin', P.isDark), s.bigButton]}
-    >
-      {busy ? (
-        <ActivityIndicator size="small" color={fg} />
-      ) : icon ? (
-        <Icon name={icon} size={14} color={fg} weight="bold" />
-      ) : null}
-      <Text style={[s.bigButtonText, { color: fg }]}>{label}</Text>
-    </TouchableOpacity>
-  );
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────
@@ -534,20 +560,6 @@ function makeStyles(P: AdminPalette) {
     actions: {
       flexDirection: 'row',
       gap: 8,
-    },
-    bigButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      borderRadius: 14,
-      paddingVertical: 12,
-    },
-    bigButtonText: {
-      ...FACE.bold,
-      fontSize: 14,
-      lineHeight: 20,
     },
   });
 }

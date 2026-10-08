@@ -3,9 +3,9 @@
  * GET /me/access says is_admin; every endpoint it reads checks admin again on
  * the server.
  *
- * Tabs: Agent (traces, the default), Reports (beta bug reports, GUR-242),
- * API (latency + recent calls) and Ingestion. API and Ingestion share one
- * /admin/perf-metrics fetch.
+ * Tabs: Issues (every open issue under the ship gate, GUR-271, the default),
+ * Agent (traces), Reports (beta bug reports, GUR-242), API (latency + recent
+ * calls) and Ingestion. API and Ingestion share one /admin/perf-metrics fetch.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -24,6 +24,7 @@ import type { PerfMetrics } from '../services/admin-service';
 import { AdminPalette, AdminType, MONO, useAdminPalette, withAlpha } from './admin/adminTheme';
 import { Segmented, SegmentOption } from './admin/AdminUI';
 import AgentPerfTab from './admin/AgentPerfTab';
+import IssuesTab from './admin/IssuesTab';
 import ReportsTab from './admin/ReportsTab';
 
 // --- Helpers ---
@@ -60,9 +61,10 @@ function shortPath(path: string): string {
 
 // --- Layout ---
 
-type PanelTab = 'agent' | 'reports' | 'api' | 'ingestion';
+type PanelTab = 'issues' | 'agent' | 'reports' | 'api' | 'ingestion';
 
 const TAB_OPTIONS: SegmentOption<PanelTab>[] = [
+  { value: 'issues', label: 'Issues' },
   { value: 'agent', label: 'Agent' },
   { value: 'reports', label: 'Reports' },
   { value: 'api', label: 'API' },
@@ -84,12 +86,14 @@ export default function DevMetricsPanel() {
   const { height: windowHeight } = useWindowDimensions();
 
   const [isExpanded, setIsExpanded] = useState(false);
-  // Once opened, the panel stays mounted (hidden when closed) so the Agent
-  // tab keeps its filters, data and scroll position between opens.
+  // Once opened, the panel stays mounted (hidden when closed) so each tab
+  // keeps its filters, data, open detail and scroll position between opens.
   const [hasOpened, setHasOpened] = useState(false);
-  const [tab, setTab] = useState<PanelTab>('agent');
+  const [tab, setTab] = useState<PanelTab>('issues');
+  const [issuesRefresh, setIssuesRefresh] = useState(0);
+  // Agent and Reports load on their first view, then stay mounted like Issues.
+  const [agentOpened, setAgentOpened] = useState(false);
   const [agentRefresh, setAgentRefresh] = useState(0);
-  // Reports loads on its first view, then stays mounted like Agent.
   const [reportsOpened, setReportsOpened] = useState(false);
   const [reportsRefresh, setReportsRefresh] = useState(0);
   const [chromeHeight, setChromeHeight] = useState(84);
@@ -126,6 +130,7 @@ export default function DevMetricsPanel() {
   }, [isExpanded, isMetricsTab, data, loading, error, fetchMetrics]);
 
   const selectTab = (next: PanelTab) => {
+    if (next === 'agent') setAgentOpened(true);
     if (next === 'reports') setReportsOpened(true);
     setTab(next);
   };
@@ -135,7 +140,8 @@ export default function DevMetricsPanel() {
   };
 
   const onRefresh = () => {
-    if (tab === 'agent') setAgentRefresh(n => n + 1);
+    if (tab === 'issues') setIssuesRefresh(n => n + 1);
+    else if (tab === 'agent') setAgentRefresh(n => n + 1);
     else if (tab === 'reports') setReportsRefresh(n => n + 1);
     else fetchMetrics();
   };
@@ -198,15 +204,23 @@ export default function DevMetricsPanel() {
                 onChange={selectTab}
                 P={P}
                 role="tab"
+                dense
                 accessibilityLabel="Performance sections"
               />
             </View>
           </View>
 
-          {/* Agent: stays mounted so its filters and list survive tab switches */}
-          <View style={tab === 'agent' ? null : s.hidden}>
-            <AgentPerfTab refreshSignal={agentRefresh} maxHeight={bodyMaxHeight} />
+          {/* Issues: the default tab, kept mounted so an open case or report survives tab switches */}
+          <View style={tab === 'issues' ? null : s.hidden}>
+            <IssuesTab refreshSignal={issuesRefresh} maxHeight={bodyMaxHeight} />
           </View>
+
+          {/* Agent: mounted on first view, then kept so its filters and list survive tab switches */}
+          {agentOpened && (
+            <View style={tab === 'agent' ? null : s.hidden}>
+              <AgentPerfTab refreshSignal={agentRefresh} maxHeight={bodyMaxHeight} />
+            </View>
+          )}
 
           {/* Reports: mounted on first view, then kept like Agent (an open report survives tab switches) */}
           {reportsOpened && (

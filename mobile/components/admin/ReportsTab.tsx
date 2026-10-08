@@ -12,7 +12,7 @@ import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Te
 import Icon from '../ui/Icon';
 import { AdminApiError, AdminReport, AdminReportRow, listReports, toAdminError } from '../../services/admin-service';
 import { reportCategoryLabel } from '../../services/report-service';
-import { AdminPalette, isNum, useAdminPalette, withAlpha } from './adminTheme';
+import { AdminPalette, fmtAgo, isNum, useAdminPalette, withAlpha } from './adminTheme';
 import { StateMessage } from './AdminUI';
 import AgentTurnDetailModal from './AgentTurnDetail';
 import ReportDetail, { FIRST_BLOCK_BUDGET_MS, Tag, fmtSeconds, statusTag } from './ReportDetail';
@@ -29,18 +29,6 @@ function modeFromScreen(screen: string | null): string | null {
   if (!screen || !screen.startsWith('guru/')) return null;
   const mode = screen.slice('guru/'.length).trim();
   return /^[a-z][a-z-]{0,23}$/.test(mode) ? mode : null;
-}
-
-/** "12m", "2h", "3d". */
-function fmtAgo(iso: string | null): string {
-  if (!iso) return '';
-  const ms = Date.parse(iso);
-  if (!Number.isFinite(ms)) return '';
-  const s = Math.max(0, (Date.now() - ms) / 1000);
-  if (s < 60) return 'now';
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
 }
 
 /** The list shows the name part of the email; the report shows all of it. */

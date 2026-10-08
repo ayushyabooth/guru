@@ -166,6 +166,20 @@ export function confidenceColor(c: HypothesisConfidence | string | null | undefi
   return P.muted;
 }
 
+/**
+ * An Issues tab tone (GUR-271) as a palette color: red is the failure color of
+ * the Failed tag, amber the over-budget amber, green success, indigo the
+ * action color. Neutral (or anything unknown) has none: it draws as the quiet
+ * glass tag.
+ */
+export function issueToneColor(tone: string | null | undefined, P: AdminPalette): string | null {
+  if (tone === 'red') return P.bad;
+  if (tone === 'amber') return P.warn;
+  if (tone === 'green') return P.good;
+  if (tone === 'indigo') return P.accent;
+  return null;
+}
+
 // ─── Type ────────────────────────────────────────────────────────────────
 
 /** Monospace stack for ids, JSON and numbers that must line up. */
@@ -260,6 +274,18 @@ export function fmtDate(iso: string | null | undefined): string {
   const d = parseDate(iso);
   if (!d) return iso || '-';
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** Age for a list row: "now", "12m", "2h", "3d". Missing -> "". */
+export function fmtAgo(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return '';
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 60) return 'now';
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
 }
 
 /** First n characters of an id or sha. Missing -> "-". */

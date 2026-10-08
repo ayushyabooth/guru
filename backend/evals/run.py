@@ -7,12 +7,19 @@ Run the Guru agent evals and print the report.
     python -m evals.run --live --case QA-03 --runs 1
     python -m evals.run --live --no-judge  # live, without the LLM judge
     python -m evals.run --save-baseline    # make this run the baseline the next runs compare to
+    python -m evals.run --no-upload        # keep this run off the admin Issues tab
 
 Exit code 1 when a case labeled GREEN fails (a regression) or a scenario crashes.
 A red case that starts passing is reported as NOW GREEN: update its label.
 
 On a live run, the T2 cases with judge: true are also graded by the LLM judge (judge.py). It is
 report-only: it never changes a verdict or the exit code until calibration.yaml has judge_gates: true.
+
+After the report, a whole live run goes to the admin Issues tab (POST /admin/eval-runs on GURU_API_URL,
+production by default), sent with ADMIN_API_KEY: each case's verdict, what happened, why and the
+fix, never a transcript. Without the key it says so in one line. A failed upload is one line too,
+and never changes the exit code. An offline run and a --case run stay local: the tab's ship gate
+reads a whole live run, and a partial one would make the gate look clearer than it is.
 """
 import argparse
 import asyncio
@@ -26,12 +33,14 @@ import statistics
 import sys
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
+import httpx
 import yaml
 
 from app.config import settings
 from app.routes import agent
+from app.services.agent_trace import BUILD_SHA
 
 from evals import calibrate, judge
 from evals.checks import run_checks
@@ -45,6 +54,9 @@ BASELINE = os.path.join(HERE, "baseline.json")
 # launch price became the standard price), for a cost estimate, not billing.
 PRICE = {"in": 2.00, "out": 10.00, "cache_read": 0.20, "cache_write": 2.50}
 CHECKS = [f"K{i}" for i in range(1, 13)]
+PROD_API = "https://guru-production-1b4f.up.railway.app/api/v1"  # scripts/traces.py's, so make traces reads the same server
+UPLOAD_TIMEOUT_S = 15
+UPLOAD_TEXT_CHARS = 2000  # per text field; the server takes up to 4,000
 
 
 def load_cases():
@@ -161,6 +173,21 @@ def exit_code(results):
     """1 when a case labeled GREEN fails (a regression) or a scenario crashes, else 0."""
     bad = [r for r in results if verdict(r) in ("UNEXPECTED RED", "CRASHED") or verdict(r).endswith("a regression")]
     return 1 if bad else 0
+
+
+def verdict_kind(r):
+    """verdict() in one word, for the Issues tab: pass, red_as_labeled, regression, now_green, flaky or
+    crashed. regression and crashed are exactly the cases exit_code() counts."""
+    v = verdict(r)
+    if v == "ok":
+        return "pass"
+    if v == "CRASHED":
+        return "crashed"
+    if v == "UNEXPECTED RED" or v.endswith("a regression"):
+        return "regression"
+    if v.startswith("NOW GREEN"):
+        return "now_green"
+    return "flaky" if v.startswith("FLAKY") else "red_as_labeled"
 
 
 def _judged(r):
@@ -302,6 +329,90 @@ def print_report(results, cases, live, baseline, baseline_at=None, gates=False):
     print("\nSummary: " + ", ".join(f"{n} {v}" for v, n in counts.items()))
 
 
+# ── the admin Issues tab ─────────────────────────────────────────────────────
+
+def judge_summary(r):
+    """The judge on one case: how many of the runs it graded it passed, each rubric's mean, and its reason
+    on the first run where it and the code check disagree (the run to read first). None if nothing was judged."""
+    judged = [x for _, x in _judged(r)]
+    if not judged:
+        return None
+    graded = [x for x in judged if "error" not in x["judge"]]
+    split = next((x["judge"]["reason"] for x in graded if x["judge"]["meets_expectation"] != _code_ok(x)), None)
+    return {"meets": f"{sum(1 for x in graded if x['judge']['meets_expectation'])} of {len(graded)}",
+            "means": {k: round(statistics.mean(x["judge"][k]["score"] for x in graded), 1) if graded else None
+                      for k in judge.RUBRICS},
+            "reason": _clip(split)}
+
+
+def _clip(text, n=UPLOAD_TEXT_CHARS):
+    if text is None:
+        return None
+    text = str(text)
+    return text if len(text) <= n else text[:n - 3].rstrip() + "..."
+
+
+def upload_case(r, case):
+    """One case as the Issues tab keeps it: the verdict, what happened, why and the fix. No transcripts.
+    A latency case passes on its percentile, not run by run, so there a run counts as passed only when it
+    also came in within the case's bar: "0 of 5", never "5 of 5" on a case that failed."""
+    first_bad = next((x["detail"] for x in r["runs"] if not x["ok"]), None)  # what the report prints, too
+    bar = case.get("p95_ms")
+    oks = [x["ok"] if bar is None or not x["ok"] else (x.get("metric") is not None and x["metric"] <= bar)
+           for x in r["runs"]]
+    return {"id": r["id"], "title": r["title"], "tier": r["tier"], "area": case.get("area"), "label": r["label"],
+            "verdict": verdict_kind(r), "passed": bool(r["passed"]), "n_runs": len(oks),
+            "n_passed": sum(1 for ok in oks if ok), "expect": _clip(case.get("expect")),
+            "what_happened": _clip(first_bad or r["summary"]), "why": _clip(case.get("why")),
+            "fix": _clip(case.get("fix")), "runs": [{"ok": ok} for ok in oks], "judge": judge_summary(r)}
+
+
+def upload_payload(results, cases, live, judging):
+    """The run as POST /admin/eval-runs takes it (app/routes/admin_issues.py, EvalRunIn)."""
+    by_id = {c["id"]: c for c in cases}
+    return {"run_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "live": bool(live),
+            "build_sha": BUILD_SHA, "prompt_version": agent.PROMPT_VERSION, "evals_version": evals_version(),
+            "judge_version": judge.VERSION if judging else None,
+            "cases": [upload_case(r, by_id.get(r["id"], {})) for r in results]}
+
+
+def _refused_field(r):
+    """The first field the server refused, from FastAPI's 422 body, e.g. cases.3.title and why."""
+    try:
+        e = r.json()["detail"][0]
+        return f", {'.'.join(str(p) for p in e['loc'][1:])}: {e['msg']}"[:200]
+    except Exception:
+        return ""
+
+
+def upload(results, cases, live, judging):
+    """Send the run to the admin Issues tab. One line either way, and it never raises: a failed upload
+    can't change the exit code. The key goes in a header and is never printed."""
+    key = os.getenv("ADMIN_API_KEY")
+    if not key:
+        print("Not uploaded: set ADMIN_API_KEY to send this run to the Issues tab.")
+        return False
+    base = os.getenv("GURU_API_URL", PROD_API).rstrip("/")
+    try:
+        payload = upload_payload(results, cases, live, judging)
+        r = httpx.post(f"{base}/admin/eval-runs", json=payload, headers={"X-Admin-Key": key},
+                       timeout=UPLOAD_TIMEOUT_S)
+    except Exception as e:
+        print(f"Not uploaded ({base}): {type(e).__name__}: {e}".replace(key, "***")[:300])
+        return False
+    if r.status_code != 201:
+        why = {401: ", the key was refused", 403: ", the key does not match ADMIN_API_KEY on the server",
+               404: ", the Issues tab isn't on this server yet", 422: _refused_field(r)}.get(r.status_code, "")
+        print(f"Not uploaded: {base} answered HTTP {r.status_code}{why}.")
+        return False
+    try:
+        run_id = r.json().get("id")
+    except Exception:
+        run_id = None
+    print(f"Uploaded to the Issues tab: run {run_id} on {base}.")
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser(description="Guru agent evals")
     ap.add_argument("--live", action="store_true", help="also run the T2 cases against the live model")
@@ -309,6 +420,7 @@ def main():
     ap.add_argument("--runs", type=int, help="override the run count for T2 cases")
     ap.add_argument("--save-baseline", action="store_true", help="store this run as the baseline")
     ap.add_argument("--no-judge", action="store_true", help="skip the LLM judge on live runs")
+    ap.add_argument("--no-upload", action="store_true", help="keep this run off the admin Issues tab")
     ap.add_argument("--verbose", action="store_true", help="show the agent's own error logs")
     args = ap.parse_args()
     if not args.verbose:  # ERR-03 makes the route log a traceback on purpose; the report already says it
@@ -369,6 +481,14 @@ def main():
         with open(BASELINE, "w") as f:
             json.dump(base, f, indent=2, default=str)
         print(f"Saved as the baseline: {os.path.relpath(BASELINE)}")
+    if args.case and not args.no_upload:
+        print("Not uploaded: a --case run covers only some cases, and the Issues tab's gate reads a whole run.")
+    elif not args.live and not args.no_upload:
+        # An offline run skips every T2 case. Uploaded, it would become the latest run and drop the live
+        # reds (INJ-01, STEP-07) off the tab, so the gate would look clearer than it is.
+        print("Not uploaded: an offline run skips the live cases, and the Issues tab's gate reads a whole live run.")
+    elif not args.no_upload:
+        upload(results, cases, args.live, judging)
     sys.exit(exit_code(results))
 
 

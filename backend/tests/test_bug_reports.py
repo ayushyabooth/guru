@@ -56,8 +56,8 @@ class FakeLinear:
     """Records every call. Set the fail_* fields to make Linear refuse."""
 
     def __init__(self):
-        self.issues, self.comments = [], []
-        self.fail_issue = self.fail_comment = None
+        self.issues, self.comments, self.updates = [], [], []
+        self.fail_issue = self.fail_comment = self.fail_update = None
         self.fail_labels = set()
         self.on_issue = None
 
@@ -84,6 +84,12 @@ class FakeLinear:
             raise self.fail_comment
         self.comments.append({"issue_id": issue_id, "body": body})
         return {"id": "comment-1", "url": None}
+
+    def update_issue_description(self, issue_id, description):
+        if self.fail_update:
+            raise self.fail_update
+        self.updates.append({"issue_id": issue_id, "description": description})
+        return {"id": issue_id}
 
 
 class FakeClaude:
@@ -123,7 +129,7 @@ def api(monkeypatch):
     monkeypatch.setenv("ADMIN_API_KEY", KEY)
     monkeypatch.delenv("SYNTHETIC_EMAIL_DOMAINS", raising=False)  # example.com is synthetic by default
     fake_linear, fake_claude = FakeLinear(), FakeClaude()
-    for name in ("resolve_team", "find_or_create_label", "create_issue", "create_comment"):
+    for name in ("resolve_team", "find_or_create_label", "create_issue", "create_comment", "update_issue_description"):
         monkeypatch.setattr(linear_client, name, getattr(fake_linear, name))
     monkeypatch.setattr(bug_reports.anthropic, "Anthropic", fake_claude.client)
     monkeypatch.setattr(bug_reports, "_jobs", Inline())
@@ -329,12 +335,58 @@ async def test_a_failed_triage_never_touches_the_filed_issue(api):
 
     api.claude.reply, api.claude.stop = GOOD_REPLY, "refusal"
     assert "refusal" in json.loads((await report()).hypothesis)["error"]
+    assert api.linear.updates == [], "a failed triage never rewrites the issue"
 
     api.claude.stop, api.linear.fail_comment = "end_turn", linear_client.LinearError("HTTP 500: boom")
     last = await report()
     hypothesis = json.loads(last.hypothesis)
     assert last.status == "filed" and hypothesis["summary"] and "HTTP 500" in hypothesis["comment_error"]
     assert len(api.linear.issues) == 4 and api.linear.comments == []
+    assert [u["issue_id"] for u in api.linear.updates] == ["issue-264"], "a refused comment doesn't stop the body"
+
+
+async def test_the_triage_writes_its_hypothesis_into_the_issue_body(api):
+    trace_id, session_id = _seed_trace(api, BETA)
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                       body={**BODY, "trace_id": trace_id, "session_id": session_id})
+    [issue], [update], [comment] = api.linear.issues, api.linear.updates, api.linear.comments
+    filed, body = issue["description"], update["description"]
+    assert update["issue_id"] == comment["issue_id"] == "issue-261"
+    assert bug_reports.EVAL_PLACEHOLDER in filed and bug_reports.EVAL_PLACEHOLDER not in body
+
+    sections = SECTIONS[:-1] + ("## Triage hypothesis", "## Suggested regression eval")
+    positions = [body.find(s) for s in sections]
+    assert -1 not in positions and positions == sorted(positions), "the hypothesis goes just before the eval"
+    head = filed[:filed.find("## Suggested regression eval")]
+    assert body.startswith(head), "everything above it stays as filed"
+    section = body[body.find("## Triage hypothesis"):body.find("## Suggested regression eval")]
+    for line in ("**Summary:** The feed tool failed, so the agent answered with an error.",
+                 "**Likely cause:** get_catchup_feed returned HTTP 500 and the model went on without it.",
+                 "**Severity:** high. **Confidence:** medium.",
+                 "**Evidence:**\n- trace.tool_errors[0]\n- report.expected",
+                 f"_{bug_reports.TRIAGE_MODEL} read the report and the rule findings. "
+                 "A hypothesis to check, not a verdict._"):
+        assert line in section, line
+    assert body.endswith("## Suggested regression eval\nFail get_catchup_feed once; expect a retry pill.")
+    assert "**Suggested regression eval:**" not in body, "the eval sits in its own section, once"
+
+    assert comment["body"].startswith("## Triage hypothesis"), "the comment still goes up"
+    assert "**Suggested regression eval:** Fail get_catchup_feed once" in comment["body"]
+    stored = json.loads(_report(api, r.json()["id"]).hypothesis)
+    assert stored["comment"] == "posted" and stored["description"] == "updated"
+
+
+async def test_a_failed_description_update_leaves_the_report_filed(api, caplog):
+    api.linear.fail_update = linear_client.LinearError("HTTP 400: Entity not found (INVALID_INPUT)")
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body=BODY)
+    assert r.status_code == 200, r.text
+    report = _report(api, r.json()["id"])
+    assert report.status == "filed" and report.linear_identifier == "GUR-261" and report.error is None
+    hypothesis = json.loads(report.hypothesis)
+    assert hypothesis["summary"] and hypothesis["comment"] == "posted"
+    assert "INVALID_INPUT" in hypothesis["description_error"] and "description" not in hypothesis
+    assert len(api.linear.comments) == 1 and api.linear.updates == []
+    assert "issue description not updated" in caplog.text
 
 
 # ── Admin ────────────────────────────────────────────────────────────────────
@@ -534,3 +586,22 @@ def test_the_linear_client_sends_the_key_bare_and_keeps_it_out_of_errors(monkeyp
     with pytest.raises(linear_client.LinearError, match="LINEAR_API_KEY is not set"):
         linear_client.create_comment("issue-1", "hello")
     assert len(sent) == 5
+
+
+def test_the_linear_client_rewrites_an_issue_description(monkeypatch):
+    monkeypatch.setenv("LINEAR_API_KEY", "lin_api_" + "s" * 40)
+    sent = []
+
+    def linear_api(request):
+        body = json.loads(request.content)
+        sent.append(body)
+        found = body["variables"]["id"] == "issue-1"
+        return httpx.Response(200, json={"data": {"issueUpdate": {"success": found,
+                                                                  "issue": {"id": "issue-1"} if found else None}}})
+
+    monkeypatch.setattr(linear_client, "_client", lambda: httpx.Client(transport=httpx.MockTransport(linear_api)))
+    assert linear_client.update_issue_description("issue-1", "## New body") == {"id": "issue-1"}
+    assert "issueUpdate(id: $id, input: $input)" in sent[0]["query"]
+    assert sent[0]["variables"] == {"id": "issue-1", "input": {"description": "## New body"}}
+    with pytest.raises(linear_client.LinearError, match="did not update"):
+        linear_client.update_issue_description("issue-2", "## New body")

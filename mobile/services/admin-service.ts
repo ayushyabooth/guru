@@ -1,6 +1,7 @@
 /**
  * Admin service: everything the in-app Performance panel reads (admins only):
- * agent traces, API and ingestion metrics, and beta bug reports.
+ * open issues and the latest eval run, agent traces, API and ingestion
+ * metrics, and beta bug reports.
  *
  * Every call goes through authedFetch, the single 401 -> login path. A 403 means
  * "this account is not an admin" and never signs anyone out. A 404 from these
@@ -462,6 +463,131 @@ export interface AdminReportDetail {
   diagnosis: AgentDiagnosis | null;
 }
 
+// ─── Issues (GUR-271): GET /admin/issues ─────────────────────────────────
+
+export type IssueSource = 'eval' | 'report' | 'production';
+export type IssueSourceFilter = IssueSource | 'all';
+export type ShipGateState = 'blocked' | 'clear' | 'unknown';
+export type GateReasonKind = 'safety' | 'regressions' | 'reports';
+export type IssueStatusTone = 'red' | 'amber' | 'green' | 'neutral';
+export type IssueChipTone = 'indigo' | 'amber';
+
+/** One line of the ship gate. The reports line never blocks the gate by itself. */
+export interface GateReason {
+  kind: GateReasonKind | string;
+  ok: boolean;
+  text: string;
+}
+
+/** The eval run the gate was read from. */
+export interface GateRun {
+  id: string;
+  run_at: string;
+  live: boolean;
+  build_sha: string | null;
+  prompt_version: string | null;
+}
+
+export interface ShipGate {
+  state: ShipGateState | string;
+  /** In order: safety, regressions, reports. */
+  reasons: GateReason[];
+  /** Null when no eval run has been uploaded. */
+  run: GateRun | null;
+  /** Null until the eval score ships (GUR-268). */
+  score: number | null;
+}
+
+export interface IssueCounts {
+  all: number;
+  eval: number;
+  report: number;
+  production: number;
+}
+
+export interface IssueStatus {
+  text: string;
+  tone: IssueStatusTone | string;
+}
+
+export interface IssueChip {
+  text: string;
+  tone: IssueChipTone | string;
+}
+
+/** What a row opens. Exactly one id is set: case_id for an eval, report_id for a report, trace_id for production. */
+export interface IssueRef {
+  case_id?: string;
+  report_id?: string;
+  trace_id?: string;
+}
+
+export interface AdminIssue {
+  key: string;
+  source: IssueSource | string;
+  at: string;
+  title: string;
+  status: IssueStatus;
+  body: string;
+  chip: IssueChip | null;
+  footer: string | null;
+  ref: IssueRef;
+  linear_url: string | null;
+}
+
+export interface AdminIssuesResponse {
+  gate: ShipGate;
+  counts: IssueCounts;
+  /** Newest first. */
+  issues: AdminIssue[];
+}
+
+// ─── GET /admin/evals/latest ─────────────────────────────────────────────
+
+export type EvalVerdict = 'pass' | 'red_as_labeled' | 'regression' | 'now_green' | 'flaky' | 'crashed';
+
+/** The LLM judge over a case's live runs. Report-only until it is calibrated. */
+export interface EvalJudgeSummary {
+  /** How many judged runs met the case, e.g. "2/3". */
+  meets: string;
+  /** Rubric means, 1 to 5. A rubric passes at 4. */
+  means: { voice: number | null; honesty: number | null; journey: number | null };
+  reason: string | null;
+}
+
+export interface EvalCaseResult {
+  id: string;
+  title: string;
+  /** "T1" (scripted model) or "T2" (live model). */
+  tier: string;
+  area: string;
+  /** "GREEN", "RED change N" or "STAY RED N", from cases.yaml. */
+  label: string;
+  verdict: EvalVerdict | string;
+  passed: boolean;
+  n_runs: number;
+  n_passed: number;
+  expect: string;
+  what_happened: string;
+  why: string;
+  fix: string;
+  runs: { ok: boolean }[];
+  judge: EvalJudgeSummary | null;
+  linear_url: string | null;
+}
+
+export interface EvalRun {
+  id: string;
+  run_at: string;
+  live: boolean;
+  build_sha: string | null;
+  prompt_version: string | null;
+  evals_version: string | null;
+  judge_version: string | null;
+  uploaded_by: string | null;
+  cases: EvalCaseResult[];
+}
+
 // ─── Transport ───────────────────────────────────────────────────────────
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -598,4 +724,27 @@ export function retryReport(id: string): Promise<AdminReportDetail> {
   return adminRequest<AdminReportDetail>(`/admin/reports/${encodeURIComponent(id)}/retry`, {
     method: 'POST',
   });
+}
+
+/**
+ * GET /admin/issues: every open issue in the window, newest first (eval cases,
+ * beta reports, flagged production turns), under the ship gate read from the
+ * latest eval run.
+ */
+export function getIssues(days: number = 7, source: IssueSourceFilter = 'all'): Promise<AdminIssuesResponse> {
+  return adminRequest<AdminIssuesResponse>(`/admin/issues${queryString({ days, source })}`);
+}
+
+/**
+ * GET /admin/evals/latest: the latest uploaded eval run, or null when there is
+ * none (the server answers 404 with a reason; a bare 404 still means the route
+ * is not deployed).
+ */
+export async function getLatestEvalRun(): Promise<EvalRun | null> {
+  try {
+    return await adminRequest<EvalRun>('/admin/evals/latest');
+  } catch (e) {
+    if (isAdminApiError(e) && e.kind === 'not_found') return null;
+    throw e;
+  }
 }
