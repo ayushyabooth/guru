@@ -3,6 +3,14 @@
 PY := $(shell [ -x backend/venv/bin/python ] && echo venv/bin/python || echo python3)
 DAYS ?= 7
 TRAFFIC ?= real
+# The admin key, for the commands that read production and for the eval upload: the shell's own if it has
+# one, otherwise the Mac login Keychain's (item guru-admin-api-key), read as the command runs and never
+# printed. So they work from any terminal and from a Claude Code session, whose shell skips ~/.zshrc.
+# Without either, each command says the key is missing.
+ADMIN_KEY_TARGETS = evals evals-upload traces trace reports report issues eval-runs ingestion-health
+ifeq ($(origin ADMIN_API_KEY),undefined)
+$(ADMIN_KEY_TARGETS): export ADMIN_API_KEY = $(shell security find-generic-password -a "$$USER" -s guru-admin-api-key -w 2>/dev/null)
+endif
 # Backend tests never touch a real database or spend money: DATABASE_URL points at a fresh SQLite file, deleted
 # afterwards (some legacy test files create tables on whatever it names), and the Anthropic key is a dummy, so a
 # missed mock fails instead of calling the API. Use as: cd backend && $(TEST_DB) <pytest ...>$(TEST_DB_DONE)
