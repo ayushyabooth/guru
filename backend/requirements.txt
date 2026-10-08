@@ -16,7 +16,10 @@ passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 
 # AI / ML
-anthropic>=0.39.0
+# Pinned (GUR-305): 1.x dropped `temperature` from messages.create(), and 17 calls pass it. A fresh resolve
+# picked 1.5.0, so those calls fell back to generic output in production. 0.75.0 is the version every local
+# test, eval, judge call and persona run used. Unpin only with those calls changed.
+anthropic==0.75.0
 fastembed>=0.3.0
 scikit-learn>=1.3.0
 numpy>=1.24.0
