@@ -7,7 +7,7 @@ TRAFFIC ?= real
 .PHONY: test-agent test evals traces traces-local trace
 
 test-agent: ## Agent contract, admin access, reports and boot-cleanup tests: scripted model, no network, no real database
-	cd backend && $(PY) -m pytest -q --disable-warnings tests/test_agent_loop.py tests/test_admin_access.py tests/test_trace_insights.py tests/test_evals_judge.py tests/test_bug_reports.py tests/test_cleanup.py
+	cd backend && $(PY) -m pytest -q --disable-warnings tests/test_agent_loop.py tests/test_admin_access.py tests/test_trace_insights.py tests/test_evals_judge.py tests/test_bug_reports.py tests/test_cleanup.py tests/test_watch_deploy.py
 
 test: ## Full backend test suite (some tests use the configured database)
 	cd backend && $(PY) -m pytest -q tests
@@ -37,3 +37,7 @@ reports-local: ## The same list from the local database
 
 report: ## One production report in full: make report ID=<report id>
 	cd backend && $(PY) scripts/reports.py show $(ID) --prod
+
+.PHONY: watch-deploy
+watch-deploy: ## After a push: poll /health every 10s until the pushed commit serves; lists any downtime. SHA=<commit>, or PROBE=<route> EXPECT=<status> for an older build
+	cd backend && $(PY) scripts/watch_deploy.py $(if $(SHA),--sha $(SHA)) $(if $(PROBE),--probe $(PROBE) --expect $(EXPECT))

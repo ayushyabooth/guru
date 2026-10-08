@@ -276,8 +276,10 @@ async def startup_event():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "message": "Guru API is running"}
+    """Health check endpoint. `build` is the commit serving (Railway's), so a deploy can be
+    watched until the pushed commit answers: make watch-deploy."""
+    from app.services.agent_trace import BUILD_SHA
+    return {"status": "healthy", "message": "Guru API is running", "build": BUILD_SHA}
 
 
 @app.get("/")

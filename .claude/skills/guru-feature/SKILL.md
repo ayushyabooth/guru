@@ -45,7 +45,7 @@ Create sub-issues under the feature's issue: backend, app (one per group of fram
 `make test-agent`, `make evals` (add `LIVE=1` for a prompt change), and a screenshot of the running app next to each approved frame. Name any difference you chose to keep. A persona run if the change touches a journey.
 
 ## 6. Ship
-Run the pre-push checklist in the root `CLAUDE.md`, out loud: what the restart does, the schema change, the rollback. Push and deploy only on the owner's go. After the deploy: `/health` answers 200 and one traced turn shows the new build SHA. Close the Linear issues, then `python3 .claude/hooks/feature_state.py done`.
+Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, `make watch-deploy` until the new commit serves, the backend checks, then the web preview and promote. Close the Linear issues, then `python3 .claude/hooks/feature_state.py done`.
 
 ## Small changes
 A bug fix or a copy change still starts with a one-line requirement the owner approves. Skip the design stage only when nothing visible changes, and record that with `--none`.
