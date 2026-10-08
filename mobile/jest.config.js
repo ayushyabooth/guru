@@ -11,6 +11,10 @@ module.exports = {
   //   Playwright refuses to run inside jest.
   // - complete-auth-flow.test.ts and signup-diagnostic.test.js call a live API
   //   and sign up new accounts on it. Under jest, fetch is a mock.
+  // GitHub's runners are slower than a laptop: the first render of an admin
+  // view took over 5 seconds there (jest's default) and timed out. A test that
+  // hangs still fails, after 20 seconds.
+  testTimeout: 20000,
   testPathIgnorePatterns: [
     '/node_modules/',
     '<rootDir>/__tests__/e2e/[^/]*\\.spec\\.ts$',
