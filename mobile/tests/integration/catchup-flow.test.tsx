@@ -3,15 +3,16 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import CatchupScreen from '../../app/(tabs)/catchup';
 import { CatchupService } from '../../services/article-service';
-import * as TimeTracking from '../../hooks/useTimeTracking';
 
 // Mock the services and hooks
 jest.mock('../../services/article-service');
-jest.mock('../../hooks/useTimeTracking');
 jest.mock('../../utils/auth');
 
 const mockCatchupService = CatchupService as jest.Mocked<typeof CatchupService>;
-const mockUseTimeTracking = TimeTracking.useTimeTracking as jest.MockedFunction<typeof TimeTracking.useTimeTracking>;
+// hooks/useTimeTracking no longer exists (the screen now uses
+// useScreenTimeTracking from contexts/TimeTrackingContext). This stand-in only
+// lets the file load so the skipped tests below are reported.
+const mockUseTimeTracking = jest.fn();
 
 // Mock data
 const mockStoryboards = [
@@ -71,7 +72,14 @@ const mockStoryboards = [
   },
 ];
 
-describe('Catchup Flow Integration Tests', () => {
+// Skipped, every test, until they are rewritten for today's Catch-up screen
+// (GUR-253). They were written for an older screen, with a "Your curated daily
+// insights" header and time tracked by hooks/useTimeTracking. Today the screen
+// renders CatchupFeed, which loads the feed through react-query
+// (hooks/useCatchupFeed.ts) and draws InFocusStoryboardCard, and it tracks time
+// through TimeTrackingContext. The file stopped loading when
+// hooks/useTimeTracking was deleted.
+describe.skip('Catchup Flow Integration Tests', () => {
   const mockStartTracking = jest.fn();
   const mockStopTracking = jest.fn();
   const mockLogTime = jest.fn();

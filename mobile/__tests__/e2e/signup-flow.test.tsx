@@ -1,307 +1,152 @@
+/**
+ * Sign up when the network or the API misbehaves (app/(auth)/signup.tsx): the
+ * one retry after a refused connection (GUR-229), the busy button, and the
+ * error text for answers that aren't a plain message. A component test despite
+ * the folder: fetch is the mock from jest-setup.js, which also mocks
+ * expo-secure-store and expo-router, so nothing leaves the test.
+ *
+ * The form's checks, a successful sign-up and a sign-up the API refuses are in
+ * __tests__/integration/auth.test.tsx. This file used to repeat them against
+ * the old screen (Alert dialogs, "Confirm Password", "Create Account"), and its
+ * "real API" case never reached an API: it put back the same mocked fetch.
+ */
 import React from 'react';
-import { render, fireEvent, waitFor, screen } from '@testing-library/react-native';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 import SignupScreen from '../../app/(auth)/signup';
 
-// Mock fetch
-const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
+const fetchMock = jest.mocked(global.fetch);
+const setItem = jest.mocked(SecureStore.setItemAsync);
+const replace = jest.mocked(router.replace);
 
-// Mock router
-const mockReplace = jest.fn();
-jest.mock('expo-router', () => ({
-  router: {
-    replace: mockReplace,
-  },
-  Link: ({ children, href, asChild }: any) => {
-    if (asChild) {
-      return React.cloneElement(children, {
-        onPress: () => mockReplace(href),
-      });
-    }
-    return children;
-  },
-}));
+function ok(body: unknown): Response {
+  return { ok: true, status: 200, json: async () => body } as unknown as Response;
+}
 
-describe('Signup E2E Flow', () => {
+/** A failed answer. The screen reads the body with text(), then parses it. */
+function failed(status: number, text: string): Response {
+  return { ok: false, status, text: async () => text } as unknown as Response;
+}
+
+/**
+ * Let pending promises (the request, json(), SecureStore) settle until `done`.
+ * RNTL's findBy and waitFor hang under fake timers on this screen, where the
+ * wordmark's organism (GuruBlob) redraws on a requestAnimationFrame loop.
+ */
+async function settleUntil(done: () => boolean): Promise<void> {
+  for (let i = 0; i < 20 && !done(); i++) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+}
+
+function signUp(email = 'new@example.com', password = 'password123') {
+  fireEvent.changeText(screen.getByPlaceholderText('Email'), email);
+  fireEvent.changeText(screen.getByPlaceholderText('Password'), password);
+  fireEvent.changeText(screen.getByPlaceholderText('Confirm password'), password);
+  fireEvent.press(screen.getByRole('button', { name: 'Sign Up' }));
+}
+
+describe('Signup when the network or the API misbehaves', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFetch.mockClear();
-    mockReplace.mockClear();
-    (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
+    fetchMock.mockReset();
+    jest.useFakeTimers();
   });
 
-  it('successfully creates account and redirects to onboarding', async () => {
-    // Mock successful API response
-    const mockResponse = {
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        user_id: '3074ba22-c292-41e9-bbab-aade3932867b',
-        access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refresh_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      }),
-    };
-    mockFetch.mockResolvedValue(mockResponse as any);
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
+  it('retries once after a refused connection, then creates the account', async () => {
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('Network request failed'))
+      .mockResolvedValueOnce(ok({ access_token: 'access-1', refresh_token: 'refresh-1' }));
     render(<SignupScreen />);
 
-    // Fill in the form
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
+    signUp();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    fireEvent.changeText(emailInput, 'test.e2e@example.com');
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'testpass123');
-
-    // Tap create account button
-    fireEvent.press(createAccountButton);
-
-    // Wait for API call
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/auth/signup',
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: 'test.e2e@example.com',
-            password: 'testpass123',
-          }),
-        })
-      );
+    // The retry waits 1.5 seconds. The async advance also runs the promise
+    // callbacks around each timer, so the first failure is seen before it.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(1500);
     });
+    await settleUntil(() => screen.queryByText('Account created!') !== null);
 
-    // Verify tokens are stored
-    await waitFor(() => {
-      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
-        'access_token',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-      );
-      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
-        'refresh_token',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-      );
-    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Account created!')).toBeTruthy();
+    expect(setItem).toHaveBeenCalledWith('access_token', 'access-1');
+    expect(replace).not.toHaveBeenCalled();
 
-    // Verify navigation to onboarding
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/onboarding/industry');
+    act(() => {
+      jest.advanceTimersByTime(1500);
     });
+    expect(replace).toHaveBeenCalledWith('/(auth)/onboarding/industry');
   });
 
-  it('handles API errors gracefully', async () => {
-    // Mock API error response
-    const mockResponse = {
-      ok: false,
-      json: jest.fn().mockResolvedValue({
-        detail: 'Email already exists',
-      }),
-    };
-    mockFetch.mockResolvedValue(mockResponse as any);
-
+  it("says it couldn't reach Guru when the retry fails too", async () => {
+    fetchMock.mockRejectedValue(new TypeError('Network request failed'));
     render(<SignupScreen />);
 
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
-
-    fireEvent.changeText(emailInput, 'existing@example.com');
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'testpass123');
-
-    fireEvent.press(createAccountButton);
-
-    await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
-        'Signup Failed',
-        'Email already exists'
-      );
+    signUp();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(1500);
     });
+    await settleUntil(() => screen.queryByText(/Couldn't reach Guru/) !== null);
 
-    // Should not navigate on error
-    expect(mockReplace).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/Couldn't reach Guru/)).toBeTruthy();
+    expect(setItem).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('handles network errors gracefully', async () => {
-    // Mock network error
-    mockFetch.mockRejectedValue(new Error('Network error'));
-
+  it('shows the button busy while the account is created', async () => {
+    let answer!: (r: Response) => void;
+    fetchMock.mockReturnValue(new Promise<Response>((resolve) => (answer = resolve)));
     render(<SignupScreen />);
 
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
+    signUp();
+    expect(screen.getByRole('button', { name: 'Sign Up' }).props.accessibilityState).toEqual({
+      disabled: true,
+      busy: true,
+    });
 
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'testpass123');
+    answer(ok({ access_token: 'access-1', refresh_token: 'refresh-1' }));
+    await settleUntil(() => screen.queryByText('Account created!') !== null);
 
-    fireEvent.press(createAccountButton);
-
-    await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Network error. Please try again.'
-      );
+    expect(screen.getByRole('button', { name: 'Redirecting...' }).props.accessibilityState).toEqual({
+      disabled: true,
+      busy: false,
     });
   });
 
-  it('validates form fields before submission', async () => {
+  it("joins a 422's validation messages into one line", async () => {
+    const detail = [
+      { type: 'value_error', loc: ['body', 'email'], msg: 'value is not a valid email address', input: 'x' },
+      { type: 'string_too_short', loc: ['body', 'password'], msg: 'String should have at least 8 characters' },
+    ];
+    fetchMock.mockResolvedValue(failed(422, JSON.stringify({ detail })));
     render(<SignupScreen />);
 
-    const createAccountButton = screen.getByText('Create Account');
+    signUp('x', 'password123');
+    const message = 'value is not a valid email address. String should have at least 8 characters';
+    await settleUntil(() => screen.queryByText(message) !== null);
 
-    // Try to submit empty form
-    fireEvent.press(createAccountButton);
-
-    await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Please fill in all fields'
-      );
-    });
-
-    // Should not make API call
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(screen.getByText(message)).toBeTruthy();
   });
 
-  it('validates password confirmation', async () => {
+  it("shows a general message when the error isn't JSON", async () => {
+    fetchMock.mockResolvedValue(failed(502, '<html>Bad Gateway</html>'));
     render(<SignupScreen />);
 
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
+    signUp();
+    await settleUntil(() => screen.queryByText('Something went wrong. Please try again.') !== null);
 
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'differentpass');
-
-    fireEvent.press(createAccountButton);
-
-    await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Passwords do not match'
-      );
-    });
-
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(screen.getByText('Something went wrong. Please try again.')).toBeTruthy();
+    expect(replace).not.toHaveBeenCalled();
   });
-
-  it('validates password length', async () => {
-    render(<SignupScreen />);
-
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
-
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, '12345'); // Less than 6 characters
-    fireEvent.changeText(confirmPasswordInput, '12345');
-
-    fireEvent.press(createAccountButton);
-
-    await waitFor(() => {
-      expect(require('react-native').Alert.alert).toHaveBeenCalledWith(
-        'Error',
-        'Password must be at least 6 characters'
-      );
-    });
-
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it('shows loading state during signup', async () => {
-    // Mock slow API response
-    const mockResponse = {
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        user_id: 'test-id',
-        access_token: 'test-token',
-        refresh_token: 'test-refresh',
-      }),
-    };
-    
-    let resolvePromise: (value: any) => void;
-    const slowPromise = new Promise((resolve) => {
-      resolvePromise = resolve;
-    });
-    
-    mockFetch.mockReturnValue(slowPromise as any);
-
-    render(<SignupScreen />);
-
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
-
-    fireEvent.changeText(emailInput, 'test@example.com');
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'testpass123');
-
-    fireEvent.press(createAccountButton);
-
-    // Should show loading state
-    await waitFor(() => {
-      expect(screen.getByText('Creating Account...')).toBeTruthy();
-    });
-
-    // Resolve the promise
-    resolvePromise!(mockResponse);
-
-    // Should return to normal state
-    await waitFor(() => {
-      expect(screen.getByText('Create Account')).toBeTruthy();
-    });
-  });
-});
-
-// Integration test with real API
-describe('Signup Integration Test', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (SecureStore.setItemAsync as jest.Mock).mockResolvedValue(undefined);
-  });
-
-  it('real API signup flow works end-to-end', async () => {
-    // Use real fetch for integration test
-    const originalFetch = global.fetch;
-    global.fetch = originalFetch;
-
-    render(<SignupScreen />);
-
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-    const confirmPasswordInput = screen.getByPlaceholderText('Confirm Password');
-    const createAccountButton = screen.getByText('Create Account');
-
-    // Use unique email for each test run
-    const testEmail = `test.integration.${Date.now()}@example.com`;
-    
-    fireEvent.changeText(emailInput, testEmail);
-    fireEvent.changeText(passwordInput, 'testpass123');
-    fireEvent.changeText(confirmPasswordInput, 'testpass123');
-
-    fireEvent.press(createAccountButton);
-
-    // Wait for successful completion
-    await waitFor(() => {
-      expect(SecureStore.setItemAsync).toHaveBeenCalledWith(
-        'access_token',
-        expect.stringMatching(/^eyJ/) // JWT token pattern
-      );
-    }, { timeout: 10000 });
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(auth)/onboarding/industry');
-    });
-  }, 15000); // 15 second timeout for real API
 });

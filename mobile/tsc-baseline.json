@@ -1,0 +1,28 @@
+{
+  "about": "Type errors per file in the app, the most `npm run typecheck:ratchet` allows. It only goes down: fix errors, then run it with --update. See scripts/tsc-ratchet.js.",
+  "total": 40,
+  "files": {
+    "__tests__/e2e/auth-flow-playwright.spec.ts": 1,
+    "__tests__/e2e/filter-section-test.spec.ts": 3,
+    "app/(tabs)/catchup.tsx": 1,
+    "app/(tabs)/divein.tsx": 2,
+    "app/(tabs)/recap.tsx": 6,
+    "app/article/[id].tsx": 4,
+    "components/Catch-up/InFocusStoryboardCard.tsx": 3,
+    "components/Catch-up/RelatedArticlesList.tsx": 2,
+    "components/Divein/DiveinArticleCard.tsx": 1,
+    "components/Reader/RelatedArticles.tsx": 1,
+    "components/Reader/TextSelectionMenu.tsx": 1,
+    "components/Reader/WebViewReader.tsx": 3,
+    "components/Recap/CommitmentScreen.tsx": 1,
+    "components/Recap/QuestionsStage.tsx": 1,
+    "components/Recap/SocraticStage.tsx": 1,
+    "components/ui/AppBackground.tsx": 1,
+    "components/ui/FilterPills.tsx": 2,
+    "components/ui/HeroGradientFallback.tsx": 1,
+    "components/ui/Icon.tsx": 1,
+    "components/ui/OrganicBackground.tsx": 1,
+    "contexts/TimeTrackingContext.tsx": 2,
+    "hooks/useReadingSession.ts": 1
+  }
+}

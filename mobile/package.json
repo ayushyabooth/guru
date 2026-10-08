@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "build:web": "npx expo export --platform web && node scripts/post-export-fonts.js",
     "test": "jest",
+    "typecheck:ratchet": "node scripts/tsc-ratchet.js",
     "lint": "expo lint"
   },
   "dependencies": {

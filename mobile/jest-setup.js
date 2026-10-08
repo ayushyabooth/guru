@@ -40,15 +40,43 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock react-native components
+// Two native modules that react-native's own jest setup (0.81) doesn't mock:
+// DevMenu, and SettingsManager (read by Settings on iOS, the platform jest-expo
+// tests as). Reading DevMenu or Settings, or spreading the whole module the way
+// `{ ...jest.requireActual('react-native') }` does, used to throw
+// "TurboModuleRegistry.getEnforcing(...): 'DevMenu' could not be found" and
+// fail every suite that imported react-native.
+jest.mock('react-native/src/private/devsupport/devmenu/specs/NativeDevMenu', () => ({
+  __esModule: true,
+  default: {
+    show: jest.fn(),
+    reload: jest.fn(),
+    setProfilingEnabled: jest.fn(),
+    setHotLoadingEnabled: jest.fn(),
+  },
+}));
+jest.mock('react-native/src/private/specs_DEPRECATED/modules/NativeSettingsManager', () => ({
+  __esModule: true,
+  default: {
+    getConstants: () => ({ settings: {} }),
+    setValues: jest.fn(),
+    deleteValues: jest.fn(),
+  },
+}));
+
+// The real react-native with Alert.alert mocked. react-native's index exports
+// each API through a lazy getter, so copy the getters instead of spreading
+// them: a spread loads every API (and its native module) in every suite.
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Alert: {
-      alert: jest.fn(),
-    },
-  };
+  const mocked = Object.defineProperties({}, Object.getOwnPropertyDescriptors(RN));
+  Object.defineProperty(mocked, 'Alert', {
+    value: { alert: jest.fn() },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  return mocked;
 });
 
 // Silence the warning: Animated: `useNativeDriver` is not supported

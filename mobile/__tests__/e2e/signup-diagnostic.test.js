@@ -1,4 +1,6 @@
 // Simple diagnostic test for signup functionality
+// Needs a backend on localhost:8000, and signs up a new account on it, so
+// `npx jest` leaves this file out (testPathIgnorePatterns in jest.config.js).
 describe('Signup Diagnostic Test', () => {
   it('can make API call to signup endpoint', async () => {
     const testEmail = `test.diagnostic.${Date.now()}@example.com`;

@@ -57,6 +57,13 @@ const mockStoryboard: Storyboard = {
   article_count: 3,
 };
 
+// No screen renders StoryboardCard any more: the Catch-up feed draws
+// InFocusStoryboardCard (components/Catch-up/CatchupFeed.tsx). The card has
+// also changed since these tests were written: the theme shows as written (in
+// a pill), the prompt has no quotes, the button reads "Save" then "Saved", and
+// the expandable related-articles list with its own save buttons became a
+// fixed "Also in this story:" list. The tests follow today's card; the two
+// about the old related list are skipped below.
 describe('StoryboardCard', () => {
   const mockOnSave = jest.fn();
   const mockOnNotRelevant = jest.fn();
@@ -75,7 +82,7 @@ describe('StoryboardCard', () => {
     );
 
     // Check theme
-    expect(getByText('AI INNOVATION')).toBeTruthy();
+    expect(getByText('AI Innovation')).toBeTruthy();
     
     // Check headline
     expect(getByText('Major AI Breakthrough Announced')).toBeTruthy();
@@ -85,10 +92,10 @@ describe('StoryboardCard', () => {
     expect(getByText('This is a test storyboard summary about recent developments in AI.')).toBeTruthy();
     
     // Check personal prompt
-    expect(getByText('"How might these AI developments impact your current projects?"')).toBeTruthy();
+    expect(getByText('How might these AI developments impact your current projects?')).toBeTruthy();
     
     // Check action buttons
-    expect(getByText('Save for Dive-in')).toBeTruthy();
+    expect(getByText('Save')).toBeTruthy();
     expect(getByText('Not relevant')).toBeTruthy();
   });
 
@@ -106,7 +113,9 @@ describe('StoryboardCard', () => {
     expect(() => getByText('🔒')).toThrow();
   });
 
-  it('expands and collapses related articles', () => {
+  // Skipped: the related articles are no longer a list that expands and
+  // collapses. The card shows narrative_articles under "Also in this story:".
+  it.skip('expands and collapses related articles', () => {
     const { getByText, queryByText } = render(
       <StoryboardCard
         storyboard={mockStoryboard}
@@ -144,7 +153,7 @@ describe('StoryboardCard', () => {
       />
     );
 
-    fireEvent.press(getByText('Save for Dive-in'));
+    fireEvent.press(getByText('Save'));
     
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith('article-1');
@@ -160,14 +169,14 @@ describe('StoryboardCard', () => {
       />
     );
 
-    // Initially shows "Save for Dive-in"
-    expect(getByText('Save for Dive-in')).toBeTruthy();
+    // Initially shows "Save"
+    expect(getByText('Save')).toBeTruthy();
 
     // Press save button
-    fireEvent.press(getByText('Save for Dive-in'));
+    fireEvent.press(getByText('Save'));
     
     await waitFor(() => {
-      expect(getByText('✓ Saved')).toBeTruthy();
+      expect(getByText('Saved')).toBeTruthy();
     });
   });
 
@@ -217,7 +226,9 @@ describe('StoryboardCard', () => {
     expect(mockOnNotRelevant).toHaveBeenCalledWith('storyboard-1');
   });
 
-  it('handles save article in related articles list', async () => {
+  // Skipped: related articles no longer have their own save buttons; only the
+  // headline article can be saved from the card.
+  it.skip('handles save article in related articles list', async () => {
     const { getByText } = render(
       <StoryboardCard
         storyboard={mockStoryboard}

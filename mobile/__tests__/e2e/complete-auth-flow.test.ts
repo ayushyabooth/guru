@@ -2,6 +2,9 @@
  * E2E Test: Complete Auth Flow
  * Tests the entire user journey: signup -> login -> fetch storyboards
  * This test will identify exactly where the auth flow is breaking
+ *
+ * Needs a live API, and signs up new accounts on it, so `npx jest` leaves this
+ * file out (testPathIgnorePatterns in jest.config.js). It is still type-checked.
  */
 
 import { API_BASE_URL } from '../../constants/config';
@@ -29,10 +32,6 @@ describe('Complete Auth Flow E2E', () => {
     expect(response.status).toBe(200);
     
     const data = await response.json();
-      user_id: data.user_id,
-      has_access_token: !!data.access_token,
-      has_refresh_token: !!data.refresh_token,
-    });
 
     expect(data.user_id).toBeDefined();
     expect(data.access_token).toBeDefined();
@@ -60,9 +59,6 @@ describe('Complete Auth Flow E2E', () => {
     expect(response.status).toBe(200);
     
     const profile = await response.json();
-      user_id: profile.user_id,
-      core_industry: profile.core_industry,
-    });
 
     expect(profile.user_id).toBe(userId);
   });
@@ -79,21 +75,11 @@ describe('Complete Auth Flow E2E', () => {
     
     if (!response.ok) {
       const errorText = await response.text();
-      
-      // Log detailed error info
-        url: `${API_BASE_URL}/catchup-feed?filter=core&limit=5&offset=0`,
-        token_preview: accessToken.substring(0, 20) + '...',
-        user_id: userId,
-      });
     }
 
     expect(response.status).toBe(200);
     
     const data = await response.json();
-      storyboards_count: data.storyboards?.length || 0,
-      total: data.total,
-      filter: data.filter,
-    });
 
     // Storyboards might be 0 initially (need to generate), that's OK
     expect(data.storyboards).toBeDefined();
@@ -119,10 +105,6 @@ describe('Complete Auth Flow E2E', () => {
     expect(response.status).toBe(200);
     
     const data = await response.json();
-      user_id: data.user_id,
-      has_access_token: !!data.access_token,
-      token_matches_signup: data.access_token === accessToken,
-    });
 
     expect(data.user_id).toBe(userId);
     expect(data.access_token).toBeDefined();
@@ -175,13 +157,6 @@ describe('Complete Auth Flow E2E', () => {
     
     if (!storiesRes.ok) {
       const errorText = await storiesRes.text();
-      
-      // Additional debugging
-        email: newEmail,
-        user_id: loginData.user_id,
-        token_preview: loginData.access_token.substring(0, 30),
-        api_url: API_BASE_URL,
-      });
     }
 
     expect(storiesRes.status).toBe(200);

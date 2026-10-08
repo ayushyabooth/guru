@@ -48,14 +48,14 @@ describe('UnifiedTabBar', () => {
       />
     );
 
-    // Icons are emoji strings - check they're rendered
-    expect(screen.getByText('🎯')).toBeTruthy(); // core
-    expect(screen.getByText('⭐')).toBeTruthy(); // specialization
-    expect(screen.getByText('💡')).toBeTruthy(); // interest
+    // The icons were emoji; they are Phosphor icons now (components/ui/Icon).
+    expect(screen.getByTestId(/^phosphor-react-native-target-/)).toBeTruthy(); // core
+    expect(screen.getByTestId(/^phosphor-react-native-star-/)).toBeTruthy(); // specialization
+    expect(screen.getByTestId(/^phosphor-react-native-lightbulb-/)).toBeTruthy(); // interest
   });
 
   it('does not show icons in minimal variant', () => {
-    const { queryByText } = render(
+    render(
       <UnifiedTabBar
         tabs={mockTabs}
         activeTabId="1"
@@ -65,13 +65,11 @@ describe('UnifiedTabBar', () => {
       />
     );
 
-    expect(queryByText('🎯')).toBeNull();
-    expect(queryByText('⭐')).toBeNull();
-    expect(queryByText('💡')).toBeNull();
+    expect(screen.queryAllByTestId(/^phosphor-react-native-/)).toHaveLength(0);
   });
 
   it('handles empty tabs array', () => {
-    const { container } = render(
+    render(
       <UnifiedTabBar
         tabs={[]}
         activeTabId=""
@@ -79,11 +77,15 @@ describe('UnifiedTabBar', () => {
       />
     );
 
-    // Should render without crashing
-    expect(container).toBeTruthy();
+    // Renders the empty tab list without crashing.
+    expect(screen.getByLabelText('Content filters')).toBeTruthy();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
   });
 });
 
+// FilterTabBar is now a wrapper over FilterPills (GUR-132), which draws each
+// label twice: a dim layer that is always visible and an active layer that
+// fades in. So these tests find a pill by its tab role and name, not its text.
 describe('FilterTabBar', () => {
   const mockTabs = [
     { label: 'All', context: 'all' },
@@ -100,9 +102,11 @@ describe('FilterTabBar', () => {
       />
     );
 
-    expect(screen.getByText('All')).toBeTruthy();
-    expect(screen.getByText('Consumer')).toBeTruthy();
-    expect(screen.getByText('Technology')).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
+      'All',
+      'Consumer',
+      'Technology',
+    ]);
   });
 
   it('calls onContextChange when tab is pressed', () => {
@@ -115,12 +119,12 @@ describe('FilterTabBar', () => {
       />
     );
 
-    fireEvent.press(screen.getByText('Consumer'));
+    fireEvent.press(screen.getByRole('tab', { name: 'Consumer' }));
     expect(mockOnContextChange).toHaveBeenCalledWith('consumer');
   });
 
   it('highlights selected context', () => {
-    const { getByText } = render(
+    render(
       <FilterTabBar
         tabs={mockTabs}
         selectedContext="consumer"
@@ -128,8 +132,7 @@ describe('FilterTabBar', () => {
       />
     );
 
-    // The Consumer tab should be active (styled differently)
-    const consumerTab = getByText('Consumer');
-    expect(consumerTab).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Consumer' }).props.accessibilityState).toEqual({ selected: true });
+    expect(screen.getByRole('tab', { name: 'All' }).props.accessibilityState).toEqual({ selected: false });
   });
 });
