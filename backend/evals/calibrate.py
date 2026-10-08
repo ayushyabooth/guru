@@ -530,7 +530,11 @@ CHECKED = (("summary", (("article", "summary"), ("item", "summary"), ("item", "w
            ("why it matters", (("item", "why_matters"), ("article", "why_matters"))),
            ("spotlight quote", (("item", "spotlight_quotes"), ("item", "spotlight_quote"),
                                 ("article", "spotlight_quote"))),
-           ("between the lines", (("item", "between_the_lines"),)))
+           ("between the lines", (("item", "between_the_lines"),)),
+           # Dive-in's crux fields (GUR-231): the walkthrough quotes them, so a labeler needs them to judge it.
+           ("core argument", (("item", "core_argument"),)),
+           ("strongest evidence", (("item", "strongest_evidence"),)),
+           ("counterpoints", (("item", "counterpoints"),)))
 UNSEEN = f"(not in the judge's copy: the run's tool results had used up their {judge.RUN_RESULT_CHARS:,} characters)"
 CUT = "(the judge's copy stops here: the rest was clipped)"
 
@@ -780,6 +784,8 @@ def _items(s, items, indent):
             if label == "spotlight quote":
                 quotes = value if isinstance(value, list) else [value]
                 label, value = ("spotlight quotes" if len(quotes) > 1 else label), " ".join(f'"{q}"' for q in quotes)
+            elif isinstance(value, list):
+                value = "; ".join(str(v) for v in value)
             s.add(f"{label}: {_clip(value)}", indent + len(mark), 2)
     if len(items) > DIGEST_ITEMS:
         s.add(f"and {len(items) - DIGEST_ITEMS} more", indent)
