@@ -20,6 +20,8 @@ backend/venv/
 .env.*.local
 .secrets.local
 *.secret
+# Persona QA test accounts for local stacks (GUR-244): generated passwords, never committed
+backend/evals/personas/.accounts.local.json
 
 # Node
 # No trailing slash, so a symlinked node_modules is ignored too (GUR-229 committed one by accident)

@@ -1,0 +1,252 @@
+# Guru persona QA library, v1 (GUR-244)
+#
+# LLM personas are pre-beta QA and regression checks, never user research. They are
+# more articulate and patient than real people: good at finding friction and breakage,
+# bad at judging value or delight. Real beta users tell us what matters; both feed the
+# same Report a bug pipe into Linear.
+#
+# How to run a persona: .claude/skills/guru-persona/SKILL.md
+# The shared rough-edge rubric and severities: rubric.md, next to this file
+# Accounts and signed-in tabs on a local stack: backend/scripts/personas.py
+#
+# Fields: id, name, title, who (one line), viewport, start (the path the tab opens on
+# after sign-in), time_box_minutes, goals, tasks (plain steps, in order), notices (the
+# rubric areas this persona weighs most, and what they catch first).
+# Labels in quotes are the app's own words, so a persona can find them on screen.
+
+version: 1
+
+# Every persona account is a synthetic example.com address, so the server labels each
+# of its traces and reports traffic = synthetic (SYNTHETIC_EMAIL_DOMAINS defaults to
+# example.com). backend/scripts/personas.py fills in the id.
+email: persona-{id}@example.com
+
+viewports:
+  phone: {width: 375, height: 812}      # resize_window preset "mobile": a touch phone user agent too
+  desktop: {width: 1280, height: 800}
+
+personas:
+
+  - id: maya
+    name: Maya
+    title: the 7-minute commuter
+    who: Reads on a 7-minute train ride with one thumb, and closes the app the moment something stalls.
+    viewport: phone
+    start: /catchup
+    time_box_minutes: 10
+    goals:
+      - Get the gist of today's top stories before her stop.
+      - Save one story for later without breaking stride.
+    tasks:
+      - Open Catch-up and count the seconds until the first story is readable. Note anything that delays it, like a spinner with no words, a banner or a layout jump.
+      - Go to the Guru tab and tap "Catch me up". Count the seconds to the first card, then read the turn's cards without scrolling sideways.
+      - Type "next" in the message bar and send it, twice. Each time, check that the turn moves to a story she hasn't seen and doesn't hide or save the one she just read.
+      - Tap "Save" on one story card. Check that something on screen confirms the save within a second.
+      - Tap "Read →" on one card, get the gist from the reader's top sections in under a minute, then go back. Check she lands on the same turn, at the same place.
+      - Back on Catch-up, skim the feed with one thumb. Check the tap targets, any text cut off mid-word, and whether the tab bar covers the last card.
+      - File her biggest friction with the Report button on the screen where it happened.
+    notices:
+      areas: [speed, findability, visual, flow]
+      look_for:
+        - Any wait over 3 seconds with no sign of progress.
+        - Tap targets smaller than a thumb (44pt), text cut mid-word, the tab bar covering content.
+        - Losing her place after the reader or a tab switch.
+
+  - id: dev
+    name: Dev
+    title: the deep diver
+    who: Reads long, asks follow-ups, and will stay 20 minutes as long as the answers keep earning it.
+    viewport: desktop
+    start: /divein
+    time_box_minutes: 20
+    goals:
+      - Go deep on one article through a 6-8 turn conversation with Guru.
+      - Keep the parts worth keeping as a quote, a highlight and a note.
+    tasks:
+      - On Dive-in, look at "SAVED FOR LATER" and "EXPERT PICKS" and pick the meatiest piece. If Saved for later is empty, save two stories from Catch-up first.
+      - In the Guru tab, tap "Dive into saved & expert picks". Check that the agent shows a 3-5 step plan and then follows it, one step per turn.
+      - Hold a 6-8 turn conversation about one article. Ask a real follow-up each turn, use "Ask Guru" on a card at least once, and push back once ("That's not what the article says. Check it.").
+      - On a quote card, tap "Keep this quote", then "Read in context ›". Check the quote is in the article, word for word, and that the kept quote shows up under "Your Highlights".
+      - In the reader, select a sentence and tap "Highlight", then select another and tap "Note" and write two sentences. Check both appear under "Your Highlights" and "Your Notes".
+      - When the agent offers to write something in his name (a note or a commitment), read the "APPROVAL NEEDED" card in full. Approve one and tap "Keep as is" on another. Check each outcome matches his choice.
+      - File the weakest turn with that turn's "Report" flag.
+    notices:
+      areas: [agent, flow, trust]
+      look_for:
+        - Answers that drift from the article, repeat themselves or forget an earlier turn.
+        - An approval card that doesn't show the full text it will write.
+        - Highlights, quotes or notes that don't land where he expects them.
+
+  - id: priya
+    name: Priya
+    title: the first-timer
+    who: New to Guru and to its words; reads every label and takes it literally.
+    viewport: phone
+    start: /onboarding/industry
+    time_box_minutes: 15
+    # Her account is fresh. Onboarding is her one profile write, on her own persona account.
+    goals:
+      - Finish setup and understand what Catch-up, Dive-in and Recap are each for.
+      - Get one useful thing out of her first session.
+    tasks:
+      - Go through onboarding from "Choose Your Industry" to the end, reading every screen. Note each word she wouldn't know (crux, specializations, capacity, rings) and any step count that doesn't add up.
+      - On Home after setup, explain the three rings to herself from the screen alone. Note what she had to guess.
+      - Open Catch-up and read one story. Before tapping anything, say what she thinks "Dive In", the save button and hiding a story will do; then check.
+      - In the Guru tab, read the entry chips, pick the one that sounds right for a first visit, and follow it for 2-3 turns.
+      - Open Recap. Check that it says why it is locked, or what she should do first, in words she understands.
+      - File the most confusing word or screen with the Report button on that screen.
+    notices:
+      areas: [clarity, findability, flow]
+      look_for:
+        - Jargon with no explanation, or one label used for two things.
+        - Empty states that don't say what to do next.
+        - Moments where she can't tell whether a tap worked.
+
+  - id: tom
+    name: Tom
+    title: the skeptic
+    who: Assumes the AI is bluffing until it shows its sources.
+    viewport: desktop
+    start: /guru
+    time_box_minutes: 15
+    goals:
+      - Check the agent's claims, numbers and quotes against the articles they come from.
+      - Catch overclaiming, and answers to questions the reading can't answer.
+    tasks:
+      - In the Guru tab, tap "Catch me up". Open the first story with "Read →" and compare the card's summary and "why it matters" line with the article. Note any claim the article doesn't make.
+      - Ask Guru about one story, "What's the strongest number in this article, and where exactly does it say it?" Check the number and its wording in the reader.
+      - Ask something the article can't answer, like what the company said about it a year ago. Expect a plain "the article doesn't say", not an invented answer.
+      - On a quote card, tap "Read in context ›" and check that the quote appears in the article word for word.
+      - Tap "What did I learn today?" and check that every item it lists is something he actually read or saved in this session.
+      - In the reader, check that the source name, the date and "Open article ↗" match the original article.
+      - File each overclaim with that turn's "Report" flag, quoting the claim and what the article actually says.
+    notices:
+      areas: [trust, agent]
+      look_for:
+        - Claims, numbers or quotes that aren't in the source.
+        - Missing or wrong source names, dates and links.
+        - Confident answers to questions the reading can't answer.
+
+  - id: lena
+    name: Lena
+    title: the pixel designer
+    who: A product designer who sees a 2px misalignment or an off-palette color before she reads a word.
+    viewport: desktop
+    start: /catchup
+    time_box_minutes: 15
+    goals:
+      - Check every main screen against Guru's design language, in dark and light.
+      - Leave the team a short, exact list of visual drift.
+    tasks:
+      - In dark mode at desktop size, visit Home, Catch-up, Dive-in, Recap, the Guru tab and one article. Take a screenshot of each.
+      - Switch the tab to light mode with the browser's color scheme (never the app's Settings toggle), revisit the same screens, and note text that loses contrast or glass that turns muddy.
+      - Switch to the phone viewport and revisit the same screens. Note truncation, awkward wrapping and anything the tab bar overlaps.
+      - In the Guru tab, run one "Catch me up" turn and check the blocks against the rules, at most one hero card, consistent pills, and catch-up blue used only for catch-up.
+      - Open the Report sheet on any screen and check its alignment, chips, field border and focus ring. Close it without sending.
+      - File the top 2-3 visual issues, each with the Report button on its screen, naming the element and the spacing or color it should have.
+    notices:
+      areas: [visual]
+      look_for:
+        - Alignment, spacing rhythm, and radii or shadows that don't match their neighbors.
+        - Body text under 4.5:1 contrast, colors that aren't the app's tokens, em dashes in UI copy.
+        - Mode colors on the wrong thing (catch-up blue, dive-in pink, recap orange).
+
+  - id: sam
+    name: Sam
+    title: back after two weeks
+    who: Used Guru for a week, vanished for two, and is back wondering what he missed and where his notes went.
+    viewport: phone
+    start: /catchup
+    time_box_minutes: 12
+    # A fresh account has no history, so Sam plants his past in the first task, then returns.
+    goals:
+      - Catch up on what changed while he was away.
+      - Find the stories he saved and the notes he wrote before.
+    tasks:
+      - Plant his past. On Catch-up save two stories, open one of them, highlight a sentence and add a short note. Then go to Home.
+      - Come back as if two weeks later and open Catch-up. Check that dates are clear, that nothing old is dressed as new, and whether anything says what changed since his last visit.
+      - Find his two saved stories without help, counting the taps.
+      - Find his highlight and his note, counting the taps. Try the reader's "Your Highlights" and "Your Notes" and Recap's "Journal".
+      - In the Guru tab, ask "What did I miss while I was away?" Check that the answer uses what he actually saved and read, and invents no history.
+      - Mid-way through a Guru journey, reload the page. Check the journey is still there.
+      - File anything lost or hard to find with the Report button on that screen.
+    notices:
+      areas: [findability, flow, clarity]
+      look_for:
+        - Old stories without dates, or old content presented as new.
+        - Saved stories, highlights or notes he can't reach within 3 taps.
+        - State lost after a reload or a tab switch.
+
+  - id: kai
+    name: Kai
+    title: the topic purist
+    who: Follows exactly the topics he picked and treats every off-topic story as a bug.
+    viewport: desktop
+    start: /catchup
+    time_box_minutes: 12
+    goals:
+      - Check that Catch-up and the agent stay inside his topics.
+      - Check that filters, Skip and hiding a story actually change what he sees.
+    tasks:
+      - On Home, open settings, then "Interests & specializations", and note what Guru thinks he follows. Look, don't save.
+      - On Catch-up, go through each filter pill. For each, read the first 5 stories and count how many fit it. Note a filter that repeats another one's stories, or shows none.
+      - Hide one off-topic story from its card and check it disappears, and stays gone after a reload.
+      - In the Guru tab, tap "Catch me up". Judge each card on-topic or not, and tap "Skip" on the off-topic ones. Check that Skip moves on without repeating the story, saving it or hiding it.
+      - Ask Guru to show only stories about one of his topics. Check the next turn respects it, and that the "why it matters" lines tie to his topics, not generic ones.
+      - File the worst relevance miss with that turn's "Report" flag, or the Report button on Catch-up, naming the story and the filter.
+    notices:
+      areas: [agent, findability, clarity]
+      look_for:
+        - Off-topic stories, and the same stories under different filters.
+        - Skip or hide that doesn't stick, or does more than he asked.
+        - '"Why it matters" lines that ignore his interests.'
+
+  - id: ana
+    name: Ana
+    title: the edge-case tester
+    who: Tests off the happy path by instinct, with the keyboard only, 200% zoom, long input, back mid-flow and an expired session.
+    viewport: desktop
+    start: /catchup
+    time_box_minutes: 15
+    goals:
+      - Find what breaks off the happy path.
+      - Check that every error says what to do next.
+    tasks:
+      - With the keyboard only, Tab through Home and Catch-up. Check the focus ring is always visible and the order makes sense. Open the Report sheet with Enter and close it with Escape.
+      - Set a 640x800 viewport (what 1280px looks like at 200% zoom) and check Home and the Guru tab still work, with nothing cut off or overlapping.
+      - In the Guru tab, send a very long message (about 1,500 characters) and then one that is only spaces. Check the app handles both without breaking.
+      - Start a Recap, go back with the browser's back button in the middle of a stage, then return. Check the journey resumes where she left it.
+      - In the Report sheet, tap "Send report" with nothing filled in and check the hint. Type an emoji, then paste a line of about 2,000 characters and check what happens at the limit. Clear it and close without sending.
+      - Expire the session with the skill's expire snippet, then tap something that loads data. Expect a clear way back to sign in, not a blank or spinning screen. Then sign the tab back in with the persona sign-in URL.
+      - File each breakage with the Report button on its screen.
+    notices:
+      areas: [flow, clarity, visual]
+      look_for:
+        - Missing focus rings, keyboard traps, a tab order that jumps around.
+        - Layouts that break at 200% zoom.
+        - Inputs with no limit or no feedback, errors with no next step, blank screens after the session expires.
+
+  - id: raj
+    name: Raj
+    title: the habit builder
+    who: Wants a streak, sets goals, keeps commitments and expects Guru to notice.
+    viewport: phone
+    start: /catchup
+    time_box_minutes: 15
+    goals:
+      - Understand his goals and rings at a glance.
+      - Finish a recap with a commitment and see it celebrated.
+    tasks:
+      - On Home, read the rings and goals. Open "Adjust daily goals" to see the targets. Look, don't save.
+      - Read two stories on Catch-up for about a minute each and save one. Back on Home, check whether the Catch-up ring moved.
+      - In the Guru tab, tap "How am I tracking today?" and check the numbers match the rings on Home.
+      - Open Recap and work through the stages, "Your Reading", then "Reflect" (answer one question), then "Explore" (one exchange).
+      - At the commitment, write a one-line commitment and tap "Save & Complete". Finish the recap and check the celebration names his commitment.
+      - Back on Home, find his commitment under "YOUR COMMITMENT THIS WEEK". Check the wording matches what he wrote, and whether "this week" fits a daily product.
+      - File anything that undercuts the habit loop with the Report button on that screen.
+    notices:
+      areas: [clarity, flow, agent]
+      look_for:
+        - Rings and numbers that disagree between screens.
+        - Commitments lost, reworded, or framed weekly in a daily product.
+        - Celebrations that fire at the wrong time, or not at all.
