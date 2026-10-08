@@ -12,6 +12,9 @@ import GuruWordmark from '../../components/ui/GuruWordmark';
 import BlockRenderer, { AgentBlock } from '../../components/Agent/BlockRenderer';
 import { openExternalTab } from '../../utils/openExternalTab';
 import ExtensionInstallBanner from '../../components/ExtensionInstallBanner';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
+import ReportFlag from '../../components/report/ReportFlag';
+import ReportSheet from '../../components/report/ReportSheet';
 
 /**
  * Agentic Guru tab — Journey Pipeline (Epic H, GUR-228).
@@ -73,10 +76,44 @@ type TurnInput =
 // (The backend already persists the conversation per session_id — this keeps
 // the RENDERED journey in sync with it.)
 const JOURNEY_KEY = 'guru_agent_journey_v1';
-type JourneyPayload = { sessionId: string | null; blocks: AgentBlock[]; nextKey: number; mode: JourneyMode };
+// GUR-242: where each finished turn ends in the thread, keyed by the _key of its
+// last block, and which trace it was, so a beta tester can report that exact turn.
+type TurnEnd = { traceId: string | null; sessionId: string | null; finishedAt: number; mode: JourneyMode };
+type JourneyPayload = {
+  sessionId: string | null; blocks: AgentBlock[]; nextKey: number; mode: JourneyMode;
+  turnEnds: Record<string, TurnEnd>;
+};
 let journeyCache: JourneyPayload | null = null;
 
 const VALID_MODES: JourneyMode[] = ['catchup', 'divein', 'recap', 'progress'];
+
+// The journey mode as the Report sheet's attached-turn row names it.
+const MODE_LABEL: Record<JourneyMode, string> = {
+  catchup: 'catch-up', divein: 'dive-in', recap: 'recap', progress: 'progress',
+};
+
+// A turn report's `screen`: "guru/<mode>" (e.g. "guru/catch-up"), so the admin
+// Reports list can name the mode. "guru" when the mode is unknown.
+function reportScreen(mode: JourneyMode | null | undefined): string {
+  const label = mode ? MODE_LABEL[mode] : undefined;
+  return label ? `guru/${label}` : 'guru';
+}
+
+function loadTurnEnds(raw: unknown): Record<string, TurnEnd> {
+  const out: Record<string, TurnEnd> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [key, v] of Object.entries(raw as Record<string, any>)) {
+    if (v && typeof v.finishedAt === 'number' && VALID_MODES.includes(v.mode)) {
+      out[key] = {
+        traceId: typeof v.traceId === 'string' ? v.traceId : null,
+        sessionId: typeof v.sessionId === 'string' ? v.sessionId : null,
+        finishedAt: v.finishedAt,
+        mode: v.mode,
+      };
+    }
+  }
+  return out;
+}
 
 function loadJourney(): JourneyPayload {
   if (journeyCache) return journeyCache;
@@ -91,16 +128,20 @@ function loadJourney(): JourneyPayload {
             blocks: j.blocks,
             nextKey: j.nextKey || j.blocks.length + 1,
             mode: VALID_MODES.includes(j.mode) ? j.mode : 'catchup',
+            turnEnds: loadTurnEnds(j.turnEnds),
           };
         }
       }
     }
   } catch {}
-  return { sessionId: null, blocks: [], nextKey: 0, mode: 'catchup' };
+  return { sessionId: null, blocks: [], nextKey: 0, mode: 'catchup', turnEnds: {} };
 }
 
-function saveJourney(sessionId: string | null, blocks: AgentBlock[], nextKey: number, mode: JourneyMode) {
-  journeyCache = { sessionId, blocks, nextKey, mode };
+function saveJourney(
+  sessionId: string | null, blocks: AgentBlock[], nextKey: number, mode: JourneyMode,
+  turnEnds: Record<string, TurnEnd>,
+) {
+  journeyCache = { sessionId, blocks, nextKey, mode, turnEnds };
   try {
     if (Platform.OS === 'web' && typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(JOURNEY_KEY, JSON.stringify(journeyCache));
@@ -138,6 +179,17 @@ export default function GuruAgentScreen() {
   const modeRef = useRef<JourneyMode>(restored.mode);
   const lastActivityRef = useRef(Date.now());
   const bumpActivity = () => { lastActivityRef.current = Date.now(); };
+  // GUR-242: Report a bug. Beta accounts only (/me/access, fails closed); the
+  // report endpoint checks beta again on the server.
+  const { isBeta } = useAdminAccess();
+  const [turnEnds, setTurnEnds] = useState<Record<string, TurnEnd>>(restored.turnEnds);
+  // The sheet keeps the last reported turn while it fades out, so it never redraws empty.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTurn, setReportTurn] = useState<TurnEnd | null>(null);
+  const openReport = (end: TurnEnd) => {
+    setReportTurn(end);
+    setReportOpen(true);
+  };
   // BUG 1 fix (web first-tap swallowed): RN-web's responder system can miss the
   // first press after hydration, so taps get BOTH onPress (responder) and a raw
   // DOM onClick on web. A single real tap fires both, so a shared ref-based
@@ -175,8 +227,8 @@ export default function GuruAgentScreen() {
   // captures the session_id (it arrives in the final 'done' event, after the
   // last block append).
   React.useEffect(() => {
-    saveJourney(sessionIdRef.current, blocks, keyRef.current, modeRef.current);
-  }, [blocks, busy]);
+    saveJourney(sessionIdRef.current, blocks, keyRef.current, modeRef.current, turnEnds);
+  }, [blocks, busy, turnEnds]);
 
   // GUR-231 TASK 1: agent journey time heartbeat. Every 60s, while a journey
   // is on screen (blocks > 0), the app is foreground/visible, and the user was
@@ -234,6 +286,7 @@ export default function GuruAgentScreen() {
       sessionIdRef.current = null;
       clearJourney();
       setBlocks([]);
+      setTurnEnds({});
       setStatus(null);
     }
     setTimeout(() => onSend(goal), 50);
@@ -253,13 +306,32 @@ export default function GuruAgentScreen() {
     // pinned-aware) — no timeout race during streamed block bursts.
   };
 
+  // GUR-242: the turn answered with done or error, so it is finished and traced.
+  // Mark its last block for the Report flag, with the trace the server named.
+  const markTurnEnd = (startKey: number, traceId: unknown) => {
+    if (keyRef.current <= startKey) return; // nothing of this turn reached the thread
+    const end: TurnEnd = {
+      traceId: typeof traceId === 'string' && traceId ? traceId : null,
+      sessionId: sessionIdRef.current,
+      finishedAt: Date.now(),
+      mode: modeRef.current,
+    };
+    const lastKey = `b${keyRef.current}`;
+    setTurnEnds(prev => ({ ...prev, [lastKey]: end }));
+  };
+
   const sendTurn = async (turnInput: TurnInput, echo?: string) => {
     if (busy) return;
     setBusy(true);
     setBlobState('thinking');
     setStatus('thinking…');
+    const startKey = keyRef.current; // this turn's blocks get keys after it
     if (echo) append({ type: 'user_echo', text: echo });
     let sawOutcome = false;
+    // GUR-242: set by done or error. A turn that ends any other way (a non-2xx
+    // before the stream, a failed fetch, a stream that just closes) still gets a
+    // Report flag, with no trace to attach.
+    let ended = false;
     try {
       const token = await getAuthToken();
       const res = await fetch(`${API_BASE_URL}/agent/turn`, {
@@ -276,6 +348,7 @@ export default function GuruAgentScreen() {
       }
       if (!res.ok || !res.body) {
         append({ type: 'text', md: `Hmm, I hit a snag (HTTP ${res.status}). Try again in a moment.` });
+        markTurnEnd(startKey, null);
         return;
       }
       const reader = res.body.getReader();
@@ -300,13 +373,19 @@ export default function GuruAgentScreen() {
             append(evt.block);
           } else if (evt.event === 'done') {
             sessionIdRef.current = evt.session_id || sessionIdRef.current;
+            ended = true;
+            markTurnEnd(startKey, evt.trace_id);
           } else if (evt.event === 'error') {
             append({ type: 'text', md: `Something went wrong: ${evt.message}` });
+            ended = true;
+            markTurnEnd(startKey, evt.trace_id);
           }
         }
       }
+      if (!ended) markTurnEnd(startKey, null); // the stream closed with no done or error
     } catch (e) {
       append({ type: 'text', md: 'Network hiccup — check your connection and try again.' });
+      if (!ended) markTurnEnd(startKey, null);
     } finally {
       setBusy(false);
       setStatus(null);
@@ -357,6 +436,7 @@ export default function GuruAgentScreen() {
     modeRef.current = 'catchup'; // mode resets with the journey (GUR-231)
     clearJourney();
     setBlocks([]);
+    setTurnEnds({});
     setStatus(null);
     setBlobState('idle');
   };
@@ -485,9 +565,16 @@ export default function GuruAgentScreen() {
         scrollEventThrottle={16}
         onContentSizeChange={onThreadContentSizeChange}
       >
-        {blocks.map(b => (
-          <BlockRenderer key={b._key} block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
-        ))}
+        {blocks.map(b => {
+          // GUR-242: a finished turn ends with a quiet Report flag (beta accounts only).
+          const end = isBeta && b._key ? turnEnds[b._key] : undefined;
+          return (
+            <React.Fragment key={b._key}>
+              <BlockRenderer block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
+              {end ? <ReportFlag {...tapProps(() => openReport(end))} /> : null}
+            </React.Fragment>
+          );
+        })}
         {busy && (
           // R8: the organism itself thinks in the thread — not just a text line
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, marginTop: 2 }}>
@@ -511,6 +598,16 @@ export default function GuruAgentScreen() {
         ))}
       </View>
       {intentBar}
+      {isBeta && (
+        <ReportSheet
+          visible={reportOpen}
+          onClose={() => setReportOpen(false)}
+          screen={reportScreen(reportTurn?.mode)}
+          traceId={reportTurn?.traceId}
+          sessionId={reportTurn?.sessionId}
+          attached={reportTurn ? { mode: MODE_LABEL[reportTurn.mode], finishedAt: reportTurn.finishedAt } : null}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }

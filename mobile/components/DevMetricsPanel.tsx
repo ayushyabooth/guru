@@ -3,8 +3,9 @@
  * GET /me/access says is_admin; every endpoint it reads checks admin again on
  * the server.
  *
- * Tabs: Agent (traces, the default), API (latency + recent calls) and
- * Ingestion. API and Ingestion share one /admin/perf-metrics fetch.
+ * Tabs: Agent (traces, the default), Reports (beta bug reports, GUR-242),
+ * API (latency + recent calls) and Ingestion. API and Ingestion share one
+ * /admin/perf-metrics fetch.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -23,6 +24,7 @@ import type { PerfMetrics } from '../services/admin-service';
 import { AdminPalette, AdminType, MONO, useAdminPalette, withAlpha } from './admin/adminTheme';
 import { Segmented, SegmentOption } from './admin/AdminUI';
 import AgentPerfTab from './admin/AgentPerfTab';
+import ReportsTab from './admin/ReportsTab';
 
 // --- Helpers ---
 
@@ -58,10 +60,11 @@ function shortPath(path: string): string {
 
 // --- Layout ---
 
-type PanelTab = 'agent' | 'api' | 'ingestion';
+type PanelTab = 'agent' | 'reports' | 'api' | 'ingestion';
 
 const TAB_OPTIONS: SegmentOption<PanelTab>[] = [
   { value: 'agent', label: 'Agent' },
+  { value: 'reports', label: 'Reports' },
   { value: 'api', label: 'API' },
   { value: 'ingestion', label: 'Ingestion' },
 ];
@@ -86,7 +89,11 @@ export default function DevMetricsPanel() {
   const [hasOpened, setHasOpened] = useState(false);
   const [tab, setTab] = useState<PanelTab>('agent');
   const [agentRefresh, setAgentRefresh] = useState(0);
+  // Reports loads on its first view, then stays mounted like Agent.
+  const [reportsOpened, setReportsOpened] = useState(false);
+  const [reportsRefresh, setReportsRefresh] = useState(0);
   const [chromeHeight, setChromeHeight] = useState(84);
+  const isMetricsTab = tab === 'api' || tab === 'ingestion';
 
   const [data, setData] = useState<PerfMetrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,10 +120,15 @@ export default function DevMetricsPanel() {
 
   // API and Ingestion load on first view. After an error, Refresh retries.
   useEffect(() => {
-    if (isExpanded && tab !== 'agent' && !data && !loading && !error) {
+    if (isExpanded && isMetricsTab && !data && !loading && !error) {
       fetchMetrics();
     }
-  }, [isExpanded, tab, data, loading, error, fetchMetrics]);
+  }, [isExpanded, isMetricsTab, data, loading, error, fetchMetrics]);
+
+  const selectTab = (next: PanelTab) => {
+    if (next === 'reports') setReportsOpened(true);
+    setTab(next);
+  };
 
   const toggleSection = (key: SectionKey) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -124,6 +136,7 @@ export default function DevMetricsPanel() {
 
   const onRefresh = () => {
     if (tab === 'agent') setAgentRefresh(n => n + 1);
+    else if (tab === 'reports') setReportsRefresh(n => n + 1);
     else fetchMetrics();
   };
 
@@ -182,7 +195,7 @@ export default function DevMetricsPanel() {
               <Segmented
                 options={TAB_OPTIONS}
                 value={tab}
-                onChange={setTab}
+                onChange={selectTab}
                 P={P}
                 role="tab"
                 accessibilityLabel="Performance sections"
@@ -195,7 +208,14 @@ export default function DevMetricsPanel() {
             <AgentPerfTab refreshSignal={agentRefresh} maxHeight={bodyMaxHeight} />
           </View>
 
-          {tab !== 'agent' && (
+          {/* Reports: mounted on first view, then kept like Agent (an open report survives tab switches) */}
+          {reportsOpened && (
+            <View style={tab === 'reports' ? null : s.hidden}>
+              <ReportsTab refreshSignal={reportsRefresh} maxHeight={bodyMaxHeight} />
+            </View>
+          )}
+
+          {isMetricsTab && (
             <>
               {loading && !data && (
                 <ActivityIndicator color={P.accent} style={{ marginVertical: 12 }} />

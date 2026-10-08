@@ -1,5 +1,6 @@
 /**
- * Admin service: everything the in-app Performance panel reads (admins only).
+ * Admin service: everything the in-app Performance panel reads (admins only):
+ * agent traces, API and ingestion metrics, and beta bug reports.
  *
  * Every call goes through authedFetch, the single 401 -> login path. A 403 means
  * "this account is not an admin" and never signs anyone out. A 404 from these
@@ -364,6 +365,103 @@ export interface AgentExplainResponse {
   hypothesis: AgentHypothesis;
 }
 
+// ─── Bug reports (Report a bug, GUR-242) ─────────────────────────────────
+
+export type ReportStatus = 'saved' | 'filed' | 'failed';
+
+/** One row of GET /admin/reports. */
+export interface AdminReportRow {
+  id: string;
+  /** First 8 hex characters of the id: what the tester sees on Sent. */
+  reference: string;
+  created_at: string | null;
+  user_email: string | null;
+  /** wrong_answer | slow | broken_ui | missing | other */
+  category: string;
+  /** "real" or "synthetic" (persona and test accounts). */
+  traffic: AgentTraffic;
+  /** The first 160 characters. The detail has the full text. */
+  expected: string;
+  /** Where the report came from: "home", "guru", or "guru/<mode>" for a turn, e.g. "guru/catch-up". */
+  screen: string | null;
+  status: ReportStatus | string;
+  linear_identifier: string | null;
+  linear_url: string | null;
+  trace_id: string | null;
+  /** The rules' headline for the turn; null when the report names no turn or the turn is not the reporter's own. */
+  trace_headline: string | null;
+  /** The turn's first-block time; null when there is no turn, it is not the reporter's own, or nothing reached the user. */
+  trace_first_block_ms: number | null;
+  hypothesis_summary: string | null;
+}
+
+export interface AdminReportsPage {
+  reports: AdminReportRow[];
+  total: number;
+}
+
+export interface ReportsQuery {
+  days?: number;
+  /** Empty string means any status. */
+  status?: ReportStatus | '';
+  traffic?: AgentTrafficFilter;
+}
+
+export type ReportLevel = 'low' | 'medium' | 'high';
+
+/** Claude's triage on a report, or `error` alone when the triage call failed. */
+export interface ReportHypothesis {
+  summary?: string | null;
+  likely_cause?: string | null;
+  evidence?: string[] | null;
+  severity?: ReportLevel | null;
+  confidence?: ReportLevel | null;
+  suggested_eval?: string | null;
+  model?: string | null;
+  generated_at?: string | null;
+  stop_reason?: string | null;
+  /** Why the triage failed. When set, the fields above are absent. */
+  error?: string | null;
+  /** "posted" once the hypothesis is a comment on the Linear issue. */
+  comment?: string | null;
+  comment_error?: string | null;
+}
+
+export interface AdminReport {
+  id: string;
+  reference: string;
+  created_at: string | null;
+  user_id: string;
+  user_email: string | null;
+  category: string;
+  /** The full text. */
+  expected: string;
+  screen: string | null;
+  client: string | null;
+  trace_id: string | null;
+  session_id: string | null;
+  build_sha: string | null;
+  prompt_version: string | null;
+  traffic: AgentTraffic | null;
+  status: ReportStatus | string;
+  /** Filing attempts. */
+  attempts: number | null;
+  /** Why filing failed, or a label that could not be applied. */
+  error: string | null;
+  linear_identifier: string | null;
+  linear_url: string | null;
+  filed_at: string | null;
+  hypothesis: ReportHypothesis | null;
+}
+
+/** GET /admin/reports/{id}, and the answer to a retry. */
+export interface AdminReportDetail {
+  report: AdminReport;
+  /** The reported turn as a row of the Agent view. Null when there is no turn, or it is not the reporter's own. */
+  trace: AgentTurnRow | null;
+  diagnosis: AgentDiagnosis | null;
+}
+
 // ─── Transport ───────────────────────────────────────────────────────────
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -471,6 +569,33 @@ export function getAgentTurn(id: string): Promise<AgentTurnDetail> {
 /** POST /admin/agent/turns/{id}/explain. Costs a model call: only ever on an explicit tap. */
 export function explainAgentTurn(id: string): Promise<AgentExplainResponse> {
   return adminRequest<AgentExplainResponse>(`/admin/agent/turns/${encodeURIComponent(id)}/explain`, {
+    method: 'POST',
+  });
+}
+
+/** GET /admin/reports: newest first, at most 500. The server defaults to real traffic over 7 days. */
+export function listReports(params: ReportsQuery = {}): Promise<AdminReportsPage> {
+  return adminRequest<AdminReportsPage>(
+    `/admin/reports${queryString({
+      days: params.days ?? 7,
+      status: params.status || undefined,
+      traffic: params.traffic ?? 'real',
+    })}`,
+  );
+}
+
+/** GET /admin/reports/{id} */
+export function getReport(id: string): Promise<AdminReportDetail> {
+  return adminRequest<AdminReportDetail>(`/admin/reports/${encodeURIComponent(id)}`);
+}
+
+/**
+ * POST /admin/reports/{id}/retry: files a failed (or stuck) report to Linear again
+ * and starts a new triage, a paid Claude call. Only ever on an explicit tap.
+ * The server answers 409 for any other report.
+ */
+export function retryReport(id: string): Promise<AdminReportDetail> {
+  return adminRequest<AdminReportDetail>(`/admin/reports/${encodeURIComponent(id)}/retry`, {
     method: 'POST',
   });
 }

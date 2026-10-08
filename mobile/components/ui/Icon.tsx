@@ -91,6 +91,11 @@ import { CalendarBlank } from 'phosphor-react-native';
 import { Feather } from 'phosphor-react-native';
 import { Scales } from 'phosphor-react-native';
 import { Fire } from 'phosphor-react-native';
+// Report a bug (GUR-242). The *Icon aliases are the non-deprecated exports.
+import { FlagIcon as Flag } from 'phosphor-react-native';
+import { PaperclipIcon as Paperclip } from 'phosphor-react-native';
+import { BugIcon as Bug } from 'phosphor-react-native';
+import { PulseIcon as Pulse } from 'phosphor-react-native';
 
 // Weight type from Phosphor
 type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone';
@@ -193,6 +198,12 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'feather': Feather,
   'scales': Scales,
   'fire': Fire,
+
+  // Report a bug (GUR-242)
+  'flag': Flag,             // the Report flag under an agent turn
+  'paperclip': Paperclip,   // "This turn is attached"
+  'bug': Bug,               // Home: Report a bug
+  'pulse': Pulse,           // admin: a trace / the turn
 };
 
 // Names that should default to 'fill' weight

@@ -24,6 +24,7 @@ import { API_BASE_URL } from '../../constants/config';
 import GoalEditor from '../../components/Home/GoalEditor';
 import InterestsEditor from '../../components/Home/InterestsEditor';
 import DevMetricsPanel from '../../components/DevMetricsPanel';
+import BetaReportCard from '../../components/report/BetaReportCard';
 import { useAdminAccess } from '../../hooks/useAdminAccess';
 import { OrganicBackground, GlassButton } from '../../components/ui';
 import {
@@ -392,7 +393,8 @@ function HomeContent() {
   const { toggleTheme, isDark } = useTheme();
   // Perf panel gate: true only when the server says this account is an admin
   // (any build, production included). The server re-checks on every admin call.
-  const { isAdmin } = useAdminAccess();
+  // isBeta gates the Report a bug card the same way (GUR-242).
+  const { isAdmin, isBeta } = useAdminAccess();
   const blurStyle = COLORS.isDark ? getDarkBackdropBlur(24) : getBackdropBlur(24);
   const blurStyle16 = COLORS.isDark ? getDarkBackdropBlur(16) : getBackdropBlur(16);
   const containerBg = COLORS.isDark ? COLORS.background : 'transparent';
@@ -826,6 +828,9 @@ function HomeContent() {
             <Text style={{ fontSize: 15, lineHeight: 21, color: COLORS.textPrimary }}>{commitment}</Text>
           </View>
         )}
+
+        {/* GUR-242: Report a bug, beta accounts only (the server checks beta again) */}
+        {isBeta && <BetaReportCard />}
 
         {/* Last Updated */}
         {displayMetrics.lastUpdated && (
