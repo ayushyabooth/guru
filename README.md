@@ -93,7 +93,7 @@ The app calls the API at `EXPO_PUBLIC_API_URL` and falls back to `http://localho
 ### Tests
 
 ```bash
-make test-agent              # agent contract, admin access and trace diagnosis: offline, a few seconds
+make test-agent              # agent contract, admin access, traces, the judge, Report a bug, the boot cleanup: offline, a few seconds
 make evals                   # agent evals through the real route, scripted model: offline, about a second
 make evals LIVE=1            # adds the live-model cases, graded by the LLM judge too (about $1.35 for the full suite)
 make test                    # the full backend suite; it has known failures and writes test users to the local database

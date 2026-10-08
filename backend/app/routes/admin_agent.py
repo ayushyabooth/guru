@@ -38,6 +38,7 @@ router = APIRouter(prefix="/api/v1/admin/agent", tags=["admin"])
 
 MAX_WINDOW_ROWS = 5000
 EXPLAIN_MODEL = getattr(settings, "AGENT_MODEL", None) or "claude-sonnet-5"
+EXPLAIN_MAX_TOKENS = 2000  # Sonnet 5 thinks by default, and thinking counts toward this cap
 Traffic = Literal["real", "synthetic", "all"]
 
 
@@ -184,15 +185,18 @@ async def agent_turn_explain(trace_id: str, db: Session = Depends(get_db), admin
 
     def _call():
         client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY, timeout=60, max_retries=1)
-        resp = client.messages.create(model=EXPLAIN_MODEL, max_tokens=800, system=EXPLAIN_SYSTEM,
+        resp = client.messages.create(model=EXPLAIN_MODEL, max_tokens=EXPLAIN_MAX_TOKENS, system=EXPLAIN_SYSTEM,
                                       messages=[{"role": "user", "content": message}])
-        return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        return text, getattr(resp, "stop_reason", None)
 
     try:
-        text = await asyncio.to_thread(_call)  # never block the event loop on a model call
+        text, stop = await asyncio.to_thread(_call)  # never block the event loop on a model call
     except Exception as e:
         logger.exception("explain failed")
         raise HTTPException(status_code=502, detail=f"Explain failed: {type(e).__name__}")
+    if stop == "max_tokens":  # a cut-off answer is never cached as if it were whole
+        raise HTTPException(status_code=502, detail="Explain was cut off before it finished. Try again.")
     hypothesis = {**_parse_json(text), "model": EXPLAIN_MODEL,
                   "generated_at": datetime.now(timezone.utc).isoformat(), "by": admin.email}
     row.ai_hypothesis = json.dumps(hypothesis)

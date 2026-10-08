@@ -12,7 +12,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 - Read `mobile/CLAUDE.md` before app work, and `docs/known-gaps.md` before you fix anything that looks wrong. `docs/agentic-ui-architecture.md` is the agent design doc, and it has drifted.
 
 ## Commands
-- `make test-agent` - agent contract, admin access and trace-insights tests. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
+- `make test-agent` - agent contract, admin access, trace insights, the LLM judge, Report a bug and the boot cleanup. Scripted model, fake DB, no network, a few seconds. Run it after every backend change.
 - `make evals` - agent evals through the real route, scripted model, offline, about a second. `make evals LIVE=1` adds the live-model cases, graded by the LLM judge too (about $1.35). Cases live in `backend/evals/cases.yaml`; see `backend/evals/README.md`.
 - `make traces` - production takeaways and flagged turns. `make trace ID=<id>` - one turn in depth. `make reports` - beta bug reports, each with its turn and Claude's hypothesis; `make report ID=<id>` - one in full. All need `ADMIN_API_KEY` in my shell. Never print it. `make traces-local` and `make reports-local` read the local database instead.
 - `make test` (the legacy backend suite) and `cd mobile && npx tsc --noEmit` both fail today for old reasons (see `docs/known-gaps.md`). Run them before and after your change and compare the failures. `make test` also writes test users into the local database.

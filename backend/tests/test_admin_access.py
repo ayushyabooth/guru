@@ -227,3 +227,20 @@ async def test_explain_is_admin_only_and_cached(api, monkeypatch):
     assert r.json()["hypothesis"]["confidence"] == "medium" and len(calls) == 1
     cached = (await api.call("GET", f"/api/v1/admin/agent/turns/{ids[0]}", key=KEY)).json()["ai_hypothesis"]
     assert cached["summary"] == "The model call failed." and cached["by"] == ADMIN_EMAIL
+    assert calls[0]["max_tokens"] == admin_agent.EXPLAIN_MAX_TOKENS  # room for Sonnet 5's thinking
+
+
+async def test_a_cut_off_explanation_is_never_cached(api, monkeypatch):
+    """Sonnet 5 thinks by default and thinking counts toward max_tokens, so an answer can stop mid-JSON."""
+    from app.routes import admin_agent
+    ids = _seed_turns(api, 1, outcome="error")
+
+    class _Msgs:
+        def create(self, **kw):
+            return SimpleNamespace(stop_reason="max_tokens",
+                                   content=[SimpleNamespace(type="text", text='{"summary": "The model call fa')])
+
+    monkeypatch.setattr(admin_agent.anthropic, "Anthropic", lambda **kw: SimpleNamespace(messages=_Msgs()))
+    r = await api.call("POST", f"/api/v1/admin/agent/turns/{ids[0]}/explain", token=api.admin_token)
+    assert r.status_code == 502 and "cut off" in r.json()["detail"]
+    assert (await api.call("GET", f"/api/v1/admin/agent/turns/{ids[0]}", key=KEY)).json()["ai_hypothesis"] is None
