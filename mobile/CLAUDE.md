@@ -20,5 +20,5 @@ Read this before any change under `mobile/`. The root `CLAUDE.md` still applies.
 - Admin screens render only when `/me/access` says admin (`hooks/useAdminAccess.ts`, which fails closed). The server still checks every admin call.
 
 ## Check your work
-- `npx tsc --noEmit` from `mobile/` fails today on syntax errors in one old e2e test, which hide every type error behind them (see `docs/known-gaps.md`). Until that's fixed, it can't verify a change.
+- `make test-app` and `make typecheck-app`, from the repo root (no new type errors, against a baseline that only goes down). CI runs both on every push.
 - For a visible change, run the web app and compare a screenshot with the Figma frame. The dev app talks to the production API, so sign in with a synthetic account only.

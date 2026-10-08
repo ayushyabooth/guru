@@ -8,11 +8,12 @@ description: Use whenever Guru goes to production - any git push to main, a Rail
 Every push to `main` redeploys the backend on Railway, and every deploy is a restart with side effects. The web app deploys separately, from the CLI. Nothing here runs without the owner's go, and the settings file asks before `git push`, `vercel` and `railway`.
 
 ## 1. Before the push: the checklist, out loud
-- `make test-agent` is green, and `make evals` exits 0 (every red as labeled).
+- `make ci` green: the gate, the offline evals (every red as labeled), the legacy suite, the app's tests and no new type errors, the same checks CI runs on the push.
 - `git fetch`, confirm the push is a fast-forward of `origin/main`, and list what ships: `git log --oneline origin/main..HEAD`.
-- What the restart will do, and how big. Read the last ingestion runs with the admin key (`GET /api/v1/ingestion/runs`):
+- What the restart will do, and how big. Run `make ingestion-health` (production, with the admin key) and read it out:
   - The cleanup deletes articles older than 30 days, except any a user saved, highlighted, noted or asked about. Name the batch that sits on the 30-day line.
-  - The ingestion boot guard runs a tier whose last completed run is outside its window (72 hours for expert RSS, 168 for discovery). Name the next time a restart would start a paid run.
+  - The ingestion boot guard runs a tier whose last completed run is outside its window (72 hours for expert RSS, 168 for discovery). Each tier's "on a restart" line says whether a restart starts a paid run now, or from when: name it, and the `TIER2_RUN_AT` one-off if one is scheduled, since a restart during that run kills it.
+  - A failing verdict (the target exits 1) means a tier's last run failed or a run is stuck: say which, from its reasons, before asking for the go.
   - Missing columns are added and new tables created. A schema change boots on a scratch Postgres 16 first.
 - Variables staged with `--skip-deploys` go live with this deploy.
 - The rollback: Railway, Deployments, the previous deployment, Redeploy (also a restart), or `git revert` and push.
@@ -20,7 +21,8 @@ Every push to `main` redeploys the backend on Railway, and every deploy is a res
 
 ## 2. Push, then watch
 - `git push origin <branch>:main`
-- `make watch-deploy`: polls `/health` every 10 seconds and prints each check. It finishes when `/health` names the pushed commit, and lists any check that wasn't 200 as downtime. For a build from before `/health` named its commit, watch a route only the new build has: `make watch-deploy PROBE=/api/v1/admin/reports EXPECT=401`.
+- The deploy waits for the GitHub checks: with "Wait for CI" on in the Railway service, Railway builds the commit only after both CI jobs (backend, app) pass on it, and a red check means no deploy. Watch them on the commit (the Actions tab, or `gh run watch`). If one goes red, nothing restarted: fix it and push again.
+- Once the checks are green, `make watch-deploy`: polls `/health` every 10 seconds and prints each check. It finishes when `/health` names the pushed commit, and lists any check that wasn't 200 as downtime. For a build from before `/health` named its commit, watch a route only the new build has: `make watch-deploy PROBE=/api/v1/admin/reports EXPECT=401`.
 
 ## 3. Check the backend
 - The startup lines, from `backend/`: `railway logs`. Look for `Stale content cleanup ... kept N`, `skipping initial run` for each tier, `Application startup complete`, and no errors.

@@ -93,11 +93,13 @@ The app calls the API at `EXPO_PUBLIC_API_URL` and falls back to `http://localho
 ### Tests
 
 ```bash
-make test-agent              # agent contract, admin access, traces, the judge, Report a bug, the boot cleanup: offline, a few seconds
+make test-agent              # the gate: agent contract, admin access, traces, the judge, Report a bug, the Issues tab, the boot cleanup and ingestion: offline, about 20 seconds
 make evals                   # agent evals through the real route, scripted model: offline, about a second
 make evals LIVE=1            # adds the live-model cases, graded by the LLM judge too (about $1.35 for the full suite)
-make test                    # the full backend suite; it has known failures and writes test users to the local database
-cd mobile && npx tsc --noEmit # fails today on one old e2e test file, see docs/known-gaps.md
+make test                    # the whole backend suite on a throwaway database; quarantined tests are skipped (backend/tests/QUARANTINE.md)
+make test-app                # the app's jest suites, with fetch mocked
+make typecheck-app           # the app's type check: no new type errors, against a baseline that only goes down
+make ci                      # everything CI runs, in the same order
 ```
 
 ### With Docker (includes PostgreSQL)
@@ -122,6 +124,15 @@ Copy `backend/.env.example` to `backend/.env` and configure it. The template doe
 | `BETA_EMAILS` | No | Comma-separated beta testers |
 | `SYNTHETIC_EMAIL_DOMAINS` | No | Email domains whose traffic is labeled synthetic in traces, `example.com` by default |
 | `TRACE_FULL_TEXT` | No | `true` by default: while pre-beta, agent traces keep full text for every user. `false` turns privacy mode on |
+
+## CI
+
+Every push and pull request runs `.github/workflows/ci.yml` on GitHub Actions: two jobs in parallel, offline, with no secrets.
+
+- **Backend** (Python 3.11): the gate (`make test-agent`), the offline evals (`make evals UPLOAD=0`), then the legacy suite (`make test-legacy`), which skips the tests listed in `backend/tests/QUARANTINE.md`. The tests block the network and stand in for the secrets and the embedding model (`backend/tests/conftest.py`).
+- **App** (Node 20): `npm ci`, the jest suites (`make test-app`), then the type check, which fails on any new type error (`make typecheck-app`).
+
+`make ci` runs the same checks locally, in the same order. With "Wait for CI" on in the Railway service, a push to `main` deploys only after both jobs pass.
 
 ## Deployment
 
