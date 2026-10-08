@@ -7,10 +7,16 @@ Saved first, then filed: the row is committed before the response, and filing to
 Linear and the Claude triage run afterwards on a worker thread
 (services/bug_reports.py), so a Linear outage never loses a report. Beta only,
 decided on the server (BETA_EMAILS; admins count as beta).
+
+The app may send the session's context with it (GUR-277): the screen, the ids on
+screen, the last screens and the last failed calls. It is best effort. A context
+that breaks a rule in services/session_context.py is dropped with the reason in
+context_error, never a 422: the tester's report is the payload. An older app sends
+none and files as before.
 """
 import uuid
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from pydantic import BaseModel, Field, field_validator
@@ -20,7 +26,7 @@ from app.db.database import get_db
 from app.models.bug_report import BugReport
 from app.models.user import User
 from app.routes.agent import PROMPT_VERSION, _client_kind
-from app.services import bug_reports
+from app.services import bug_reports, session_context
 from app.services.access import is_synthetic, require_beta
 from app.services.agent_trace import BUILD_SHA
 
@@ -36,6 +42,7 @@ class ReportRequest(BaseModel):
     trace_id: Optional[uuid.UUID] = None           # the agent turn the report is about
     session_id: Optional[uuid.UUID] = None
     client: Optional[str] = Field(None, max_length=64)
+    context: Optional[Any] = None                  # raw JSON, read in the route: a bad one never costs the report
 
     @field_validator("expected")
     @classmethod
@@ -54,6 +61,7 @@ async def create_report(
     db: Session = Depends(get_db),
 ):
     report_id = uuid.uuid4()
+    client_context, context_error = session_context.read_context(body.context)
     db.add(BugReport(
         id=report_id, created_at=datetime.now(timezone.utc), user_id=user.id,
         category=body.category, expected=body.expected, screen=body.screen,
@@ -62,6 +70,7 @@ async def create_report(
         build_sha=BUILD_SHA, prompt_version=PROMPT_VERSION,
         traffic="synthetic" if is_synthetic(user) else "real",
         status="saved", attempts=0,
+        client_context=client_context, context_error=context_error,
     ))
     db.commit()
     background_tasks.add_task(bug_reports.start, bug_reports.process_report, str(report_id),

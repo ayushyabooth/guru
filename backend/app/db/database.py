@@ -119,6 +119,21 @@ def _run_column_migrations():
         ("agent_turn_traces", "decision", "VARCHAR(16)"),
         ("agent_turn_traces", "ai_hypothesis", "TEXT"),
         ("agent_turn_traces", "context", "TEXT"),
+        # Report a bug with the session's context (GUR-277): bug_reports is live without these columns.
+        ("bug_reports", "client_context", "JSON"),
+        ("bug_reports", "context_error", "TEXT"),
+        ("bug_reports", "session_context", "JSON"),
+        # The graded eval score (GUR-268). eval_runs went live with Deploy 4 (10/7) without these columns.
+        ("eval_runs", "score", "FLOAT"),
+        ("eval_runs", "score_baseline", "FLOAT"),
+        ("eval_runs", "weights_version", "VARCHAR(16)"),
+        ("eval_runs", "score_areas", "TEXT"),
+        # Eval runs in the admin view (GUR-282): every run uploads, labeled as what it is. eval_runs is live
+        # without these columns; a row from before them reads back as a whole run, started by hand.
+        ("eval_runs", "scope", "VARCHAR(16)"),
+        ("eval_runs", "trigger", "VARCHAR(16)"),
+        ("eval_runs", "n_cases", "INTEGER"),
+        ("eval_runs", "case_set", "VARCHAR(16)"),
     ]
     import re
     _SAFE_IDENTIFIER = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')

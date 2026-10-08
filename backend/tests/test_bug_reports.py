@@ -1,6 +1,7 @@
 """
 Report a bug, beta (GUR-242): app/routes/reports.py, app/routes/admin_reports.py,
-app/services/bug_reports.py and app/services/linear_client.py.
+app/services/bug_reports.py and app/services/linear_client.py. With the session's
+context (GUR-277): app/services/session_context.py.
 
 Hermetic like test_admin_access.py: the real FastAPI app over httpx's ASGI
 transport, an in-memory SQLite, no startup events and no network. Linear and
@@ -9,10 +10,11 @@ real worker thread.
 """
 import json
 import os
+import re
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -29,9 +31,13 @@ from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from app.db.base import Base  # noqa: E402
 from app.db.database import get_db  # noqa: E402
+from app.models.article import Article  # noqa: E402
 from app.models.bug_report import BugReport  # noqa: E402
+from app.models.interaction import UserAnnotation, UserSavedArticle  # noqa: E402
+from app.models.qa_models import QAExchange  # noqa: E402
+from app.models.recap import RecapJourney  # noqa: E402
 from app.models.user import User  # noqa: E402
-from app.services import bug_reports, linear_client  # noqa: E402
+from app.services import agent_trace, bug_reports, linear_client  # noqa: E402
 from app.services.agent_trace import TurnTrace  # noqa: E402
 from app.services.auth_service import generate_jwt  # noqa: E402
 
@@ -40,7 +46,8 @@ pytestmark = pytest.mark.anyio
 ADMIN, BETA, PERSONA, OUTSIDER = "admin@guru.app", "tester@guru.app", "persona@example.com", "someone@guru.app"
 KEY = "k" * 40
 BODY = {"category": "wrong_answer", "expected": "Three stories about AI chips, not an error about my feed."}
-SECTIONS = ("## What the user said", "## Where", "## Trace summary", "## Replay ids", "## Suggested regression eval")
+SECTIONS = ("## What the user said", "## Where", "## Session context", "## Trace summary", "## Replay ids",
+            "## Suggested regression eval")
 GOOD_REPLY = json.dumps({"summary": "The feed tool failed, so the agent answered with an error.",
                          "likely_cause": "get_catchup_feed returned HTTP 500 and the model went on without it.",
                          "evidence": ["trace.tool_errors[0]", "report.expected"], "severity": "High",
@@ -177,8 +184,8 @@ def _seed_report(api, email, minutes_ago=0, **columns) -> str:
     return str(report_id)
 
 
-def _seed_trace(api, email):
-    """One agent turn for this user: get_catchup_feed fails and the agent answers anyway."""
+def _seed_trace(api, email, when=None):
+    """One agent turn for this user: get_catchup_feed fails and the agent answers anyway. `when` moves its start."""
     usage = SimpleNamespace(input_tokens=1000, output_tokens=80, cache_read_input_tokens=5000,
                             cache_creation_input_tokens=0)
     t = TurnTrace(uuid.uuid4(), api.users[email].id, "claude-sonnet-5", "goal", "catch me up on AI chips",
@@ -191,7 +198,10 @@ def _seed_trace(api, email):
     t.model_done(SimpleNamespace(stop_reason="end_turn", usage=usage))
     t.block({"type": "text", "md": "I could not load your feed right now."})
     t.block({"type": "prompt_pills", "prompts": ["Try again"]})
-    api.db.add(t.to_row("blocks"))
+    row = t.to_row("blocks")
+    if when is not None:
+        row.created_at = when
+    api.db.add(row)
     api.db.commit()
     return str(t.id), str(t.session_id)
 
@@ -364,7 +374,8 @@ async def test_the_triage_writes_its_hypothesis_into_the_issue_body(api):
                  "**Likely cause:** get_catchup_feed returned HTTP 500 and the model went on without it.",
                  "**Severity:** high. **Confidence:** medium.",
                  "**Evidence:**\n- trace.tool_errors[0]\n- report.expected",
-                 f"_{bug_reports.TRIAGE_MODEL} read the report and the rule findings. "
+                 "**Used:** none of the session context",
+                 f"_{bug_reports.TRIAGE_MODEL} read the report, the session context and the rule findings. "
                  "A hypothesis to check, not a verdict._"):
         assert line in section, line
     assert body.endswith("## Suggested regression eval\nFail get_catchup_feed once; expect a retry pill.")
@@ -476,10 +487,8 @@ async def test_a_turn_links_back_to_the_reports_filed_against_it(api, monkeypatc
     assert f"make report ID={mine['id']}" in capsys.readouterr().out
 
 
-def test_make_reports_prints_what_the_admin_view_shows(api, monkeypatch, capsys):
-    """scripts/reports.py (make reports) reads through the admin routes themselves, so the terminal and the
-    admin view can't drift apart."""
-    import asyncio
+def _reports_cli(monkeypatch, api):
+    """scripts/reports.py as a module, reading this test's database."""
     import importlib.util
     from app.db import database
     scripts = os.path.join(os.path.dirname(__file__), "..", "scripts")
@@ -488,6 +497,14 @@ def test_make_reports_prints_what_the_admin_view_shows(api, monkeypatch, capsys)
     cli = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cli)
     monkeypatch.setattr(database, "SessionLocal", api.Session)
+    return cli
+
+
+def test_make_reports_prints_what_the_admin_view_shows(api, monkeypatch, capsys):
+    """scripts/reports.py (make reports) reads through the admin routes themselves, so the terminal and the
+    admin view can't drift apart."""
+    import asyncio
+    cli = _reports_cli(monkeypatch, api)
 
     trace_id, _ = _seed_trace(api, BETA)
     filed = _seed_report(api, BETA, minutes_ago=5, status="filed", trace_id=trace_id, linear_identifier="GUR-300",
@@ -541,6 +558,508 @@ async def test_retry_files_a_failed_or_stuck_report_again(api):
     assert r.status_code == 200 and r.json()["report"]["status"] == "filed"
     assert (await api.call("POST", f"/api/v1/admin/reports/{uuid.uuid4()}/retry",
                            token=api.admin_token)).status_code == 404
+
+
+# ── Session context (GUR-277) ────────────────────────────────────────────────
+
+KINDS = ("note", "highlight", "save", "question", "recap_answer", "agent_turn")
+ITEM_KEYS = {"kind", "at", "text", "article_id", "article_title", "trace_id", "detail"}
+NO_APP = "- No session context: sent by an app build from before GUR-277."
+NO_ACTIVITY = "- No activity in the 30 minutes before the report."
+UNREADABLE = "- The app sent a session context the server couldn't read: "
+RECAP_UNTIMED = "- Recap screen answers aren't timestamped, so they can't be placed in the window."
+PRIVACY_LINE = "- Privacy mode: kinds, counts, times and ids only."
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def _context(**over):
+    """A context as the app sends it: both lists newest first."""
+    now = _now()
+
+    def ago(seconds):
+        return (now - timedelta(seconds=seconds)).isoformat()
+
+    return {"screen": "recap", "step": "stage-3", "on_screen": {"recap_journey_id": str(uuid.uuid4())},
+            "trail": [{"screen": "recap", "step": "stage-3", "at": ago(60)}, {"screen": "article", "at": ago(300)},
+                      {"screen": "guru", "at": ago(600)}],
+            "failed_calls": [{"method": "POST", "path": "/recap/j-1/socratic", "status": 500, "at": ago(20)},
+                             {"method": "get", "path": "/articles/a-1", "status": 0, "at": ago(200)}],
+            **over}
+
+
+def _section(body):
+    return body[body.find("## Session context"):body.find("## Trace summary")]
+
+
+def _lines(section, ref):
+    """The section's numbered lines of one kind, T (trail), F (failed calls) or A (activity), in order, from the ref."""
+    return [line.strip()[2:] for line in section.splitlines() if re.match(rf"\s+- {ref}\d+ ", line)]
+
+
+def _article(api, title="The Eval Gap"):
+    article_id = uuid.uuid4()
+    api.db.add(Article(id=article_id, url=f"https://example.com/{article_id}", title=title))
+    api.db.commit()
+    return article_id
+
+
+def _note(api, email, article_id, when, note=None, passage="Evals lag the product they grade."):
+    """A highlight, or a note on it when `note` is given."""
+    api.db.add(UserAnnotation(user_id=api.users[email].id, article_id=article_id, highlighted_text=passage,
+                              note_text=note, start_offset=0, end_offset=len(passage), created_at=when))
+    api.db.commit()
+
+
+def _save(api, email, article_id, when):
+    api.db.add(UserSavedArticle(user_id=api.users[email].id, article_id=article_id, saved_at=when))
+    api.db.commit()
+
+
+def _question(api, email, article_id, when, question, answer="Because the product moves first."):
+    api.db.add(QAExchange(user_id=api.users[email].id, article_id=article_id, question=question, answer=answer,
+                          model_used="haiku", created_at=when))
+    api.db.commit()
+
+
+def _journey(api, email, replies=(), answers=2, commitment=None, completed_at=None, weeks_ago=0):
+    """A recap journey with three guided questions, `answers` of them answered on the Recap screen (no time
+    of their own), and Socratic replies, each (when, text), with Guru's turn before each one."""
+    def utc_naive(dt):  # how the recap service writes them: datetime.utcnow().isoformat()
+        return dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat()
+
+    exchanges = []
+    for when, text in replies:
+        exchanges += [{"role": "assistant", "content": "What pulled you to that line?",
+                       "timestamp": utc_naive(when - timedelta(seconds=5))},
+                      {"role": "user", "content": text, "timestamp": utc_naive(when)}]
+    journey_id, week = uuid.uuid4(), date.today() - timedelta(days=7 * weeks_ago)
+    api.db.add(RecapJourney(id=journey_id, user_id=api.users[email].id, week_start=week,
+                            week_end=week + timedelta(days=6), status="stage_3", stage_progress=3,
+                            guided_questions=[{"type": "reflection", "text": f"Question {i + 1}"} for i in range(3)],
+                            guided_responses={str(i): f"Guided answer {i + 1}" for i in range(answers)},
+                            socratic_exchanges=exchanges, commitment_text=commitment, completed_at=completed_at))
+    api.db.commit()
+    return journey_id
+
+
+def _seed_answer_turn(api, email, journey_id, question_index, when, typed="my answer: evals lag the product"):
+    """An agent turn that submits a Stage 2 answer with submit_recap_answer: the one Stage 2 answer with a time."""
+    usage = SimpleNamespace(input_tokens=1000, output_tokens=80, cache_read_input_tokens=5000,
+                            cache_creation_input_tokens=0)
+    t = TurnTrace(uuid.uuid4(), api.users[email].id, "claude-sonnet-5", "message", typed, traffic="real")
+    t.model_started()
+    t.model_done(SimpleNamespace(stop_reason="tool_use", usage=usage))
+    t.tool_started("submit_recap_answer", {"journey_id": str(journey_id), "question_index": question_index,
+                                           "response": typed})
+    t.tool_done("submit_recap_answer", json.dumps({"stored": True, "question_index": question_index}))
+    t.model_started()
+    t.model_done(SimpleNamespace(stop_reason="end_turn", usage=usage))
+    t.block({"type": "text", "md": "Noted."})
+    row = t.to_row("blocks")
+    row.created_at = when
+    api.db.add(row)
+    api.db.commit()
+    return str(t.id)
+
+
+async def test_the_issue_carries_the_session_context_between_where_and_the_trace(api):
+    now = _now()
+    article, saved = _article(api, "The Eval Gap"), _article(api, "Per-Seat Pricing Breaks")
+    journey = _journey(api, BETA, replies=[(now - timedelta(seconds=90), "Both pieces say evals lag the product.")])
+    _note(api, BETA, article, now - timedelta(minutes=4), note="Undo only when the action is reversible.")
+    _question(api, BETA, article, now - timedelta(minutes=6), "Why does this matter?")
+    _save(api, BETA, saved, now - timedelta(minutes=8))
+    trace_id, _ = _seed_trace(api, BETA)  # the report names no turn, so the latest one joins the activity
+    context = _context(on_screen={"article_id": str(article), "recap_journey_id": str(journey)})
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                       body={**BODY, "screen": "recap", "context": context})
+    assert r.status_code == 200, r.text
+    assert set(r.json()) == {"id", "reference", "status"}
+
+    body = api.linear.issues[0]["description"]
+    positions = [body.find(s) for s in SECTIONS]
+    assert -1 not in positions and positions == sorted(positions), "Session context sits between Where and the trace"
+    section = _section(body)
+    parts = [section.find(s) for s in ("- Screen: recap, step stage-3", "- Trail, newest first:", "- On screen:",
+                                       "- Failed calls, newest first:",
+                                       "- Activity in the 30 minutes before the report, newest first")]
+    assert -1 not in parts and parts == sorted(parts), "the screen, the trail, the ids on screen, the calls, the activity"
+    trail = _lines(section, "T")
+    assert [re.search(r"before\): (\w+)", line).group(1) for line in trail] == ["recap", "article", "guru"]
+    assert re.fullmatch(r"T1 \d\d:\d\d:\d\d UTC \(1m( \ds)? before\): recap, step stage-3", trail[0]), trail[0]
+    assert f'- On screen: article {article} "The Eval Gap"; recap journey {journey}' in section
+    calls = _lines(section, "F")
+    assert calls[0].endswith(": POST /recap/j-1/socratic, 500")
+    assert calls[1].endswith(": GET /articles/a-1, no answer"), "status 0: the call never got an answer"
+    activity = _lines(section, "A")
+    expected = (f'agent turn {trace_id} (2 blocks): "catch me up on AI chips"',
+                'recap answer (stage 3, reply 1): "Both pieces say evals lag the product."',
+                'note on "The Eval Gap": "Undo only when the action is reversible."',
+                'question on "The Eval Gap": "Why does this matter?"',
+                'saved "Per-Seat Pricing Breaks"')
+    assert len(activity) == len(expected)
+    for line, words in zip(activity, expected):
+        assert line.endswith(words), line
+    assert "(5: 1 note, 1 save, 1 question, 1 recap answer, 1 agent turn)" in section
+    assert RECAP_UNTIMED not in section, "a datable recap answer is in the window"
+
+    report = _report(api, r.json()["id"])
+    stored = report.client_context
+    assert (stored["screen"], stored["step"], report.context_error) == ("recap", "stage-3", None)
+    assert stored["on_screen"] == {"article_id": str(article), "recap_journey_id": str(journey), "trace_id": None,
+                                   "article_title": "The Eval Gap"}, "the server fills in the title"
+    assert [v["screen"] for v in stored["trail"]] == ["recap", "article", "guru"] and stored["trail"][1]["step"] is None
+    assert stored["failed_calls"][1] == {"method": "GET", "path": "/articles/a-1", "status": 0,
+                                         "at": context["failed_calls"][1]["at"]}
+    snap = report.session_context
+    assert set(snap) == {"window_minutes", "privacy", "counts", "items"}
+    assert snap["window_minutes"] == 30 and snap["privacy"] is False
+    assert snap["counts"] == {"note": 1, "highlight": 0, "save": 1, "question": 1, "recap_answer": 1, "agent_turn": 1}
+    assert [x["kind"] for x in snap["items"]] == ["agent_turn", "recap_answer", "note", "question", "save"]
+    assert all(set(x) == ITEM_KEYS for x in snap["items"]), "every item has every key, null where it doesn't apply"
+    turn, answer, note, question, save = snap["items"]
+    assert (turn["trace_id"], turn["detail"], turn["text"]) == (trace_id, "2 blocks", "catch me up on AI chips")
+    assert (answer["detail"], answer["article_id"], answer["trace_id"]) == ("stage 3, reply 1", None, None)
+    assert (note["text"], note["article_id"], note["article_title"]) == (
+        "Undo only when the action is reversible.", str(article), "The Eval Gap")
+    assert (save["text"], save["article_title"]) == (None, "Per-Seat Pricing Breaks")
+
+
+async def test_a_report_without_context_still_files_and_still_joins_the_activity(api):
+    for body in (BODY, {**BODY, "context": None}):
+        r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body=body)
+        assert r.status_code == 200 and set(r.json()) == {"id", "reference", "status"}, r.text
+        report = _report(api, r.json()["id"])
+        assert report.status == "filed" and report.client_context is None and report.context_error is None
+        assert report.session_context == {"window_minutes": 30, "privacy": False, "items": [],
+                                          "counts": {k: 0 for k in KINDS}}
+        section = _section(api.linear.issues[-1]["description"])
+        assert NO_APP in section and NO_ACTIVITY in section and "- Screen:" not in section
+    from sqlalchemy import text
+    assert api.db.execute(text("SELECT count(*) FROM bug_reports WHERE client_context IS NULL")).scalar() == 2, \
+        "no context is SQL NULL, not a JSON null"
+
+    # An older app's report still gets the server's own join
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=2), note="Written just before the report.")
+    await api.call("POST", "/api/v1/reports", token=api.beta_token, body=BODY)
+    section = _section(api.linear.issues[-1]["description"])
+    assert NO_APP in section and NO_ACTIVITY not in section
+    assert _lines(section, "A")[0].endswith('note on "The Eval Gap": "Written just before the report."')
+
+
+async def test_privacy_mode_keeps_kinds_counts_times_and_ids_only(api, monkeypatch):
+    monkeypatch.setattr(agent_trace, "FULL_TEXT_FOR_ALL", False)
+    now = _now()
+    article = _article(api, "PRIVATE-TITLE")
+    journey = _journey(api, BETA, answers=3, replies=[(now - timedelta(minutes=3), "PRIVATE-REPLY")],
+                       commitment="PRIVATE-COMMITMENT", completed_at=now - timedelta(minutes=1))
+    _seed_answer_turn(api, BETA, journey, 2, now - timedelta(minutes=2), typed="PRIVATE-TYPED")
+    _note(api, BETA, article, now - timedelta(minutes=5), note="PRIVATE-NOTE", passage="PRIVATE-PASSAGE")
+    _note(api, BETA, article, now - timedelta(minutes=6), passage="PRIVATE-HIGHLIGHT")
+    _question(api, BETA, article, now - timedelta(minutes=7), "PRIVATE-QUESTION", answer="PRIVATE-ANSWER")
+    _save(api, BETA, article, now - timedelta(minutes=8))
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                       body={**BODY, "context": _context(on_screen={"article_id": str(article)})})
+    assert r.status_code == 200, r.text
+
+    report = _report(api, r.json()["id"])
+    snap = report.session_context
+    seen = [api.linear.issues[0]["description"], api.linear.updates[0]["description"], api.linear.comments[0]["body"],
+            json.dumps([report.client_context, snap]), json.dumps([c["messages"] for c in api.claude.calls])]
+    for words in ("PRIVATE-", "Guided answer"):
+        assert not [s for s in seen if words in s], f"{words} reached the issue, the snapshot or the triage"
+    assert snap["privacy"] is True
+    assert snap["counts"] == {"note": 1, "highlight": 1, "save": 1, "question": 1, "recap_answer": 3, "agent_turn": 1}
+    assert all(x["text"] is None and x["article_title"] is None for x in snap["items"]), "no text, no title"
+    assert [x["detail"] for x in snap["items"] if x["kind"] == "recap_answer"] == [
+        "commitment", "stage 2, answer 3 of 3", "stage 3, reply 1"], "details are positions, never words: they stay"
+    assert {x["article_id"] for x in snap["items"] if x["article_id"]} == {str(article)}
+    assert report.client_context["on_screen"]["article_title"] is None, "no title is filled in privacy mode"
+    section = _section(api.linear.issues[0]["description"])
+    assert f"note on article {article}" in section and PRIVACY_LINE in section
+
+
+async def test_only_the_reporters_own_rows_are_joined(api):
+    now = _now()
+    mine, theirs = _article(api, "The Eval Gap"), _article(api, "A Story Only Someone Else Read")
+    _note(api, BETA, mine, now - timedelta(minutes=4), note="My own note, the control.")
+    their_journey = _journey(api, OUTSIDER, answers=3, replies=[(now - timedelta(minutes=1), "THEIR-REPLY")],
+                             commitment="THEIR-COMMITMENT", completed_at=now - timedelta(minutes=1))
+    _note(api, OUTSIDER, theirs, now - timedelta(minutes=2), note="THEIR-NOTE")  # saved minutes before the report
+    _note(api, OUTSIDER, theirs, now - timedelta(minutes=2), passage="THEIR-HIGHLIGHT")
+    _save(api, OUTSIDER, theirs, now - timedelta(minutes=2))
+    _question(api, OUTSIDER, theirs, now - timedelta(minutes=2), "THEIR-QUESTION")
+    their_turn, _ = _seed_trace(api, OUTSIDER)
+    their_answer = _seed_answer_turn(api, OUTSIDER, their_journey, 0, now - timedelta(minutes=1), typed="THEIR-TYPED")
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": _context()})
+    assert r.status_code == 200, r.text
+
+    report = _report(api, r.json()["id"])
+    body, stored = api.linear.issues[0]["description"], json.dumps([report.client_context, report.session_context])
+    for leak in ("THEIR-", "Guided answer", "A Story Only Someone Else Read", str(theirs), their_turn, their_answer,
+                 str(their_journey), "catch me up on AI chips"):
+        assert leak not in body and leak not in stored, leak
+    assert "My own note, the control." in body, "the join ran: the reporter's own note is there"
+    assert report.session_context["counts"] == {"note": 1, "highlight": 0, "save": 0, "question": 0,
+                                                "recap_answer": 0, "agent_turn": 0}
+
+
+async def test_the_30_minute_window_holds_at_both_edges(api):
+    report_id = _seed_report(api, BETA, minutes_ago=60)
+    created = bug_reports._aware(_report(api, report_id).created_at)
+    start, tick = created - timedelta(minutes=30), timedelta(seconds=1)
+    article = _article(api)
+    for when, label in ((start - tick, "OUT before"), (start, "IN at the start"), (created, "IN at the report"),
+                        (created + tick, "OUT after")):
+        _note(api, BETA, article, when, note=f"note {label}")
+    journey = _journey(api, BETA, replies=[(start - tick, "reply OUT before"), (start, "reply IN at the start"),
+                                           (created + tick, "reply OUT after")])
+    _question(api, BETA, article, created, "question IN at the report")
+    _question(api, BETA, article, created + tick, "question OUT after")
+    _save(api, BETA, _article(api, "Saved OUT"), start - tick)
+    _save(api, BETA, _article(api, "Saved IN"), start)
+    latest, _ = _seed_trace(api, BETA, when=created)
+    _seed_trace(api, BETA, when=created + tick)  # newer, but after the report
+    _seed_answer_turn(api, BETA, journey, 0, created + tick)
+    bug_reports.file_report(report_id, bug_reports.sessions_for(api.db))
+
+    snap = _report(api, report_id).session_context
+    texts = [x["text"] for x in snap["items"] if x["text"]]
+    assert not [t for t in texts if "OUT" in t]
+    assert {"note IN at the start", "note IN at the report", "reply IN at the start",
+            "question IN at the report"} <= set(texts)
+    assert [x["article_title"] for x in snap["items"] if x["kind"] == "save"] == ["Saved IN"]
+    assert [x["trace_id"] for x in snap["items"] if x["kind"] == "agent_turn"] == [latest]
+    assert snap["counts"] == {"note": 2, "highlight": 0, "save": 1, "question": 1, "recap_answer": 1, "agent_turn": 1}
+    times = [datetime.fromisoformat(x["at"]) for x in snap["items"]]
+    assert times == sorted(times, reverse=True) and (min(times), max(times)) == (start, created)
+
+
+async def test_the_activity_keeps_the_newest_ten_and_clips_each_text(api):
+    now, article = _now(), _article(api)
+    long_note = " ".join(f"word{i}" for i in range(200))
+    for i in range(12):
+        _note(api, BETA, article, now - timedelta(minutes=i + 1),
+              note=long_note if i == 0 else f"note {i + 1} minutes before")
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body=BODY)
+    snap = _report(api, r.json()["id"]).session_context
+    assert snap["counts"]["note"] == 12 and len(snap["items"]) == 10
+    assert snap["items"][-1]["text"] == "note 10 minutes before", "the two oldest are left out"
+    clipped = snap["items"][0]["text"]
+    assert len(clipped) <= 201 and long_note.startswith(clipped[:-1])
+    assert re.fullmatch(r"(word\d+ )*word\d+…", clipped), "cut at a word, and marked"
+    section = _section(api.linear.issues[0]["description"])
+    assert len(_lines(section, "A")) == 10 and "(12: 12 notes)" in section and "  - ...and 2 older" in section
+
+
+async def test_recap_answers_count_by_the_times_that_exist(api):
+    """A Stage 3 reply and the commitment carry their own times, and a Stage 2 answer has one only when the
+    agent submitted it. An answer typed on the Recap screen keeps no time, so it is never counted, and the
+    section says so when the session was on Recap and no recap answer could be placed."""
+    now = _now()
+    journey = _journey(api, BETA, answers=3, commitment="Read one paper a week.", completed_at=now - timedelta(minutes=1),
+                       replies=[(now - timedelta(minutes=40), "An older reply."),
+                                (now - timedelta(minutes=3), "A reply in the window.")])
+    _seed_answer_turn(api, BETA, journey, 2, now - timedelta(minutes=2))
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": _context()})
+    snap = _report(api, r.json()["id"]).session_context
+    assert [(x["detail"], x["text"]) for x in snap["items"] if x["kind"] == "recap_answer"] == [
+        ("commitment", "Read one paper a week."), ("stage 2, answer 3 of 3", "Guided answer 3"),
+        ("stage 3, reply 2", "A reply in the window.")], "Guru's own turns and the Recap-screen answers never count"
+    assert snap["counts"]["recap_answer"] == 3
+    assert RECAP_UNTIMED not in _section(api.linear.issues[-1]["description"])
+
+    _journey(api, PERSONA, answers=2)  # answered on the Recap screen: no time to place them by
+    await api.call("POST", "/api/v1/reports", token=api.persona_token, body={**BODY, "context": _context()})
+    section = _section(api.linear.issues[-1]["description"])
+    assert RECAP_UNTIMED in section and NO_ACTIVITY in section, "on Recap with nothing datable, the section says why"
+    await api.call("POST", "/api/v1/reports", token=api.persona_token,
+                   body={**BODY, "context": _context(screen="home", step=None, trail=[], on_screen={})})
+    assert RECAP_UNTIMED not in _section(api.linear.issues[-1]["description"]), "off Recap the line stays out"
+
+
+async def test_a_failed_join_never_stops_the_filing(api, monkeypatch, caplog):
+    from app.services import session_context
+
+    def broken(db, report):
+        raise RuntimeError("the database went away")
+
+    monkeypatch.setattr(session_context, "collect", broken)
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": _context()})
+    report = _report(api, r.json()["id"])
+    assert report.status == "filed" and report.session_context is None
+    assert report.client_context["screen"] == "recap", "the app's context is kept; only the join failed"
+    assert "- Activity: not collected for this report." in _section(api.linear.issues[0]["description"])
+    assert "session context not collected" in caplog.text
+
+
+async def test_the_context_is_joined_once_and_kept_through_a_linear_outage(api, monkeypatch):
+    from app.services import session_context
+    real, joins = session_context.collect, []
+    monkeypatch.setattr(session_context, "collect", lambda db, report: joins.append(report.id) or real(db, report))
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=3), note="The undo point.")
+    api.linear.fail_issue = linear_client.LinearError("HTTP 503: Service Unavailable")
+    report_id = (await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                                body={**BODY, "context": _context()})).json()["id"]
+    stored = _report(api, report_id).session_context
+    assert _report(api, report_id).status == "failed" and stored["counts"]["note"] == 1, "stored before Linear"
+
+    api.linear.fail_issue = None
+    retry = (await api.call("POST", f"/api/v1/admin/reports/{report_id}/retry", token=api.admin_token)).json()
+    assert retry["report"]["status"] == "filed" and retry["report"]["session_context"] == stored
+    assert len(joins) == 1, "the retry files the stored snapshot, so the issue matches what the admin saw"
+    assert "The undo point." in api.linear.issues[-1]["description"]
+
+
+CALL = {"method": "POST", "path": "/recap/j-1/answer", "status": 500, "at": "2026-10-07T19:00:00+00:00"}
+VISIT = {"screen": "recap", "at": "2026-10-07T19:00:00+00:00"}
+
+
+@pytest.mark.parametrize("context, reason", [
+    ({"failed_calls": [{**CALL, "body": '{"response": "SECRET-ANSWER"}'}]},
+     "failed call 1 has a field the server doesn't take: 'body'"),
+    ({"failed_calls": [CALL, {**CALL, "response": "SECRET-ERROR"}]},
+     "failed call 2 has a field the server doesn't take: 'response'"),
+    ({"failed_calls": [{**CALL, "path": "/search?q=SECRET-WORDS"}]}, "failed call 1 'path' has a query string"),
+    ({"failed_calls": [{**CALL, "path": "/notes/SECRET WORDS"}]}, "failed call 1 'path' is not a bare path"),
+    ({"failed_calls": [CALL] * 6}, "'failed_calls' has more than 5 items"),
+    ({"failed_calls": [{**CALL, "method": "FETCH"}]},
+     "failed call 1 'method' must be one of GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS"),
+    ({"failed_calls": [{**CALL, "status": None}]}, "failed call 1 'status' must be a whole number from 0 to 599"),
+    ({"failed_calls": [{**CALL, "status": 600}]}, "failed call 1 'status' must be a whole number from 0 to 599"),
+    ({"trail": [VISIT] * 11}, "'trail' has more than 10 items"),
+    ({"trail": [VISIT, VISIT, {"screen": "recap"}]}, "trail item 3 has no 'at'"),
+    ({"trail": [{**VISIT, "at": "SECRET-yesterday"}]}, "trail item 1 'at' is not a time"),
+    ({"trail": [{**VISIT, "screen": "s" * 121}]}, "trail item 1 'screen' is longer than 120 characters"),
+    ({"trail": "recap"}, "'trail' is not a list"),
+    ({"screen": "s" * 121}, "'screen' is longer than 120 characters"),
+    ({"step": "s" * 65}, "'step' is longer than 64 characters"),
+    ({"on_screen": {"article_id": "SECRET WORDS"}}, "on_screen 'article_id' is not an id"),
+    ({"on_screen": {"article_id": "a" * 65}}, "on_screen 'article_id' is longer than 64 characters"),
+    ({"on_screen": {"article_title": "SECRET-TITLE"}},
+     "on_screen has a field the server doesn't take: 'article_title'"),
+    ({"headers": {"authorization": "Bearer SECRET-TOKEN"}},
+     "the context has a field the server doesn't take: 'headers'"),
+    ("SECRET-STRING", "the context is not an object"),
+    ({"step": "s", "trail": [{**VISIT, "screen": "x" * 100}] * 10, "failed_calls": [{**CALL, "path": "/" + "p" * 3000}] * 5},
+     "the context is 16,"),
+])
+async def test_a_context_the_server_cant_read_never_costs_the_report(api, context, reason):
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=3), note="Still joined.")
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": context})
+    assert r.status_code == 200, r.text
+    report = _report(api, r.json()["id"])
+    assert report.status == "filed" and report.client_context is None
+    assert report.context_error and report.context_error.startswith(reason), report.context_error
+    body = api.linear.issues[0]["description"]
+    assert f"{UNREADABLE}{report.context_error}." in _section(body)
+    assert "Still joined." in body, "the server's own join still runs"
+    assert "SECRET" not in body + json.dumps([report.client_context, report.session_context, report.context_error])
+
+
+async def test_the_caps_are_accepted_and_an_unknown_screen_is_stored_as_other(api):
+    at = "2026-10-07T19:00:00Z"
+    context = {"screen": "Settings", "step": "s" * 64,
+               "on_screen": {"article_id": "a" * 64, "recap_journey_id": None, "trace_id": "turn-1"},
+               "trail": [{"screen": "RECAP", "at": "2026-10-07T19:00:00"}] + [{"screen": "home", "at": at}] * 9,
+               "failed_calls": [{"method": "delete", "path": "/" + "p" * 199, "status": 599, "at": at}]
+               + [{"method": "GET", "path": "/x", "status": 0, "at": at}] * 4}
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": context})
+    assert r.status_code == 200, r.text
+    report = _report(api, r.json()["id"])
+    stored = report.client_context
+    assert report.context_error is None and stored["screen"] == "other", "an unknown screen is kept, as other"
+    assert stored["trail"][0] == {"screen": "recap", "step": None, "at": "2026-10-07T19:00:00+00:00"}, \
+        "a known screen in any case, and a time without a zone taken as UTC"
+    assert len(stored["trail"]) == 10 and len(stored["failed_calls"]) == 5
+    assert stored["failed_calls"][0] == {"method": "DELETE", "path": "/" + "p" * 199, "status": 599,
+                                         "at": "2026-10-07T19:00:00+00:00"}
+    assert stored["on_screen"] == {"article_id": "a" * 64, "recap_journey_id": None, "trace_id": "turn-1",
+                                   "article_title": None}
+
+
+async def test_triage_reads_the_session_context_and_says_what_it_used(api):
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=3), note="The undo point.")
+    api.claude.reply = json.dumps({**json.loads(GOOD_REPLY), "context_used": ["F1", "a1", "trail", "F9"]})
+    r = await api.call("POST", "/api/v1/reports", token=api.beta_token, body={**BODY, "context": _context()})
+    assert r.status_code == 200, r.text
+
+    [call] = api.claude.calls
+    assert '"context_used"' in call["system"] and "session context" in call["system"]
+    sent = json.loads(call["messages"][0]["content"])["session_context"]
+    assert [v["ref"] for v in sent["app"]["trail"]] == ["T1", "T2", "T3"]
+    first = sent["app"]["failed_calls"][0]
+    assert (first["ref"], first["method"], first["path"], first["status"]) == ("F1", "POST", "/recap/j-1/socratic", 500)
+    assert abs(first["seconds_before"] - 20) <= 2
+    [item] = sent["activity"]["items"]
+    assert (item["ref"], item["kind"], item["text"]) == ("A1", "note", "The undo point.")
+
+    hypothesis = json.loads(_report(api, r.json()["id"]).hypothesis)
+    assert hypothesis["context_used"] == ["F1", "a1", "trail", "F9"]
+    [update], [comment] = api.linear.updates, api.linear.comments
+    for text in (update["description"], comment["body"]):
+        assert "**Used:** F1 (POST /recap/j-1/socratic, 500); A1 (note, " in text
+        assert " before); the screen trail; F9 (not in the session context)" in text
+        assert "A hypothesis to check, not a verdict." in text
+
+
+async def test_the_admin_detail_returns_the_context_as_stored(api):
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=3), note="The undo point.")
+    report_id = (await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                                body={**BODY, "context": _context()})).json()["id"]
+    report = _report(api, report_id)
+    d = (await api.call("GET", f"/api/v1/admin/reports/{report_id}", key=KEY)).json()["report"]
+    assert d["client_context"] == report.client_context and d["client_context"]["failed_calls"][0]["status"] == 500
+    assert d["session_context"] == report.session_context and d["session_context"]["counts"]["note"] == 1
+    assert d["context_error"] is None
+    assert (await api.call("GET", f"/api/v1/admin/reports/{report_id}", token=api.beta_token)).status_code == 403
+
+    bad = (await api.call("POST", "/api/v1/reports", token=api.beta_token,
+                          body={**BODY, "context": {"trail": "recap"}})).json()["id"]
+    d = (await api.call("GET", f"/api/v1/admin/reports/{bad}", token=api.admin_token)).json()["report"]
+    assert (d["client_context"], d["context_error"]) == (None, "'trail' is not a list")
+    row = (await api.call("GET", "/api/v1/admin/reports", key=KEY)).json()["reports"][0]
+    assert not {"client_context", "session_context", "context_error"} & set(row), "the list stays lean"
+
+
+def test_make_report_prints_the_session_context(api, monkeypatch, capsys):
+    """make report ID= prints the same Session context section as the Linear issue, and what triage used."""
+    import asyncio
+    cli = _reports_cli(monkeypatch, api)
+    _note(api, BETA, _article(api), _now() - timedelta(minutes=3), note="The undo point.")
+    api.claude.reply = json.dumps({**json.loads(GOOD_REPLY), "context_used": ["F1"]})
+    report_id = asyncio.run(api.call("POST", "/api/v1/reports", token=api.beta_token,
+                                     body={**BODY, "context": _context()})).json()["id"]
+    cli.print_report(cli._local("show", days=7, status=None, traffic="real", report_id=report_id))
+    out = capsys.readouterr().out
+    lines = [line for line in _section(api.linear.updates[0]["description"]).splitlines()[1:] if line.strip()]
+    assert "Session context" in out and len(lines) > 8
+    for line in lines:
+        assert line in out, line
+    assert "used: F1 (POST /recap/j-1/socratic, 500)" in out
+
+
+def test_boot_adds_the_context_columns_to_an_existing_reports_table(monkeypatch):
+    """create_all() never adds a column to a table that exists, so _run_column_migrations() adds them on boot."""
+    from sqlalchemy import inspect, text
+    from app.db import database
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    with engine.begin() as conn:  # bug_reports as a build before GUR-277 made it, with one report in it
+        conn.execute(text("CREATE TABLE bug_reports (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL, "
+                          "category VARCHAR(32) NOT NULL, expected TEXT NOT NULL, status VARCHAR(16) NOT NULL, "
+                          "attempts INTEGER NOT NULL)"))
+        conn.execute(text("INSERT INTO bug_reports VALUES ('r-1', 'u-1', 'other', 'An older report.', 'filed', 1)"))
+    monkeypatch.setattr(database, "engine", engine)
+    database._run_column_migrations()
+    database._run_column_migrations()  # the next boot finds them there and moves on
+    assert {"client_context", "session_context", "context_error"} <= {
+        c["name"] for c in inspect(engine).get_columns("bug_reports")}
+    with engine.connect() as conn:
+        row = conn.execute(text("SELECT expected, client_context, session_context, context_error FROM bug_reports"))
+        assert row.one() == ("An older report.", None, None, None)
 
 
 # ── The Linear client itself, over a mock transport ──────────────────────────

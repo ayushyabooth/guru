@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey
+from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey, JSON
 from sqlalchemy.sql import func
 
 from app.db.base import Base
@@ -12,7 +12,9 @@ class BugReport(Base):
 
     Saved before anything else happens, then filed to Linear after the response,
     so a Linear outage never loses a report: it stays "failed" with the error
-    until an admin retries it. Created automatically by Base.metadata.create_all().
+    until an admin retries it. Created automatically by Base.metadata.create_all();
+    the columns added since then reach an existing table through
+    _run_column_migrations() in app/db/database.py.
     """
     __tablename__ = "bug_reports"
 
@@ -38,3 +40,8 @@ class BugReport(Base):
     linear_url = Column(String(500))
     filed_at = Column(DateTime(timezone=True))
     hypothesis = Column(Text)                        # JSON: Claude's triage hypothesis, or why triage failed
+
+    # The session's context (GUR-277), see services/session_context.py. None is stored as SQL NULL.
+    client_context = Column(JSON(none_as_null=True))   # what the app sent, as validated; null from an older app
+    context_error = Column(Text)                     # why the app's context was dropped, if it was
+    session_context = Column(JSON(none_as_null=True))  # the reporter's own activity before the report, joined at filing

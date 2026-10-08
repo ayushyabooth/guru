@@ -9,6 +9,9 @@ the Reports tab in the admin view (app/routes/admin_reports.py).
 --prod reads production through the admin API: set ADMIN_API_KEY in your shell
 (and GURU_API_URL to point somewhere other than production). The key is sent as
 a header and never printed. Without --prod it reads the local database.
+
+show prints the report's Session context (GUR-277) with the same lines as its
+Linear issue, from the same code (app/services/session_context.py).
 """
 import argparse
 import asyncio
@@ -87,6 +90,10 @@ def print_report(d):
     print(f"category {r['category']}, screen {r.get('screen')}, client {r.get('client')}, "
           f"build {r.get('build_sha')}, prompt {r.get('prompt_version')}")
     print(f"\nexpected: {r['expected']}")
+    from app.services import session_context as sc  # the Linear issue's own lines, so the two can't drift
+    print("\nSession context")
+    for line in sc.section_lines(r):
+        print(f"  {line}")
     h = r.get("hypothesis")
     if h and h.get("error"):
         print(f"\nClaude's triage failed: {h['error']}")
@@ -96,6 +103,8 @@ def print_report(d):
             print(f"  likely cause: {h['likely_cause']}")
         for e in h.get("evidence") or []:
             print(f"  evidence: {e}")
+        if "context_used" in h:
+            print(f"  used: {sc.used_line(h['context_used'], sc.labels(r))}")
         if h.get("suggested_eval"):
             print(f"  eval to add: {h['suggested_eval']}")
     if t:

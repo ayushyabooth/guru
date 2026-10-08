@@ -5,6 +5,7 @@ admin only: it files to Linear and spends a Claude call.
 
     GET  /api/v1/admin/reports              newest first, with the turn's headline and the hypothesis
     GET  /api/v1/admin/reports/{id}         everything, plus the reported turn's row from the Agent view
+                                            and the session's context as stored (GUR-277)
     POST /api/v1/admin/reports/{id}/retry   file a failed (or stuck) report again
 """
 import asyncio
@@ -66,6 +67,8 @@ def _report(r: BugReport, email) -> dict:
         "status": r.status, "attempts": r.attempts, "error": r.error,
         "linear_identifier": r.linear_identifier, "linear_url": r.linear_url, "filed_at": br.iso(r.filed_at),
         "hypothesis": br.hypothesis_of(r),
+        # As stored: what the app sent (or why it was dropped) and the activity joined at filing
+        "client_context": r.client_context, "context_error": r.context_error, "session_context": r.session_context,
     }
 
 
