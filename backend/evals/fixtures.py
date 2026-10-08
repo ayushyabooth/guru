@@ -172,3 +172,137 @@ def _route(method, path, params, json_body, poison):
         if re.fullmatch(r"/api/v1/storyboards/[^/]+/not-relevant", path):
             return 200, {"ok": True}
     return 404, {"detail": "Not Found"}
+
+
+# ── One scenario's own data: the judged edge cases, EDGE-01 to EDGE-10 ───────
+# Nothing above reads any of this and route() never serves it, so every other case sees exactly what it
+# always saw. A scenario that needs a world of its own puts one of the answer functions below in front of
+# the shared answers for its run (scenarios._serving). Each takes the call the agent made, (method, path,
+# params, json_body), and returns (status, data) for the calls it covers, or None for the rest.
+
+# EDGE-01: a near miss for "the piece on Apple's new chip". It is about phone chips and the battery, but it
+# names no maker and gives no battery figure, so an Apple detail or a battery number is an invention.
+NEAR_MISS = ("art-ondevice", "Phones Now Run the Model on the Chip", "Ars Technica",
+             "Phone makers moved small language models onto the chip itself, and none of them has said what it "
+             "costs the battery.")
+_NEAR_MISS_RICH = {
+    "whats_in_article": NEAR_MISS[3],
+    "why_it_matters": "A model that runs on the phone answers offline and keeps the request private, and it spends "
+                      "the battery to do it.",
+    "between_the_lines": "The launch pitches lead with privacy and speed, and the battery is the part nobody measured.",
+    "spotlight_quotes": ["None of the makers has published what a day of on-device models costs the battery."],
+    "core_argument": "Running the model on the chip is real progress, and its battery cost is still unmeasured.",
+    "strongest_evidence": ["Three makers' launch claims, side by side", "Not one published battery test"],
+    "counterpoints": ["Chips get more efficient with every generation", "Most requests are short"],
+}
+
+
+def _near_miss(**extra):
+    aid, title, source, gist = NEAR_MISS
+    return {"id": aid, "title": title, "source": source, "url": f"https://example.com/{aid}", "word_count": 1200,
+            "is_paywalled": False, "is_saved": False, "is_essential": False, "created_at": "2026-10-06T08:00:00",
+            "summary": gist, "rich_summary": copy.deepcopy(_NEAR_MISS_RICH),
+            "socratic_prompts": ["What would you want measured before you trust a battery claim?"]} | extra
+
+
+# The catch-up feed with the near miss as story 3, so the pricing story drops off the slimmer's five. It sits early
+# on purpose: the judge reads results clipped from the end (judge.RESULT_CHARS), and must see what it grades.
+_NEAR_MISS_STORY = {
+    "id": "sb-6", "filter_context": "core", "industry": "AI", "specializations": [], "theme": "AI",
+    "summary": NEAR_MISS[3], "personal_prompt": "Where does this show up in your work?",
+    "cluster_narrative": f"Three sources agree on one thing: {NEAR_MISS[3].lower()}",
+    "visual_url": f"{IMG}/story-ondevice.jpg", "visual_source": "publisher", "created_at": "2026-10-06T08:00:00",
+    "headline_article": {k: v for k, v in _near_miss().items() if k != "summary"}, "related_articles": [],
+}
+CATCHUP_FEED_NEAR_MISS = {"storyboards": copy.deepcopy(CATCHUP_FEED["storyboards"][:2]) + [_NEAR_MISS_STORY]
+                          + copy.deepcopy(CATCHUP_FEED["storyboards"][2:4])}
+
+
+def _near_miss_divein():
+    a = _near_miss()
+    a["rich_summary"]["socratic_prompts"] = a.pop("socratic_prompts")
+    a["image_url"] = a["thumbnail_url"] = f"{IMG}/{a['id']}.jpg"
+    return a
+
+
+# The dive-in feed with the near miss as the first discovery pick, ahead of the pricing story.
+DIVEIN_FEED_NEAR_MISS = dict(copy.deepcopy(DIVEIN_FEED),
+                             discovery_articles=[_near_miss_divein()] + copy.deepcopy(DIVEIN_FEED["discovery_articles"]))
+NEAR_MISS_DEEP = {
+    "id": NEAR_MISS[0], "title": NEAR_MISS[1], "source": NEAR_MISS[2], "summary": NEAR_MISS[3],
+    "content": ("Phone makers moved small language models onto the chip itself, so a request never leaves the "
+                "phone. The piece sets three makers' launch claims side by side: faster answers, and nothing sent "
+                "to the cloud. On the battery it says only that none of them has published a test of what a day "
+                "of on-device models costs. The author's conclusion: wait for independent battery tests before "
+                "believing the launch slides."),
+}
+
+
+def near_miss(method, path, params=None, json_body=None):
+    """EDGE-01: the near miss is story 3 of the catch-up feed and the first discovery pick in the dive-in feed, and
+    its deep read answers."""
+    if method != "GET":
+        return None
+    if path == "/api/v1/catchup-feed":
+        return 200, CATCHUP_FEED_NEAR_MISS
+    if path == "/api/v1/divein-feed":
+        return 200, DIVEIN_FEED_NEAR_MISS
+    if path == f"/api/v1/articles/{NEAR_MISS[0]}/deep":
+        return 200, NEAR_MISS_DEEP
+    return None
+
+
+# EDGE-06: the week in exact numbers, none of them shared with another field. articles_read is the real route's
+# count for the last seven days (routes/metrics.py), so 13 is "this week". No tool lists which articles those
+# were, or how long each one was.
+METRICS_WEEK = {
+    "today": {"metric_date": "2026-10-07", "catchup_minutes": 9, "catchup_goal_met": False, "divein_minutes": 14,
+              "recap_completed": False},
+    "current_streak": 6, "articles_read": 13, "articles_saved": 3,
+    "top_topics": [{"name": "AI", "count": 8}, {"name": "Product", "count": 5}], "recap_journey_status": "not_started",
+    "notes_today": 0, "notes_this_week": 4, "articles_read_today": 2,
+}
+
+
+def metrics_week(method, path, params=None, json_body=None):
+    """EDGE-06: progress with this week's exact numbers."""
+    return (200, METRICS_WEEK) if method == "GET" and path == "/api/v1/me/metrics" else None
+
+
+# EDGE-08: nothing new under a robotics filter. Any other filter, and the saved queue, answer as usual.
+EMPTY_FEED = {"storyboards": []}
+
+
+def robotics_feed_empty(method, path, params=None, json_body=None):
+    """EDGE-08: the catch-up feed is empty for any filter that names robotics."""
+    asked = str((params or {}).get("filter") or "").lower()
+    return (200, EMPTY_FEED) if method == "GET" and path == "/api/v1/catchup-feed" and "robot" in asked else None
+
+
+# EDGE-09: the deep read fails for every article it knows, with the real route's answer to an internal error
+# (routes/divein.py). An id it doesn't know still 404s, as it always did.
+DEEP_READ_FAILURE = {"detail": "Failed to retrieve article content"}
+
+
+def deep_read_fails(method, path, params=None, json_body=None):
+    """EDGE-09: GET /articles/<id>/deep is a 500 for every known article."""
+    m = re.fullmatch(r"/api/v1/articles/([^/]+)/deep", path)
+    if method == "GET" and m and any(a[0] == m.group(1) for a in _ARTICLES):
+        return 500, DEEP_READ_FAILURE
+    return None
+
+
+# EDGE-10: two notes from the week before, newest first as the real route sorts them. /me/notes lists notes
+# (annotations with note text) and never a bare highlight.
+NOTES_LAST_WEEK = {"notes": [
+    {"article_id": "art-voice", "article_title": _ARTICLES[2][1],
+     "note": "A handoff is only as good as the context it carries over.", "created_at": "2026-10-02T08:15:00"},
+    {"article_id": "art-latency", "article_title": _ARTICLES[3][1],
+     "note": "Our first screen waits for the whole answer. Stream the first line instead.",
+     "created_at": "2026-10-01T18:40:00"},
+]}
+
+
+def notes_last_week(method, path, params=None, json_body=None):
+    """EDGE-10: the user's recent notes are last week's two."""
+    return (200, NOTES_LAST_WEEK) if method == "GET" and path == "/api/v1/me/notes" else None
