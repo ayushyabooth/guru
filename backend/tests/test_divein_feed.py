@@ -52,8 +52,8 @@ def test_user(db_session: Session):
     profile = UserProfile(
         user_id=user.id,
         core_industry="Technology",
-        specializations='["Software Development", "AI & Machine Learning"]',
-        additional_interest_industries='["Healthcare", "Finance"]',
+        specializations=["Software Development", "AI & Machine Learning"],
+        additional_interest_industries=["Healthcare", "Finance"],
         catchup_daily_goal_minutes=20,
         catchup_daily_max_minutes=45,
         divein_weekly_goal_minutes=90,
@@ -168,7 +168,7 @@ def sample_articles(db_session: Session, test_user: User):
 
 @pytest.mark.anyio
 async def test_get_divein_feed_includes_saved(db_session: Session, test_user: User, sample_articles, auth_headers, async_client):
-    """Verify feed includes saved articles in the essential pool (Pool 1)"""
+    """Verify feed includes saved articles in the saved section"""
     # Save an article
     saved_article = UserSavedArticle(
         user_id=test_user.id,
@@ -181,19 +181,17 @@ async def test_get_divein_feed_includes_saved(db_session: Session, test_user: Us
     assert response.status_code == 200
 
     data = response.json()
-    # Two-pool architecture: essential_articles (Pool 1) + discovery_articles (Pool 2)
+    # Three sections: saved_articles, essential_articles, discovery_articles
+    assert "saved_articles" in data
     assert "essential_articles" in data
     assert "discovery_articles" in data
 
-    # Saved article should be in Pool 1 (essential_articles)
-    all_articles = data["essential_articles"] + data["discovery_articles"]
-    assert len(all_articles) > 0
-
-    article_ids = [a["id"] for a in data["essential_articles"]]
+    # The saved article is in the saved section
+    article_ids = [a["id"] for a in data["saved_articles"]]
     assert str(sample_articles[0].id) in article_ids
 
     # Check that saved article is marked as saved
-    saved_article_data = next(a for a in data["essential_articles"] if a["id"] == str(sample_articles[0].id))
+    saved_article_data = next(a for a in data["saved_articles"] if a["id"] == str(sample_articles[0].id))
     assert saved_article_data["is_saved"] is True
 
 

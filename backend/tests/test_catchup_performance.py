@@ -12,6 +12,10 @@ from app.models.user import User
 from app.models.storyboard import Storyboard
 from app.services.clustering_service import get_or_build_storyboards_for_filter
 
+pytestmark = pytest.mark.quarantine(
+    reason="A benchmark for a populated database: it needs real storyboards (the embedding model, a download), "
+           "times requests against wall-clock limits, reuses one email and imports app.utils.auth, which is gone")
+
 
 @pytest.fixture
 def db():

@@ -1,0 +1,58 @@
+# Guru CI: two jobs in parallel on every push and pull request, every check offline.
+# Railway deploys a push to main only after both pass ("Wait for CI" in the Railway service settings).
+# `make ci` runs the same checks locally, in the same order.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # No secrets. With no backend/.env the tests and evals set dummy JWT_SECRET_KEY and
+      # ANTHROPIC_API_KEY themselves, ADMIN_API_KEY stays unset so nothing uploads, and the
+      # database is a throwaway SQLite file (each test target also makes its own).
+      DATABASE_URL: sqlite:////tmp/guru-ci.sqlite3
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11" # backend/Dockerfile runs python:3.11-slim
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+      - name: Gating backend suite
+        run: make test-agent
+      - name: Offline evals
+        run: make evals UPLOAD=0
+      - name: Legacy suite (quarantine listed in tests/QUARANTINE.md)
+        run: make test-legacy
+
+  app:
+    name: App
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20" # Expo SDK 54 needs 20.19.4+, and every engines range in the lockfile allows 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install app dependencies
+        working-directory: mobile
+        run: npm ci
+      - name: App tests
+        run: make test-app
+      - name: No new type errors
+        run: make typecheck-app

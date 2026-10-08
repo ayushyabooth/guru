@@ -15,6 +15,10 @@ from app.services.auth_service import generate_jwt, verify_jwt
 from app.services.clustering_service import get_or_build_storyboards_for_filter, parse_filter_context
 from app.services.summary_service import generate_personal_prompt
 
+pytestmark = pytest.mark.quarantine(
+    reason="Never ran: needs a client fixture that was never written and mocks it never defines, and patches "
+           "get_db, which FastAPI's Depends never sees")
+
 
 @pytest.fixture
 def db_session():

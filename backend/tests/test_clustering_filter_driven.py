@@ -267,6 +267,7 @@ class TestEmbeddings:
         # Mock the embedding model
         mock_model = MagicMock()
         mock_model.encode.return_value = [np.random.rand(384) for _ in range(len(sample_articles_with_notes))]
+        mock_model.embed.side_effect = lambda texts: [np.random.rand(384) for _ in texts]  # fastembed's API
         mock_get_model.return_value = mock_model
         
         embeddings = compute_article_embeddings(sample_articles_with_notes)
@@ -300,6 +301,7 @@ class TestEmbeddings:
 class TestClustering:
     """Test semantic clustering functionality"""
     
+    @patch('app.services.clustering_service._generate_cluster_narrative', lambda articles, theme: None)  # a model call
     @patch('app.services.clustering_service.get_embedding_model')
     @patch('app.services.clustering_service._generate_cluster_summary')
     @patch('app.services.clustering_service._generate_cluster_theme')
@@ -327,6 +329,7 @@ class TestClustering:
             return embeddings
         
         mock_model.encode = mock_encode
+        mock_model.embed = mock_encode  # fastembed's API
         mock_get_model.return_value = mock_model
         
         # Mock LLM responses
@@ -403,13 +406,13 @@ class TestStoryboardCaching:
         db_session.add(storyboard)
         db_session.commit()
         
-        # Create cache entry
+        # Create the base cache entry: shared by every user with this filter, under a sentinel user id
         cache_entry = StoryboardCache(
-            user_id=sample_user_with_profile.id,
+            user_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
             filter_context="specialization:Food & Beverage",
             cache_date=datetime.now().strftime('%Y-%m-%d'),
             storyboard_ids=[str(storyboard.id)],
-            expires_at=datetime.now() + timedelta(hours=6)
+            expires_at=datetime.utcnow() + timedelta(hours=6)  # the cache compares in UTC
         )
         db_session.add(cache_entry)
         db_session.commit()

@@ -120,10 +120,11 @@ class TestFreshnessScore:
         score = _get_freshness_score(article)
         assert score > 0.95
 
-    def test_15_day_old_article(self):
-        article = _make_article(created_at=datetime.now() - timedelta(days=15))
+    def test_half_window_old_article_scores_half(self):
+        from app.config import settings
+        article = _make_article(created_at=datetime.now() - timedelta(days=settings.ARTICLE_TIME_WINDOW_DAYS / 2))
         score = _get_freshness_score(article)
-        assert 0.45 < score < 0.55  # Should be ~0.5
+        assert 0.45 < score < 0.55  # Linear decay over ARTICLE_TIME_WINDOW_DAYS: half the window is ~0.5
 
     def test_30_day_old_article_scores_0(self):
         article = _make_article(created_at=datetime.now() - timedelta(days=30))

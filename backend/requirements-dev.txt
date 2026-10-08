@@ -1,0 +1,6 @@
+# What the tests and evals import that requirements.txt doesn't pin. CI installs both files;
+# the Docker image installs only requirements.txt, so none of this ships.
+pytest==9.1.1
+# The evals and tests/test_evals_score.py read YAML. Today PyYAML arrives only as a dependency of a
+# dependency (fastembed, through huggingface_hub), so it is pinned here in its own right.
+PyYAML==6.0.3

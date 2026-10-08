@@ -3,7 +3,7 @@ Test suite for authentication endpoints and JWT functionality
 """
 import pytest
 import uuid
-from fastapi.testclient import TestClient
+from tests.asgi_client import SyncASGIClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -12,6 +12,8 @@ from jose import JWTError
 from app.main import app
 from app.db.base import Base
 from app.db.database import get_db
+from app.routes.auth import limiter
+from app.services.industries_config import IndustriesConfig
 from app.models.user import User, UserProfile
 # Import all models to ensure Base.metadata has all tables
 from app.models import user, article, storyboard, interaction, recap, metric, cache, ingestion, qa_models, preferences, ingestion_run, article_rich_content  # noqa: F401
@@ -50,8 +52,9 @@ def client(db_session):
             pass
     
     app.dependency_overrides[get_db] = override_get_db
+    limiter.reset()  # signup allows 3 a minute from one address; each test starts fresh
     
-    test_client = TestClient(app)
+    test_client = SyncASGIClient(app)
     yield test_client
     
     app.dependency_overrides.clear()
@@ -129,8 +132,11 @@ def test_signup_creates_user_profile(client, db_session):
     # Verify user profile was created with defaults
     profile = db_session.query(UserProfile).filter(UserProfile.user_id == user_id).first()
     assert profile is not None
-    assert profile.core_industry == "Consumer"
-    assert profile.specializations == ["Food & Beverage"]
+    # Signup defaults to the config's first industry and its first specialization
+    _, default_industry = IndustriesConfig.get_instance().get_default_industry()
+    _, default_specialization = IndustriesConfig.get_instance().get_default_specialization()
+    assert profile.core_industry == default_industry
+    assert profile.specializations == [default_specialization]
     assert profile.additional_interest_industries == []
     assert profile.total_weekly_capacity_band == "~2h"
     assert profile.catchup_daily_goal_minutes == 20

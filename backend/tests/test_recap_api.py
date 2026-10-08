@@ -15,9 +15,16 @@ from app.models.qa_models import QAExchange
 from app.models.recap import RecapSession, RecapSessionPublish
 from app.services.recap_service import RecapService
 from app.services.auth_service import create_access_token
+from app.config import settings
 from app.db.database import SessionLocal, create_tables
+from tests.asgi_client import SyncASGIClient
 
 create_tables()
+client = SyncASGIClient(app)  # the sync endpoint tests below call it
+
+RECAP_SESSION_API = pytest.mark.quarantine(
+    reason="Written for the RecapSession API: /recap/start now starts a journey, answers take a new shape "
+           "and publishing is gone, so these get 422 and 404")
 
 
 @pytest.fixture
@@ -96,7 +103,7 @@ def sample_articles_and_qa(db_session: Session, test_user: User):
         article = Article(
             id=uuid.uuid4(),
             title=f"{industry} Article {i+1}",
-            url=f"https://example.com/{industry.lower()}-{i+1}",
+            url=f"https://example.com/{industry.lower()}-{i+1}-{uuid.uuid4().hex[:8]}",
             source=f"{industry} News",
             raw_text=f"This is a comprehensive article about {industry} trends and developments.",
             word_count=200,
@@ -189,7 +196,7 @@ class TestRecapService:
     
     @patch('app.services.recap_service.get_claude_client')
     def test_generate_synthesis(self, mock_claude_client, db_session: Session, test_user: User, sample_articles_and_qa):
-        """Verify synthesis generation with Claude Opus"""
+        """Verify synthesis generation with Claude Sonnet"""
         # Create recap session first
         week_start = sample_articles_and_qa["week_start"]
         session_result = RecapService.generate_recap_session(str(test_user.id), week_start, db_session)
@@ -216,10 +223,10 @@ What's particularly striking is how these seemingly separate domains are converg
         assert "key_insights" in result
         assert len(result["synthesis_text"]) > 100
         
-        # Verify Claude Opus was used
+        # Verify Sonnet wrote the synthesis (the first call; the last is the Haiku key insights)
         mock_client.client.messages.create.assert_called()
-        call_args = mock_client.client.messages.create.call_args
-        assert call_args[1]['model'] == "claude-opus-4-5-20251101"
+        synthesis_call = mock_client.client.messages.create.call_args_list[0]
+        assert synthesis_call[1]['model'] == settings.CLAUDE_SONNET_MODEL
     
     def test_select_diverse_exchanges(self, db_session: Session, sample_articles_and_qa):
         """Verify diverse exchange selection algorithm"""
@@ -290,6 +297,7 @@ class TestRecapEndpoints:
         )
         assert response2.status_code == 409  # Conflict
     
+    @RECAP_SESSION_API
     @pytest.mark.anyio
     async def test_answer_recap_question_endpoint(self, db_session: Session, sample_articles_and_qa, auth_headers, async_client):
         """Verify POST /recap/{id}/answer works"""
@@ -318,6 +326,7 @@ class TestRecapEndpoints:
         assert data["stored"] is True
         assert data["question_order"] == 1
     
+    @RECAP_SESSION_API
     def test_answer_recap_question_validation(self, db_session: Session, sample_articles_and_qa, auth_headers):
         """Verify validation for recap question answers"""
         week_start = sample_articles_and_qa["week_start"]
@@ -388,6 +397,7 @@ class TestRecapEndpoints:
         assert len(data["synthesis_text"]) > 0
         assert isinstance(data["key_insights"], list)
     
+    @RECAP_SESSION_API
     @patch('app.services.recap_service.get_claude_client')
     def test_publish_recap_endpoint(self, mock_claude_client, db_session: Session, sample_articles_and_qa, auth_headers):
         """Verify POST /recap/{id}/publish works"""
@@ -427,6 +437,7 @@ class TestRecapEndpoints:
         assert "share_key" in data
         assert data["share_url"].startswith("/shared-recap/")
     
+    @RECAP_SESSION_API
     @patch('app.services.recap_service.get_claude_client')
     def test_view_shared_recap_endpoint(self, mock_claude_client, db_session: Session, sample_articles_and_qa, auth_headers):
         """Verify GET /recap/shared/{share_key} works (public endpoint)"""
@@ -526,6 +537,7 @@ class TestRecapEndpoints:
 class TestRecapIntegration:
     """Integration tests for complete recap workflow"""
     
+    @RECAP_SESSION_API
     @patch('app.services.recap_service.get_claude_client')
     def test_complete_recap_workflow(self, mock_claude_client, db_session: Session, sample_articles_and_qa, auth_headers):
         """Test complete recap workflow from start to sharing"""

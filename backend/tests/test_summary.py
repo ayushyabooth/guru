@@ -6,6 +6,7 @@ import uuid
 from unittest.mock import patch, MagicMock
 from datetime import datetime
 
+from app.config import settings
 from app.utils.llm_utils import ClaudeClient, get_claude_client
 from app.services.summary_service import (
     generate_article_summary, generate_personal_prompt,
@@ -152,7 +153,7 @@ class TestClaudeClient:
         client = ClaudeClient(api_key="test-key")
         
         assert client.api_key == "test-key"
-        assert client.model == "claude-sonnet-4-5-20250929"
+        assert client.model == settings.CLAUDE_HAIKU_MODEL
         mock_anthropic.assert_called_once_with(api_key="test-key")
     
     @patch('app.utils.llm_utils.anthropic.Anthropic')

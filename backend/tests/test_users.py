@@ -120,7 +120,7 @@ async def test_update_user_profile_success(async_client, test_user, auth_headers
     """Test successful profile update"""
     update_data = {
         "core_industry": "consumer",
-        "specializations": ["food_beverage", "retail"],
+        "specializations": ["food_beverage", "specialty_retail_ecommerce"],
         "additional_interest_industries": ["technology"],
         "total_weekly_capacity_band": "~4h",
         "catchup_daily_goal_minutes": 30,

@@ -296,7 +296,8 @@ def test_user_interactions(db_session):
     # Test not relevant storyboard
     not_relevant = UserNotRelevant(
         user_id=user.id,
-        storyboard_id=storyboard.id
+        storyboard_id=storyboard.id,
+        filter_context="core"
     )
     db_session.add(not_relevant)
     db_session.commit()
@@ -313,6 +314,7 @@ def test_user_interactions(db_session):
     assert len(user_with_interactions.not_relevant_storyboards) == 1
 
 
+@pytest.mark.quarantine(reason="RecapQuestion and RecapResponse no longer exist: recap moved to RecapJourney")
 def test_recap_session_flow(db_session):
     """Test recap session, questions, and responses"""
     # Create user

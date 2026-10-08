@@ -159,9 +159,11 @@ class TestStoryboardClustering:
 class TestPersonalPromptGeneration:
     """Test personal prompt generation"""
     
+    @patch('app.services.summary_service.get_claude_client')
     @patch('app.services.summary_service.SessionLocal')
-    def test_generate_personal_prompt_success(self, mock_session_local):
+    def test_generate_personal_prompt_success(self, mock_session_local, mock_get_claude_client):
         """Test successful personal prompt generation"""
+        mock_get_claude_client.return_value.generate_personal_prompt.return_value = "How will this shift your AI roadmap?"
         # Setup mock database session
         mock_db = MagicMock()
         mock_session_local.return_value.__enter__.return_value = mock_db
@@ -190,7 +192,8 @@ class TestPersonalPromptGeneration:
         
         # Verify the result
         assert isinstance(result, dict)
-        assert "prompt" in result or "error" in result
+        assert result["success"] is True
+        assert result["prompt"] == "How will this shift your AI roadmap?"
     
     @patch('app.services.summary_service.SessionLocal')
     def test_generate_personal_prompt_user_not_found(self, mock_session_local):

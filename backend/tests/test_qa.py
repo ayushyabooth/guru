@@ -5,7 +5,7 @@ import pytest
 import httpx
 from sqlalchemy.orm import Session
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from app.main import app
@@ -14,9 +14,12 @@ from app.models.article import Article, ExpertNote
 from app.models.qa_models import QAExchange
 from app.services.qa_service import QAService
 from app.services.auth_service import create_access_token
+from app.config import settings
 from app.db.database import SessionLocal, create_tables
+from tests.asgi_client import SyncASGIClient
 
 create_tables()
+client = SyncASGIClient(app)  # the sync endpoint tests below call it
 
 
 @pytest.fixture
@@ -88,7 +91,7 @@ def sample_article(db_session: Session, test_user: User):
     article = Article(
         id=uuid.uuid4(),
         title="AI Revolution in Healthcare",
-        url="https://example.com/ai-healthcare",
+        url=f"https://example.com/ai-healthcare-{uuid.uuid4().hex[:8]}",
         source="Tech Health",
         raw_text="This article discusses the revolutionary impact of AI in healthcare, including machine learning applications in diagnosis, treatment planning, and patient care optimization.",
         word_count=150,
@@ -120,7 +123,7 @@ def paywalled_article(db_session: Session, test_user: User):
     article = Article(
         id=uuid.uuid4(),
         title="Premium Finance Insights",
-        url="https://example.com/premium-finance",
+        url=f"https://example.com/premium-finance-{uuid.uuid4().hex[:8]}",
         source="Finance Premium",
         raw_text="Limited preview content...",
         word_count=500,
@@ -144,6 +147,14 @@ def paywalled_article(db_session: Session, test_user: User):
     db_session.refresh(article)
     
     return article
+
+
+@pytest.fixture(autouse=True)
+def no_context_summary_call():
+    """answer_question first asks Claude for the article's context summary. These tests mock only the answer
+    call, so the summary step returns nothing and the answer uses the article's own text."""
+    with patch("app.services.rich_summary_service.RichSummaryService.ensure_context_summary", return_value=None):
+        yield
 
 
 class TestQAService:
@@ -222,9 +233,9 @@ class TestQAService:
         assert len(result["answer"]) > 0
         assert "created_at" in result
         assert "id" in result
-        assert result["model_used"] == "claude-sonnet-4-5-20250929"
+        assert result["model_used"] == settings.CLAUDE_HAIKU_MODEL
         
-        # Verify Claude was called with latest Sonnet model
+        # Verify Claude was called
         mock_client.client.messages.create.assert_called_once()
     
     def test_answer_question_stored_in_db(self, db_session: Session, sample_article: Article, test_user: User):
@@ -257,7 +268,7 @@ class TestQAService:
             assert exchange is not None
             assert exchange.question == "Test question?"
             assert exchange.answer == "Test answer from Claude"
-            assert exchange.model_used == "claude-sonnet-4-5-20250929"
+            assert exchange.model_used == settings.CLAUDE_HAIKU_MODEL
     
     @patch('app.services.qa_service.get_claude_client')
     def test_answer_question_paywalled_article(self, mock_claude_client, db_session: Session, paywalled_article: Article, test_user: User):
@@ -283,10 +294,10 @@ class TestQAService:
         assert "answer" in result
         assert "financial strategies" in result["answer"]
         
-        # Verify Claude was called with expert notes content
+        # Verify Claude was called with expert notes content (the article block is the cached system block)
         call_args = mock_client.client.messages.create.call_args
-        prompt_content = call_args[1]['messages'][0]['content']
-        assert "advanced financial strategies" in prompt_content
+        article_block = call_args[1]['system'][1]['text']
+        assert "advanced financial strategies" in article_block
     
     def test_get_qa_history(self, db_session: Session, sample_article: Article, test_user: User):
         """Verify Q&A history retrieval"""
@@ -296,14 +307,16 @@ class TestQAService:
             article_id=sample_article.id,
             question="First question?",
             answer="First answer",
-            model_used="claude-sonnet-4-5-20250929"
+            model_used="claude-sonnet-4-5-20250929",
+            created_at=datetime.utcnow() - timedelta(minutes=1)
         )
         exchange2 = QAExchange(
             user_id=test_user.id,
             article_id=sample_article.id,
             question="Second question?",
             answer="Second answer",
-            model_used="claude-sonnet-4-5-20250929"
+            model_used="claude-sonnet-4-5-20250929",
+            created_at=datetime.utcnow()
         )
         
         db_session.add_all([exchange1, exchange2])
