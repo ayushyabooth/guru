@@ -76,7 +76,7 @@ cp .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Startup creates missing tables and columns, deletes content older than 30 days, and starts background ingestion. Ingestion calls the Anthropic API, paid web search included, so the first start on an empty database costs money. There is no switch to turn it off yet.
+Startup creates missing tables and columns, deletes content older than 30 days (keeping any article a user saved, highlighted, noted or asked about), and starts background ingestion. Ingestion calls the Anthropic API, paid web search included, so the first start on an empty database costs money. There is no switch to turn it off yet.
 
 ### Frontend
 

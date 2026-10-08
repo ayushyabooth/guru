@@ -19,7 +19,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 - Web app: `cd mobile && npx expo start --web --port 8081`. Extension: `cd extension && npm run build`, then load `extension/` unpacked in Chrome.
 
 ## Traps
-- Don't start the backend locally unless I ask. Startup deletes content older than 30 days, adds missing columns, and can start a paid ingestion run.
+- Don't start the backend locally unless I ask. Startup deletes content older than 30 days (except articles a user saved, highlighted, noted or asked about), adds missing columns, and can start a paid ingestion run.
 - `mobile/.env.local` points the dev app at the production API, so a local UI reads and writes prod data. Even looking writes: the Guru tab logs ring time, and every agent turn stores a session and a trace. Sign in only with a synthetic account (an `example.com` address).
 - If `mobile/node_modules` is ever a symlink, delete it and run `npm ci` in `mobile/`.
 
@@ -55,7 +55,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 - `backend/*.db` and `archive/`: never delete, hand-edit or commit them. Build output (`extension/dist/`, `mobile/dist/`) comes only from the build commands.
 
 ## Before a push: say what the restart will do
-Every backend restart (a deploy, a variable change, a rollback) deletes content older than 30 days with the saves and notes on it, adds missing columns, and restarts the ingestion clock. Before a push, tell me what the restart will do and how big, whether the schema changed (then it boots on a scratch Postgres 16 first), and how we roll back. After the deploy: `/health` answers 200 and one real agent turn is traced with the new build SHA.
+Every backend restart (a deploy, a variable change, a rollback) deletes content older than 30 days, keeping any article a user saved, highlighted, noted or asked about; adds missing columns; and restarts the ingestion clock. Ingestion runs at boot when a tier's last completed run is outside its window (72 hours for expert RSS). Before a push, tell me what the restart will do and how big, whether the schema changed (then it boots on a scratch Postgres 16 first), and how we roll back. After the deploy: `/health` answers 200 and one real agent turn is traced with the new build SHA.
 
 ## New features and visible changes: the pipeline
 Every new feature, and any change a user can see, runs the `guru-feature` skill (`.claude/skills/guru-feature/`). It is a real team's order: product, design, tracking, then engineering.

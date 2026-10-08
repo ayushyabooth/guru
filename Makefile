@@ -6,8 +6,8 @@ TRAFFIC ?= real
 
 .PHONY: test-agent test evals traces traces-local trace
 
-test-agent: ## Agent contract + admin access tests: scripted model, no network, no real database
-	cd backend && $(PY) -m pytest -q --disable-warnings tests/test_agent_loop.py tests/test_admin_access.py tests/test_trace_insights.py tests/test_evals_judge.py tests/test_bug_reports.py
+test-agent: ## Agent contract, admin access, reports and boot-cleanup tests: scripted model, no network, no real database
+	cd backend && $(PY) -m pytest -q --disable-warnings tests/test_agent_loop.py tests/test_admin_access.py tests/test_trace_insights.py tests/test_evals_judge.py tests/test_bug_reports.py tests/test_cleanup.py
 
 test: ## Full backend test suite (some tests use the configured database)
 	cd backend && $(PY) -m pytest -q tests

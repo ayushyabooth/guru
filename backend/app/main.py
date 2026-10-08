@@ -134,6 +134,10 @@ if settings.APP_ENV == "production":
 def _cleanup_stale_content(max_age_days: int = 30):
     """Delete articles, storyboards, caches, and ingestion runs older than max_age_days.
 
+    An article a user saved, highlighted, noted or asked Guru about is kept, whatever
+    its age: deleting it would cascade to that user's own data (GUR-246; the 10/7
+    restart purged 11,022 articles with the saves and notes on them).
+
     Cascade rules on the DB handle child records (ExpertNote, ArticleRichContent,
     StoryboardArticle, UserSavedArticle, QAExchange, ArticleAnnotation, UserNotRelevant).
 
@@ -145,13 +149,19 @@ def _cleanup_stale_content(max_age_days: int = 30):
       5. Articles older than max_age_days
     """
     from datetime import datetime, timedelta
+    from sqlalchemy import select, union
     from app.db.database import SessionLocal
     from app.models.article import Article
     from app.models.storyboard import Storyboard
     from app.models.cache import StoryboardCache
     from app.models.ingestion_run import IngestionRun
+    from app.models.interaction import UserSavedArticle, UserAnnotation
+    from app.models.qa_models import QAExchange
 
     cutoff = datetime.utcnow() - timedelta(days=max_age_days)
+    # Articles that carry a user's own data: saves, highlights and notes, Q&A.
+    kept = union(*(select(c).where(c.isnot(None)) for c in
+                   (UserSavedArticle.article_id, UserAnnotation.article_id, QAExchange.article_id)))
     db = SessionLocal()
     try:
         # 1. Stale cache entries
@@ -166,7 +176,7 @@ def _cleanup_stale_content(max_age_days: int = 30):
 
         # 3. Stale article IDs (needed for storyboard FK cleanup)
         stale_article_ids = [
-            row[0] for row in db.query(Article.id).filter(Article.created_at < cutoff).all()
+            row[0] for row in db.query(Article.id).filter(Article.created_at < cutoff, Article.id.not_in(kept)).all()
         ]
 
         # 4. Storyboards whose headline article is stale (prevents FK violation)
@@ -181,10 +191,11 @@ def _cleanup_stale_content(max_age_days: int = 30):
             Storyboard.created_at < cutoff
         ).delete(synchronize_session=False)
 
-        # 6. Articles older than cutoff (cascades handle children)
+        # 6. Articles older than cutoff, except those carrying a user's data (cascades handle children)
         articles_deleted = db.query(Article).filter(
-            Article.created_at < cutoff
+            Article.created_at < cutoff, Article.id.not_in(kept)
         ).delete(synchronize_session=False)
+        kept_old = db.query(Article.id).filter(Article.created_at < cutoff).count()
 
         db.commit()
 
@@ -192,7 +203,8 @@ def _cleanup_stale_content(max_age_days: int = 30):
         logger.info(
             f"Stale content cleanup (>{max_age_days} days): "
             f"{articles_deleted} articles, {total_sb} storyboards, "
-            f"{cache_deleted} cache entries, {runs_deleted} ingestion runs removed"
+            f"{cache_deleted} cache entries, {runs_deleted} ingestion runs removed; "
+            f"{kept_old} older articles kept because a user saved, highlighted, noted or asked about them"
         )
     except Exception as e:
         db.rollback()
