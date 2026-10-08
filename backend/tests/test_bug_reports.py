@@ -377,6 +377,9 @@ async def test_the_admin_list_is_newest_first_and_filters(api):
     assert row["linear_identifier"] == "GUR-300" and row["linear_url"].endswith("/GUR-300")
     assert row["trace_id"] == trace_id and "get_catchup_feed returned an error" in row["trace_headline"]
     assert row["hypothesis_summary"] == "The feed failed."
+    assert row["traffic"] == "real" and isinstance(row["trace_first_block_ms"], int)  # the row's chip, no second call
+    synthetic_row = (await api.call("GET", "/api/v1/admin/reports?traffic=synthetic", key=KEY)).json()["reports"][0]
+    assert synthetic_row["traffic"] == "synthetic" and synthetic_row["trace_first_block_ms"] is None
 
 
 async def test_the_detail_carries_the_reported_turn(api):

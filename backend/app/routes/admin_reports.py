@@ -112,10 +112,11 @@ async def list_reports(
         t, h = turns.get(r.id), br.hypothesis_of(r) or {}
         rows.append({
             "id": str(r.id), "reference": br.reference(r.id), "created_at": br.iso(r.created_at),
-            "user_email": emails.get(r.user_id), "category": r.category,
+            "user_email": emails.get(r.user_id), "category": r.category, "traffic": r.traffic or "real",
             "expected": (r.expected or "")[:EXPECTED_PREVIEW_CHARS], "screen": r.screen, "status": r.status,
             "linear_identifier": r.linear_identifier, "linear_url": r.linear_url, "trace_id": _id(r.trace_id),
             "trace_headline": ti.diagnose(t)["headline"] if t else None,
+            "trace_first_block_ms": t["first_block_ms"] if t else None,  # the list's chip, with the mode in `screen`
             "hypothesis_summary": h.get("summary"),
         })
     return {"reports": rows, "total": len(rows)}
