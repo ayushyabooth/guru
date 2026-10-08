@@ -16,7 +16,7 @@ Every push to `main` redeploys the backend on Railway, and every deploy is a res
   - A failing verdict (the target exits 1) means a tier's last run failed or a run is stuck: say which, from its reasons, before asking for the go.
   - Missing columns are added and new tables created. A schema change boots on a scratch Postgres 16 first.
 - Variables staged with `--skip-deploys` go live with this deploy.
-- The rollback: Railway, Deployments, the previous deployment, Redeploy (also a restart), or `git revert` and push.
+- The rollback: Railway, Deployments, the previous good deployment, its menu, Rollback. Railway restores that deployment's image and its variables ("Both the Docker image and custom variables are restored"), so there's no build and no CI wait, but it is still a restart: say its effects like a deploy's. It also brings back that image's packages (rolling back past `af3ed2d` puts anthropic 1.x back). Not Redeploy, which builds that code again. Then `git revert` and push (CI gates it), so `main` matches production; otherwise the next push ships the rolled-back commit again. Prove it with `make watch-deploy SHA=<the old commit>`.
 - Ask the owner. Push only on a clear go.
 
 ## 2. Push, then watch
