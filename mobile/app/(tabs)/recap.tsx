@@ -42,6 +42,7 @@ import {
   RecapDetail,
   RecapHero,
 } from '../../components/Recap';
+import { completedStageCount, finishingAdvances, stageTapAction } from '../../components/Recap/recapStages';
 import {
   Spacing,
   Typography,
@@ -157,8 +158,9 @@ export default function RecapScreen() {
   const hasCompletedRecap = recapStatus === 'completed' || journey?.status === 'completed';
   const isInProgress = recapStatus === 'in_progress' || (journey?.status?.startsWith('stage_') ?? false);
 
-  // Derive stage completion for interactive stages
-  const completedStages = hasCompletedRecap ? 4 : (journey?.stage_progress || 0);
+  // Stages finished, read from the journey's status. stage_progress is the stage
+  // the user is ON, so reading it as "stages done" ran the list one stage ahead.
+  const completedStages = completedStageCount(journey?.status, hasCompletedRecap);
 
   // GUR-237: stage-aware, encouraging resume copy for a paused journey. Indexed
   // by the stage the user is currently ON (completedStages = stages done, so the
@@ -319,6 +321,40 @@ export default function RecapScreen() {
     }
   };
 
+  // Open one stage from the Journey Stages list. A finished stage opens for
+  // review and never moves the journey; the stage the journey is on resumes
+  // where the server has it. Declared before the handlers that use it (TDZ).
+  const openStage = async (j: RecapJourney, stageNum: number) => {
+    if (stageTapAction(j.status, stageNum) !== 'review') {
+      await resumeJourney(j);
+      return;
+    }
+    setViewState('loading');
+    try {
+      if (stageNum === 1) {
+        const snapshotResp = await recapService.getSnapshot(j.journey_id);
+        setSnapshot(snapshotResp.snapshot);
+        setViewState('snapshot');
+      } else if (stageNum === 2) {
+        const qData = await recapService.getQuestions(j.journey_id);
+        setQuestions(qData.questions);
+        setResponses(qData.responses || {});
+        setViewState('questions');
+      } else {
+        try {
+          const summary = await recapService.getSummary(j.journey_id);
+          if (summary?.socratic_exchanges) {
+            setSocraticExchanges(summary.socratic_exchanges);
+          }
+        } catch { /* fine */ }
+        setViewState('socratic');
+      }
+    } catch (err: any) {
+      setError(err.message);
+      setViewState('entry');
+    }
+  };
+
   const handleBeginJourney = useCallback(async () => {
     setViewState('loading');
     setError(null);
@@ -353,6 +389,11 @@ export default function RecapScreen() {
 
   const handleSnapshotComplete = useCallback(async () => {
     if (!journey) return;
+    // Reviewing a finished stage: go on to the next one, journey unmoved.
+    if (!finishingAdvances(journey.status, 1)) {
+      await openStage(journey, 2);
+      return;
+    }
     try {
       // Advance to stage 2
       const result = await recapService.advanceStage(journey.journey_id);
@@ -381,6 +422,10 @@ export default function RecapScreen() {
 
   const handleQuestionsComplete = useCallback(async () => {
     if (!journey) return;
+    if (!finishingAdvances(journey.status, 2)) {
+      await openStage(journey, 3);
+      return;
+    }
     try {
       // Advance stage
       const result = await recapService.advanceStage(journey.journey_id);
@@ -412,6 +457,11 @@ export default function RecapScreen() {
 
   const handleSocraticComplete = useCallback(async () => {
     if (!journey) return;
+    // A reviewed Explore hands back to wherever the journey really is.
+    if (!finishingAdvances(journey.status, 3)) {
+      await resumeJourney(journey);
+      return;
+    }
     try {
       // Advance to commitment
       const result = await recapService.advanceStage(journey.journey_id);
@@ -1015,7 +1065,11 @@ export default function RecapScreen() {
                   ]}
                   disabled={isLocked && !hasCompletedRecap}
                   onPress={() => {
-                    if (isCompleted || isCurrent) {
+                    if (!(isCompleted || isCurrent)) return;
+                    // Open the stage tapped, not whichever stage the journey is on.
+                    if (journey) {
+                      openStage(journey, stage.num);
+                    } else {
                       handleBeginJourney();
                     }
                   }}
