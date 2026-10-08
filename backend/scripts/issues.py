@@ -1,7 +1,8 @@
 """
 The Issues tab from the terminal - for Claude Code and for a person. Same data as the
-admin Issues tab (app/routes/admin_issues.py): the ship gate from the latest eval run,
-then every open issue, whatever found it (evals, beta reports, production), newest first.
+admin Issues tab (app/routes/admin_issues.py): the ship gate from the newest whole live
+eval run and its graded score, then every open issue, whatever found it (evals, beta
+reports, production), newest first. Every run, partial and offline ones too: make eval-runs.
 
     cd backend
     venv/bin/python scripts/issues.py list [--days 7] [--source all|eval|report|production] [--prod] [--json]
@@ -13,6 +14,7 @@ a header and never printed. Without --prod it reads the local database.
 import argparse
 import asyncio
 import json
+import math
 import os
 import sys
 
@@ -64,7 +66,7 @@ def _local(days, source):
 def print_gate(g):
     run = g.get("run")
     where = (f"latest eval run {_when(run['run_at'])}, {'live' if run['live'] else 'offline'}, "
-             f"build {run['build_sha']}, prompt {run['prompt_version']}") if run else "no eval run uploaded yet"
+             f"build {run['build_sha']}, prompt {run['prompt_version']}") if run else "no whole live run uploaded yet"
     print(f"Ship gate: {g['state'].upper()}  ({where})")
     for r in g["reasons"]:
         if r["ok"]:
@@ -74,6 +76,25 @@ def print_gate(g):
         else:
             tag = TAG["info"] if g["state"] == "unknown" else TAG["bad"]
         print(f"  [{tag}] {r['kind']}: {r['text']}")
+    print_score(g.get("score"))
+
+
+def _whole(x):
+    """A score in whole points, halves up, as the eval runner prints it and the app shows it."""
+    return int(math.floor(x + 0.5))
+
+
+def print_score(s):
+    """The latest run's graded eval score (GUR-268), under the gate it never changes: the topline against
+    the baseline, the weights version, then each weighted area. Nothing for a run without one."""
+    if not s:
+        return
+    vs = f" (baseline {_whole(s['baseline'])}, {s['delta']:+d})" if s.get("baseline") is not None else ""
+    print(f"  Eval score {_whole(s['topline'])}/100{vs}, weights {s.get('weights_version')}")
+    areas = [f"{a['label']} {_whole(a['score'])}" for a in s.get("areas") or []
+             if a.get("weight") and a.get("score") is not None]
+    if areas:
+        print("    " + " · ".join(areas))
 
 
 def print_rows(rows):

@@ -7,6 +7,9 @@
  * views the Reports and Agent tabs open.
  *
  * One read for the window; the source chips filter it here.
+ *
+ * A switch at the top, Issues | Eval runs (GUR-282, frame 38:44), swaps this
+ * list for every eval run (EvalRunsTab). Each view keeps its place.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -21,17 +24,29 @@ import {
   IssueSourceFilter,
   IssueStatus,
   ShipGate,
+  asEvalScore,
+  evalScoreAreas,
+  evalScoreLine,
   getIssues,
   toAdminError,
 } from '../../services/admin-service';
 import { AdminPalette, fmtAgo, isNum, issueToneColor, shortId, useAdminPalette, withAlpha } from './adminTheme';
-import { StateMessage } from './AdminUI';
+import { Segmented, SegmentOption, StateMessage } from './AdminUI';
 import AgentTurnDetailModal from './AgentTurnDetail';
 import ReportDetail, { FIRST_BLOCK_BUDGET_MS, fmtWhen } from './ReportDetail';
 import EvalCaseDetail, { GlassTag, IssueStatusTag, spoken } from './EvalCaseDetail';
+import EvalRunsTab from './EvalRunsTab';
 import { FACE, glassSurface } from '../report/reportTheme';
 
 const WINDOW_DAYS = 7;
+
+/** The switch at the top of the tab (GUR-282): open issues, or every eval run. */
+type IssuesView = 'issues' | 'runs';
+
+const VIEWS: SegmentOption<IssuesView>[] = [
+  { value: 'issues', label: 'Issues' },
+  { value: 'runs', label: 'Eval runs' },
+];
 
 /** A row's source chip: a quiet glass chip, so color still means status. */
 const SOURCES: Record<string, { label: string; icon: string; hint: string }> = {
@@ -162,6 +177,10 @@ export default function IssuesTab({ refreshSignal, maxHeight }: Props) {
   );
   const [openReport, setOpenReport] = useState<{ id: string; reference: string } | null>(null);
   const [openTurnId, setOpenTurnId] = useState<string | null>(null);
+  // Eval runs loads on its first view, then stays mounted (hidden under Issues) like the panel's tabs.
+  const [view, setView] = useState<IssuesView>('issues');
+  const [runsOpened, setRunsOpened] = useState(false);
+  const [runsRefresh, setRunsRefresh] = useState(0);
 
   // A slow response never overwrites a newer one.
   const seq = useRef(0);
@@ -184,14 +203,22 @@ export default function IssuesTab({ refreshSignal, maxHeight }: Props) {
     load();
   }, [load]);
 
-  // The panel's Refresh button: reload in place, keeping what is on screen.
+  // The panel's Refresh button: reload the view on screen in place, keeping what is on screen.
   const firstSignal = useRef(refreshSignal);
   const latestLoad = useRef(load);
   latestLoad.current = load;
+  const viewNow = useRef(view);
+  viewNow.current = view;
   useEffect(() => {
     if (refreshSignal === firstSignal.current) return;
-    latestLoad.current();
+    if (viewNow.current === 'runs') setRunsRefresh((n) => n + 1);
+    else latestLoad.current();
   }, [refreshSignal]);
+
+  const selectView = (next: IssuesView) => {
+    if (next === 'runs') setRunsOpened(true);
+    setView(next);
+  };
 
   const onPull = useCallback(async () => {
     setPulling(true);
@@ -229,99 +256,123 @@ export default function IssuesTab({ refreshSignal, maxHeight }: Props) {
   const emptyCopy = (anyIssues ? FILTERS.find((f) => f.value === filter) : FILTERS[0])?.empty ?? FILTERS[0].empty;
   const detailOpen = !!openCase || !!openReport;
 
+  // Issues | Eval runs, at the top of each view's list. An open detail has its own Back instead.
+  const viewSwitch = (
+    <Segmented
+      options={VIEWS}
+      value={view}
+      onChange={selectView}
+      P={P}
+      role="tab"
+      accessibilityLabel="Issues or eval runs"
+    />
+  );
+
   return (
     <View>
-      {/* The list stays mounted under an open case or report, so Back returns to the same place. */}
-      <ScrollView
-        style={[{ maxHeight }, detailOpen ? s.hidden : null]}
-        contentContainerStyle={s.content}
-        nestedScrollEnabled
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          Platform.OS === 'web' ? undefined : (
-            <RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={P.accent} colors={[P.accent]} />
-          )
-        }
-      >
-        {blocking ? (
-          <StateMessage title={blocking.message} detail={blockingDetail(blocking)} P={P} />
-        ) : !data && loading ? (
-          <ActivityIndicator color={P.accent} style={s.spinner} />
-        ) : !data && error ? (
-          <StateMessage
-            title="Could not load issues"
-            detail={error.message}
-            actionLabel="Try again"
-            onAction={load}
-            P={P}
-            tone="bad"
-          />
-        ) : data ? (
-          <>
-            {error ? <Text style={s.inlineError}>Could not refresh: {error.message}</Text> : null}
+      {/* Issues: hidden, never unmounted, while Eval runs shows, so its filter, open detail and scroll survive. */}
+      <View style={view === 'issues' ? null : s.hidden}>
+        {/* The list stays mounted under an open case or report, so Back returns to the same place. */}
+        <ScrollView
+          style={[{ maxHeight }, detailOpen ? s.hidden : null]}
+          contentContainerStyle={s.content}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            Platform.OS === 'web' ? undefined : (
+              <RefreshControl refreshing={pulling} onRefresh={onPull} tintColor={P.accent} colors={[P.accent]} />
+            )
+          }
+        >
+          {viewSwitch}
 
-            <ShipGateCard gate={data.gate} P={P} s={s} />
+          {blocking ? (
+            <StateMessage title={blocking.message} detail={blockingDetail(blocking)} P={P} />
+          ) : !data && loading ? (
+            <ActivityIndicator color={P.accent} style={s.spinner} />
+          ) : !data && error ? (
+            <StateMessage
+              title="Could not load issues"
+              detail={error.message}
+              actionLabel="Try again"
+              onAction={load}
+              P={P}
+              tone="bad"
+            />
+          ) : data ? (
+            <>
+              {error ? <Text style={s.inlineError}>Could not refresh: {error.message}</Text> : null}
 
-            {anyIssues ? <SourceFilters counts={data.counts} value={filter} onChange={setFilter} P={P} s={s} /> : null}
+              <ShipGateCard gate={data.gate} P={P} s={s} />
 
-            {shown.length === 0 ? (
-              <StateMessage
-                title={emptyCopy}
-                detail={anyIssues ? undefined : 'Red eval cases, beta reports and flagged turns land here.'}
-                P={P}
-              />
-            ) : (
-              shown.map((issue, i) => {
-                const target = targetOf(issue);
-                return (
-                  <IssueRow
-                    key={issue.key || `${issue.source}-${i}`}
-                    issue={issue}
-                    onOpen={target ? () => open(issue, target) : null}
-                    P={P}
-                    s={s}
-                  />
-                );
-              })
-            )}
-          </>
+              {anyIssues ? <SourceFilters counts={data.counts} value={filter} onChange={setFilter} P={P} s={s} /> : null}
+
+              {shown.length === 0 ? (
+                <StateMessage
+                  title={emptyCopy}
+                  detail={anyIssues ? undefined : 'Red eval cases, beta reports and flagged turns land here.'}
+                  P={P}
+                />
+              ) : (
+                shown.map((issue, i) => {
+                  const target = targetOf(issue);
+                  return (
+                    <IssueRow
+                      key={issue.key || `${issue.source}-${i}`}
+                      issue={issue}
+                      onOpen={target ? () => open(issue, target) : null}
+                      P={P}
+                      s={s}
+                    />
+                  );
+                })
+              )}
+            </>
+          ) : null}
+        </ScrollView>
+
+        {openCase ? (
+          <ScrollView style={{ maxHeight }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            <EvalCaseDetail
+              key={openCase.caseId}
+              caseId={openCase.caseId}
+              status={caseStatus}
+              linearUrl={caseLinear}
+              refreshSignal={refreshSignal}
+              onBack={() => setOpenCase(null)}
+            />
+          </ScrollView>
         ) : null}
-      </ScrollView>
 
-      {openCase ? (
-        <ScrollView style={{ maxHeight }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-          <EvalCaseDetail
-            key={openCase.caseId}
-            caseId={openCase.caseId}
-            status={caseStatus}
-            linearUrl={caseLinear}
-            refreshSignal={refreshSignal}
-            onBack={() => setOpenCase(null)}
-          />
-        </ScrollView>
+        {openReport ? (
+          <ScrollView style={{ maxHeight }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+            <ReportDetail
+              key={openReport.id}
+              reportId={openReport.id}
+              reference={openReport.reference}
+              refreshSignal={refreshSignal}
+              onBack={() => setOpenReport(null)}
+              backLabel="Back to issues"
+              onOpenTurn={setOpenTurnId}
+              onChanged={onReportChanged}
+            />
+          </ScrollView>
+        ) : null}
+
+        <AgentTurnDetailModal
+          turnId={openTurnId}
+          onClose={() => setOpenTurnId(null)}
+          onNavigate={setOpenTurnId}
+          firstBlockBudgetMs={FIRST_BLOCK_BUDGET_MS}
+        />
+      </View>
+
+      {/* Eval runs (GUR-282): mounted on its first view, then kept so its list and open run survive the switch. */}
+      {runsOpened ? (
+        <View style={view === 'runs' ? null : s.hidden}>
+          <EvalRunsTab refreshSignal={runsRefresh} maxHeight={maxHeight} header={viewSwitch} />
+        </View>
       ) : null}
-
-      {openReport ? (
-        <ScrollView style={{ maxHeight }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-          <ReportDetail
-            key={openReport.id}
-            reportId={openReport.id}
-            reference={openReport.reference}
-            refreshSignal={refreshSignal}
-            onBack={() => setOpenReport(null)}
-            backLabel="Back to issues"
-            onOpenTurn={setOpenTurnId}
-            onChanged={onReportChanged}
-          />
-        </ScrollView>
-      ) : null}
-
-      <AgentTurnDetailModal
-        turnId={openTurnId}
-        onClose={() => setOpenTurnId(null)}
-        onNavigate={setOpenTurnId}
-        firstBlockBudgetMs={FIRST_BLOCK_BUDGET_MS}
-      />
     </View>
   );
 }
@@ -334,8 +385,10 @@ function ShipGateCard({ gate, P, s }: { gate: ShipGate; P: AdminPalette; s: Styl
   const look = gateLook(gate?.state, P);
   const reasons = Array.isArray(gate?.reasons) ? gate.reasons.filter(Boolean) : [];
   const run = gate?.run ?? null;
-  const score = isNum(gate?.score) ? gate.score : null;
-  const scoreText = score !== null ? `Eval score: ${score}` : 'Eval score: coming with GUR-268';
+  // The graded score sits beside the gate and never changes it (GUR-268). A run without one keeps the dashed slot.
+  const score = asEvalScore(gate?.score);
+  const scoreText = score ? evalScoreLine(score) : 'Eval score: coming with GUR-268';
+  const areasText = score ? evalScoreAreas(score) : null;
   const runWhen = run ? fmtWhen(run.run_at) : null;
   const meta = run
     ? [
@@ -350,7 +403,8 @@ function ShipGateCard({ gate, P, s }: { gate: ShipGate; P: AdminPalette; s: Styl
   const summary = [
     `Ship gate: ${look.word}`,
     ...lines.map((l) => (l.text ? `${l.label}: ${l.text}` : l.label)),
-    scoreText,
+    spoken(scoreText).replace(/(\d+)\/100/, '$1 out of 100'),
+    areasText ? spoken(areasText) : null,
     meta ? spoken(meta) : null,
   ]
     .filter(Boolean)
@@ -391,9 +445,11 @@ function ShipGateCard({ gate, P, s }: { gate: ShipGate; P: AdminPalette; s: Styl
         </View>
       ) : null}
 
-      {/* The eval score's slot, dashed until GUR-268 fills it. */}
-      <View style={[s.scoreSlot, score === null ? s.scoreSlotEmpty : null]}>
-        <Text style={s.gateSmall}>{scoreText}</Text>
+      {/* The eval score's slot (GUR-268): the score, then its areas, wrapping on a narrow phone. Dashed while
+          the latest run carries no score. */}
+      <View style={[s.scoreSlot, score ? null : s.scoreSlotEmpty]}>
+        <Text style={score ? s.scoreText : s.gateSmall}>{scoreText}</Text>
+        {areasText ? <Text style={s.scoreAreas}>{areasText}</Text> : null}
       </View>
 
       {meta ? <Text style={s.gateSmall}>{meta}</Text> : null}
@@ -611,10 +667,25 @@ function makeStyles(P: AdminPalette) {
       borderColor: P.border,
       paddingHorizontal: 10,
       paddingVertical: 6,
+      gap: 2,
     },
     scoreSlotEmpty: {
       borderStyle: 'dashed',
       borderColor: withAlpha(P.muted, 0.45),
+    },
+    scoreText: {
+      ...FACE.semibold,
+      fontSize: 12,
+      lineHeight: 17,
+      color: P.text,
+      fontVariant: ['tabular-nums'],
+    },
+    scoreAreas: {
+      ...FACE.medium,
+      fontSize: 11,
+      lineHeight: 15,
+      color: P.textSecondary,
+      fontVariant: ['tabular-nums'],
     },
     gateSmall: {
       ...FACE.medium,

@@ -5,8 +5,10 @@
  * judge said. Run this case copies the command that re-runs just this case;
  * Linear opens its issue.
  *
- * Reads the case by id from GET /admin/evals/latest. Also exports the small
- * pieces the Issues list shares: the quiet glass tag and the status tag.
+ * Reads the case by id from GET /admin/evals/latest, or, opened from a run in
+ * the Eval runs view (GUR-282), from that run (GET /admin/eval-runs/{id}).
+ * Also exports the small pieces the Issues list shares: the quiet glass tag and
+ * the status tag.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,14 +17,17 @@ import {
   AdminApiError,
   EvalCaseResult,
   EvalJudgeSummary,
-  EvalRun,
   IssueStatus,
+  caseScoreText,
+  getEvalRun,
   getLatestEvalRun,
+  judgeMeansText,
   toAdminError,
 } from '../../services/admin-service';
 import { AdminPalette, isNum, issueToneColor, useAdminPalette } from './adminTheme';
 import { StateMessage } from './AdminUI';
 import { BigButton, Tag, fmtWhen, openLink } from './ReportDetail';
+import { KEEP_RUNS, asCaseResult, runCases } from './evalRuns';
 import { FACE, glassSurface } from '../report/reportTheme';
 
 // ─── Shared with the list ────────────────────────────────────────────────
@@ -122,33 +127,36 @@ function fmtMeets(meets: string | null | undefined): string | null {
   return t ? `Meets ${t}` : null;
 }
 
-const RUBRICS: { key: keyof EvalJudgeSummary['means']; label: string }[] = [
-  { key: 'voice', label: 'Voice' },
-  { key: 'honesty', label: 'Honesty' },
-  { key: 'journey', label: 'Journey' },
-];
-
-/** "Voice 5.0  ·  Honesty 4.3  ·  Journey 3.7", skipping a rubric with no score. */
-function fmtMeans(means: EvalJudgeSummary['means'] | null | undefined): string | null {
-  const parts: string[] = [];
-  for (const { key, label } of RUBRICS) {
-    const v = means?.[key];
-    if (isNum(v)) parts.push(`${label} ${v.toFixed(1)}`);
-  }
-  return parts.length ? parts.join('  ·  ') : null;
-}
-
-function detailErrorText(e: AdminApiError): string | undefined {
+function detailErrorText(e: AdminApiError, oneRun: boolean): string | undefined {
   if (e.kind === 'forbidden') return 'This account is not on the admin list.';
   if (e.kind === 'not_deployed') return 'The eval endpoints are not on this server yet.';
   if (e.kind === 'session') return 'Sign in again to see eval runs.';
-  return 'Could not load the latest eval run.';
+  if (oneRun && e.kind === 'not_found') return `The server keeps the newest ${KEEP_RUNS} runs, so this one may have been removed.`;
+  return oneRun ? 'Could not load this eval run.' : 'Could not load the latest eval run.';
+}
+
+/** What the view reads from a run: when it ran, and its cases. */
+interface CaseRun {
+  run_at: string | null;
+  cases: EvalCaseResult[];
+}
+
+/** The given run's cases (GUR-282), or the latest whole live run's. Null when the server has no run yet. */
+async function readRun(runId: string | null | undefined): Promise<CaseRun | null> {
+  if (runId) {
+    const run = await getEvalRun(runId);
+    return { run_at: run?.run_at ?? null, cases: runCases(run?.cases).map(asCaseResult) };
+  }
+  const latest = await getLatestEvalRun();
+  return latest ? { run_at: latest.run_at, cases: Array.isArray(latest.cases) ? latest.cases : [] } : null;
 }
 
 // ─── The view ────────────────────────────────────────────────────────────
 
 interface Props {
   caseId: string;
+  /** The run to read the case from (the Eval runs view). Without one, the latest whole live run, as the Issues list opens it. */
+  runId?: string | null;
   /** The row's status tag, so the case and its row say the same thing. */
   status: IssueStatus | null;
   /** The row's Linear link, for a case that carries none itself. */
@@ -156,14 +164,25 @@ interface Props {
   /** Bumped by the panel's Refresh button. */
   refreshSignal: number;
   onBack: () => void;
+  /** What Back says to a screen reader: the view it returns to. */
+  backLabel?: string;
 }
 
-export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSignal, onBack }: Props) {
+export default function EvalCaseDetail({
+  caseId,
+  runId = null,
+  status,
+  linearUrl,
+  refreshSignal,
+  onBack,
+  backLabel = 'Back to issues',
+}: Props) {
   const P = useAdminPalette();
   const s = useMemo(() => makeStyles(P), [P]);
+  const oneRun = !!runId;
 
   // undefined until the first answer; null when the server has no eval run.
-  const [run, setRun] = useState<EvalRun | null | undefined>(undefined);
+  const [run, setRun] = useState<CaseRun | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AdminApiError | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -185,14 +204,14 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
     setLoading(true);
     setError(null);
     try {
-      const data = await getLatestEvalRun();
+      const data = await readRun(runId);
       if (alive.current && mine === seq.current) setRun(data ?? null);
     } catch (e) {
       if (alive.current && mine === seq.current) setError(toAdminError(e));
     } finally {
       if (alive.current && mine === seq.current) setLoading(false);
     }
-  }, []);
+  }, [runId]);
 
   useEffect(() => {
     load();
@@ -236,6 +255,14 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
   const runs = c && Array.isArray(c.runs) ? c.runs : [];
   const nRuns = c && isNum(c.n_runs) ? c.n_runs : runs.length;
   const nPassed = c && isNum(c.n_passed) ? c.n_passed : runs.filter((r) => r?.ok).length;
+  // The mean of its runs (GUR-268), so a flaky case grades itself. Runs uploaded before it have none.
+  const caseScore = c ? caseScoreText(c.score) : null;
+  const runsLabel = [
+    runs.length ? `${nPassed} of ${nRuns} runs passed` : null,
+    caseScore ? caseScore.replace('/100', ' out of 100') : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
   const card = glassSurface('regular', P.isDark);
 
   return (
@@ -246,7 +273,7 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
           <TouchableOpacity
             onPress={onBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to issues"
+            accessibilityLabel={backLabel}
             hitSlop={{ top: 13, bottom: 13, left: 13, right: 13 }}
           >
             <Icon name="chevron-left" size={18} color={P.textSecondary} weight="bold" />
@@ -273,7 +300,7 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
       ) : run === undefined && error ? (
         <StateMessage
           title={error.message}
-          detail={detailErrorText(error)}
+          detail={detailErrorText(error, oneRun)}
           actionLabel={error.kind === 'forbidden' || error.kind === 'session' ? undefined : 'Try again'}
           onAction={load}
           P={P}
@@ -283,8 +310,12 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
         <StateMessage title="No eval run yet" detail="The latest run shows here once one is uploaded." P={P} />
       ) : run && !c ? (
         <StateMessage
-          title="Not in the latest eval run"
-          detail={`The ${runWhen ? `${runWhen} ` : 'latest '}run has no case ${caseId}. It may have been renamed or removed.`}
+          title={oneRun ? 'Not in this eval run' : 'Not in the latest eval run'}
+          detail={
+            oneRun
+              ? `The ${runWhen ? `${runWhen} ` : ''}run has no case ${caseId}.`
+              : `The ${runWhen ? `${runWhen} ` : 'latest '}run has no case ${caseId}. It may have been renamed or removed.`
+          }
           P={P}
         />
       ) : c ? (
@@ -308,11 +339,12 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
             <Text style={s.cardLabel}>
               {runWhen ? `WHAT HAPPENED  ·  RUN ${runWhen.toUpperCase()}` : 'WHAT HAPPENED'}
             </Text>
-            {runs.length ? (
-              <View style={s.runs} accessible accessibilityLabel={`${nPassed} of ${nRuns} runs passed`}>
+            {runsLabel ? (
+              <View style={s.runs} accessible accessibilityLabel={runsLabel}>
                 {runs.map((r, i) => (
                   <Tag key={i} label={`Run ${i + 1}  ${r?.ok ? 'pass' : 'fail'}`} color={r?.ok ? P.good : P.bad} />
                 ))}
+                {caseScore ? <GlassTag label={caseScore} P={P} /> : null}
               </View>
             ) : null}
             {c.what_happened ? (
@@ -399,9 +431,13 @@ export default function EvalCaseDetail({ caseId, status, linearUrl, refreshSigna
 
 type Styles = ReturnType<typeof makeStyles>;
 
+/**
+ * The judge's read: how many runs met the case, then its five dimensions in its own order (version 2),
+ * skipping any it didn't score. An older run shows only the dimensions it shares with version 2.
+ */
 function JudgeCard({ judge, P, s }: { judge: EvalJudgeSummary; P: AdminPalette; s: Styles }) {
   const meets = fmtMeets(judge.meets);
-  const means = fmtMeans(judge.means);
+  const means = judgeMeansText(judge.means);
   return (
     <View style={[glassSurface('regular', P.isDark), s.card]}>
       <View style={s.cardHead}>

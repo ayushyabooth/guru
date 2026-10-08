@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     # GUR-281: one tier 2 run at a set time, an ISO time with its zone (e.g. 2026-10-08T01:00:00-07:00).
     # Read at boot. A time that has passed, or one without a zone, schedules nothing. Set on Railway.
     TIER2_RUN_AT: str = ""
+    # GUR-282: when the nightly live eval suite runs, a time of day and its IANA zone (e.g. "06:00 America/Los_Angeles").
+    # The admin Eval runs view shows the next run from it. It starts nothing: the suite runs on the owner's Mac
+    # (make evals LIVE=1 TRIGGER=scheduled). Unset, or not in that form, shows no schedule. Set on Railway.
+    EVAL_SCHEDULE: str = ""
     TIER2_MAX_ARTICLES_PER_LUMINARY: int = 5  # Max articles per luminary per run
     TIER2_AGE_FILTER_DAYS: int = 30  # Only ingest articles from last N days
     TIER3_RESULTS_PER_SPECIALIZATION: int = 8  # Max search results per specialization

@@ -428,7 +428,65 @@ export interface ReportHypothesis {
   comment_error?: string | null;
 }
 
-export interface AdminReport {
+/**
+ * What the app sent with a report (GUR-277), as the server validated it, plus
+ * the article's title the server looked up. Every field may be missing: an
+ * older report has none of it.
+ */
+export interface ReportClientContext {
+  /** home | catchup | divein | recap | guru | article | other */
+  screen?: string | null;
+  /** That screen's step, e.g. "stage-3" on Recap. */
+  step?: string | null;
+  on_screen?: {
+    article_id?: string | null;
+    recap_journey_id?: string | null;
+    trace_id?: string | null;
+    /** Filled in by the server; null in privacy mode. */
+    article_title?: string | null;
+  } | null;
+  /** The last 10 screens, newest first. */
+  trail?: { screen?: string | null; step?: string | null; at?: string | null }[] | null;
+  /** The last 5 failed API calls, newest first. Status 0: the call got no answer. */
+  failed_calls?: { method?: string | null; path?: string | null; status?: number | null; at?: string | null }[] | null;
+}
+
+export type SessionItemKind = 'recap_answer' | 'save' | 'question' | 'note' | 'highlight' | 'agent_turn';
+
+/** One thing the reporter did before the report, joined on the server from their own data. */
+export interface ReportSessionItem {
+  kind: SessionItemKind | string;
+  at: string | null;
+  /** Clipped; null in privacy mode. */
+  text: string | null;
+  article_id: string | null;
+  /** Null in privacy mode. */
+  article_title: string | null;
+  /** Agent turns only: opens the turn in the Agent view. */
+  trace_id: string | null;
+  /** Short, e.g. "stage 2, answer 3 of 3" or "4 blocks". */
+  detail: string | null;
+}
+
+/** The reporter's own activity in the window before the report (GUR-277): at most 10 items, newest first. */
+export interface ReportSessionContext {
+  window_minutes?: number | null;
+  /** True: counts and ids only, no text and no titles. */
+  privacy?: boolean | null;
+  /** Every kind, zeros included. */
+  counts?: Partial<Record<SessionItemKind, number>> | null;
+  items?: ReportSessionItem[] | null;
+}
+
+/** GUR-277 on a report (GET /admin/reports/{id} sends them on `report`). An older report has none of them. */
+export interface ReportContextFields {
+  client_context?: ReportClientContext | null;
+  session_context?: ReportSessionContext | null;
+  /** Why the server refused the app's context. client_context is null then. */
+  context_error?: string | null;
+}
+
+export interface AdminReport extends ReportContextFields {
   id: string;
   reference: string;
   created_at: string | null;
@@ -494,8 +552,34 @@ export interface ShipGate {
   reasons: GateReason[];
   /** Null when no eval run has been uploaded. */
   run: GateRun | null;
-  /** Null until the eval score ships (GUR-268). */
+  /** The latest run's graded score, beside the gate and never part of it. Null for a run without one. */
+  score: EvalScore | null;
+}
+
+/** One area of the eval score, e.g. "safety & consent". */
+export interface EvalScoreArea {
+  key: string;
+  label: string;
+  /** Its share of the topline, out of 100. Report a bug carries 0. */
+  weight: number;
+  /** 0-100, or null when no case in it ran. */
   score: number | null;
+  baseline: number | null;
+}
+
+/**
+ * The graded eval score (GUR-268, backend/evals/score.py): one number, 0-100, for how good the
+ * agent's answers are, weighted toward quality. Safety is the gate beside it, never averaged in.
+ */
+export interface EvalScore {
+  topline: number;
+  /** The baseline's topline under the same weights, or null when there was none to compare. */
+  baseline: number | null;
+  /** topline minus baseline in whole points, as the runner prints it. Null without a baseline. */
+  delta: number | null;
+  /** Scores compare only under one weights version. */
+  weights_version: string | null;
+  areas: EvalScoreArea[];
 }
 
 export interface IssueCounts {
@@ -546,12 +630,19 @@ export interface AdminIssuesResponse {
 
 export type EvalVerdict = 'pass' | 'red_as_labeled' | 'regression' | 'now_green' | 'flaky' | 'crashed';
 
+/** The judge's dimensions, in its own order (backend/evals/judge.py RUBRICS, version 2). */
+export const JUDGE_DIMENSIONS = ['faithfulness', 'completeness', 'honesty', 'consent', 'voice'] as const;
+export type JudgeDimension = (typeof JUDGE_DIMENSIONS)[number];
+
 /** The LLM judge over a case's live runs. Report-only until it is calibrated. */
 export interface EvalJudgeSummary {
-  /** How many judged runs met the case, e.g. "2/3". */
+  /** How many judged runs met the case, e.g. "2 of 3". */
   meets: string;
-  /** Rubric means, 1 to 5. A rubric passes at 4. */
-  means: { voice: number | null; honesty: number | null; journey: number | null };
+  /**
+   * Each dimension's mean, 1 to 5; a dimension passes at 4. Null or missing when every run scored it
+   * not applicable, or the run is older than the dimension (version 1 had voice, honesty and journey).
+   */
+  means: Partial<Record<JudgeDimension | 'journey', number | null>>;
   reason: string | null;
 }
 
@@ -574,6 +665,8 @@ export interface EvalCaseResult {
   runs: { ok: boolean }[];
   judge: EvalJudgeSummary | null;
   linear_url: string | null;
+  /** The case's graded score, 0-100: the mean of its runs. Missing from runs uploaded before GUR-268. */
+  score?: number | null;
 }
 
 export interface EvalRun {
@@ -585,7 +678,226 @@ export interface EvalRun {
   evals_version: string | null;
   judge_version: string | null;
   uploaded_by: string | null;
+  /** The run's graded score, as the gate shows it. Null for a run without one. */
+  score?: EvalScore | null;
   cases: EvalCaseResult[];
+}
+
+// ─── Eval runs (GUR-282): GET /admin/eval-runs, /admin/eval-runs/{id} ────
+// Every uploaded run, labeled as what it is (admin_issues._header). A run uploaded before GUR-282 lacks
+// most of these, so every field may be missing or null.
+
+/** A whole run, or a partial one (a --case run). */
+export type EvalRunScope = 'whole' | 'partial';
+/** How a run started: the nightly schedule, by hand, or for a demo. */
+export type EvalRunTrigger = 'scheduled' | 'manual' | 'demo';
+
+/** A run's cases by verdict. ok counts every case that passed, a NOW GREEN too. */
+export interface EvalRunCounts {
+  ok?: number | null;
+  red_as_labeled?: number | null;
+  regression?: number | null;
+  flaky?: number | null;
+  crashed?: number | null;
+}
+
+/** The ship gate for one run's cases: its state, then its safety and regressions lines. */
+export interface EvalRunGate {
+  state: ShipGateState | string;
+  reasons?: GateReason[] | null;
+}
+
+/** One weighted area of a run's score, with its change against the previous comparable run. */
+export interface EvalRunArea {
+  key: string;
+  label: string;
+  weight?: number | null;
+  /** 0-100, or null when no case in it ran. */
+  score?: number | null;
+  /** In whole points. Null without a comparable run, or when either side has no score. */
+  delta?: number | null;
+  /** True when it fell 5 or more against the comparable run: the flag. */
+  down?: boolean | null;
+}
+
+/** An area down 5 or more against the comparable run, in whole points. */
+export interface EvalRunAreaDown {
+  key: string;
+  label: string;
+  was: number;
+  now: number;
+  delta: number;
+}
+
+/** The previous comparable run: alike in live, scope, cases and weights, with a score. */
+export interface EvalRunComparedWith {
+  id: string;
+  run_at: string;
+  score?: number | null;
+}
+
+/** One run of a case where the judge and the code check split. */
+export interface EvalJudgeDisagreement {
+  case_id?: string | null;
+  /** The run's number, from 1. Null on a run uploaded before each judged run was stored. */
+  run?: number | null;
+  /** The side that passed it, "code" or "judge". Null on older runs. */
+  passed?: 'code' | 'judge' | string | null;
+  /** The side that failed it, "code" or "judge". Null on older runs. */
+  failed?: 'code' | 'judge' | string | null;
+  /** The judge's one-line reason. */
+  reason?: string | null;
+}
+
+/** The judge across one run (admin_issues._judge_read). Null when nothing in the run was judged. */
+export interface EvalRunJudge {
+  /** How many runs it graded. */
+  judged_runs?: number | null;
+  /** How many of its calls failed. Null on older runs, which never kept it. */
+  errors?: number | null;
+  /** How often its verdict matched the code check's. Null on older runs. */
+  agreement?: { agree: number; of: number } | null;
+  /** Each dimension's mean over the scores that aren't n/a, to one decimal. Null when every score was n/a. */
+  means?: Partial<Record<JudgeDimension, number | null>> | null;
+  /** How many runs scored each dimension n/a. Null on older runs. */
+  na?: Partial<Record<JudgeDimension, number | null>> | null;
+  /** The dimensions that gate a live run once the judge is calibrated. */
+  gating?: string[] | null;
+  /** The score a dimension passes at. */
+  pass_at?: number | null;
+  disagreements?: EvalJudgeDisagreement[] | null;
+  /** True once the judge counts toward the gate. The server does not send it yet: until then it is report-only. */
+  counted?: boolean | null;
+}
+
+/** One run as the Eval runs view lists it. */
+export interface EvalRunRow {
+  id: string;
+  run_at?: string | null;
+  live?: boolean | null;
+  scope?: EvalRunScope | string | null;
+  trigger?: EvalRunTrigger | string | null;
+  build_sha?: string | null;
+  prompt_version?: string | null;
+  n_cases?: number | null;
+  counts?: EvalRunCounts | null;
+  /** Whole live runs only. Null otherwise: the gate never reads them. */
+  gate?: EvalRunGate | null;
+  /** The topline, 0-100. Null for a run uploaded without a score. */
+  score?: number | null;
+  weights_version?: string | null;
+  /** The weighted areas in the server's order (report a bug carries no weight, so it isn't here). */
+  score_areas?: EvalRunArea[] | null;
+  /** The topline's change against compared_with, in whole points. */
+  score_delta?: number | null;
+  compared_with?: EvalRunComparedWith | null;
+  areas_down?: EvalRunAreaDown[] | null;
+  judge?: EvalRunJudge | null;
+}
+
+/** When the next scheduled live run is due (EVAL_SCHEDULE). Null when no schedule is set. */
+export interface EvalSchedule {
+  /** "Nightly live suite, 6:00 AM PT". */
+  text?: string | null;
+  next_run_at?: string | null;
+  /** Where it runs, e.g. "the owner's Mac (runs on wake if it was asleep)". */
+  runner?: string | null;
+}
+
+/** GET /admin/eval-runs */
+export interface EvalRunsResponse {
+  /** Newest first. */
+  runs: EvalRunRow[];
+  /** How many runs the server keeps. */
+  total?: number | null;
+  /** The run the ship gate reads: the newest whole live run. */
+  gate_run_id?: string | null;
+  schedule?: EvalSchedule | null;
+}
+
+/** One case of a run (admin_issues._case_row): what the case view shows for that run. It carries no Linear link. */
+export interface EvalRunCase {
+  id: string;
+  title?: string | null;
+  tier?: string | null;
+  area?: string | null;
+  label?: string | null;
+  verdict?: EvalVerdict | string | null;
+  passed?: boolean | null;
+  n_runs?: number | null;
+  n_passed?: number | null;
+  expect?: string | null;
+  what_happened?: string | null;
+  why?: string | null;
+  fix?: string | null;
+  /** ok is null for a run that crashed. */
+  runs?: { ok?: boolean | null }[] | null;
+  score?: number | null;
+  /** An exact case: completeness gates it too. False for a run sent before exact. */
+  exact?: boolean | null;
+  /**
+   * Its five dimensions are always named (null: not applicable, or not judged on it), with the ones that gate
+   * this case once the judge counts: completeness too when the case is exact.
+   */
+  judge?: (EvalJudgeSummary & { gating?: string[] | null }) | null;
+}
+
+/** A run's cases in three groups, each in the run's own order. */
+export interface EvalRunCaseGroups {
+  regressions?: EvalRunCase[] | null;
+  red_as_labeled?: EvalRunCase[] | null;
+  ok?: EvalRunCase[] | null;
+}
+
+/** GET /admin/eval-runs/{id}: the row the list shows, then the cases. */
+export interface EvalRunDetailResponse extends EvalRunRow {
+  cases?: EvalRunCaseGroups | null;
+}
+
+// ─── The eval score's words (GUR-268) ────────────────────────────────────
+// The gate card and the case view say the score the way the runner prints it: whole points, halves up.
+
+function isFiniteNumber(x: unknown): x is number {
+  return typeof x === 'number' && Number.isFinite(x);
+}
+
+/** A server score, or null when it isn't one (an older server sent null, or a bare number). */
+export function asEvalScore(x: unknown): EvalScore | null {
+  const s = x as EvalScore | null | undefined;
+  return s && typeof s === 'object' && isFiniteNumber(s.topline) ? s : null;
+}
+
+/** "Eval score 58/100 · +3 vs baseline", or just "Eval score 58/100" without a baseline to compare. */
+export function evalScoreLine(score: EvalScore): string {
+  const head = `Eval score ${Math.round(score.topline)}/100`;
+  if (!isFiniteNumber(score.delta)) return head;
+  return `${head} · ${score.delta >= 0 ? '+' : ''}${score.delta} vs baseline`;
+}
+
+/**
+ * "quality 81 · safety & consent 22 · ..." in the server's order: the weighted areas that ran.
+ * Report a bug carries no weight, so it isn't listed. Null when no area has a score.
+ */
+export function evalScoreAreas(score: EvalScore): string | null {
+  const parts = (Array.isArray(score.areas) ? score.areas : [])
+    .filter((a) => a && isFiniteNumber(a.weight) && a.weight > 0 && isFiniteNumber(a.score))
+    .map((a) => `${a.label} ${Math.round(a.score as number)}`);
+  return parts.length ? parts.join(' · ') : null;
+}
+
+/** "Case score 20/100", or null for a case uploaded without one. */
+export function caseScoreText(score: number | null | undefined): string | null {
+  return isFiniteNumber(score) ? `Case score ${Math.round(score)}/100` : null;
+}
+
+/** The judge's means in its own order, e.g. "Faithfulness 4.7  ·  Honesty 5.0", skipping missing and null. */
+export function judgeMeansText(means: EvalJudgeSummary['means'] | null | undefined): string | null {
+  const parts: string[] = [];
+  for (const k of JUDGE_DIMENSIONS) {
+    const v = means?.[k];
+    if (isFiniteNumber(v)) parts.push(`${k[0].toUpperCase()}${k.slice(1)} ${v.toFixed(1)}`);
+  }
+  return parts.length ? parts.join('  ·  ') : null;
 }
 
 // ─── Transport ───────────────────────────────────────────────────────────
@@ -747,4 +1059,23 @@ export async function getLatestEvalRun(): Promise<EvalRun | null> {
     if (isAdminApiError(e) && e.kind === 'not_found') return null;
     throw e;
   }
+}
+
+/** The runs the Eval runs view lists. The server keeps 50. */
+export const EVAL_RUNS_LIMIT = 20;
+
+/**
+ * GET /admin/eval-runs (GUR-282): the newest runs, newest first, every kind (live or scripted, whole or
+ * partial), and when the next scheduled run is due.
+ */
+export function listEvalRuns(limit: number = EVAL_RUNS_LIMIT): Promise<EvalRunsResponse> {
+  return adminRequest<EvalRunsResponse>(`/admin/eval-runs${queryString({ limit })}`);
+}
+
+/**
+ * GET /admin/eval-runs/{id} (GUR-282): one run's row, then its cases in three groups. A 404 with a reason
+ * means the run is gone (the server keeps the newest 50); a bare 404 still means the route is not deployed.
+ */
+export function getEvalRun(id: string): Promise<EvalRunDetailResponse> {
+  return adminRequest<EvalRunDetailResponse>(`/admin/eval-runs/${encodeURIComponent(id)}`);
 }
