@@ -16,6 +16,8 @@ import {
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
+import ReportButton from '../../components/report/ReportButton';
 
 function mapArticle(article: DiveinArticleRaw): DiveinArticle {
   return {
@@ -53,6 +55,8 @@ export default function DiveinScreen() {
   const [isAuthError, setIsAuthError] = useState(false);
   const { isDark, colors } = useTheme();
   const router = useRouter();
+  // Beta accounts get the Report button on the title line (GUR-277), like Home's Beta card.
+  const { isBeta } = useAdminAccess();
 
   const queryClient = useQueryClient();
   const { savedArticles: savedRaw, essentialArticles, discoveryArticles, isLoading, error, refresh, removeArticle } = useDiveinFeed(selectedContext);
@@ -199,7 +203,11 @@ export default function DiveinScreen() {
 
       {/* Header */}
       <View style={styles.headerContainer}>
-        <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Dive-in</Text>
+        <View style={styles.headerTitleRow}>
+          <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Dive-in</Text>
+          {/* Report a bug (GUR-277, frame 27:7): top right, on the title line. */}
+          {isBeta ? <ReportButton screen="divein" style={styles.reportButton} /> : null}
+        </View>
         <View style={styles.headerMeta}>
           {isDark ? (
             <>
@@ -249,9 +257,20 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xs,
   },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   headerTitle: {
     ...Typography.displayMedium,
     letterSpacing: -0.5,
+  },
+  // The 44pt target on the 40pt title line: the header keeps its height, and
+  // the circle, not the target, lines up with the header's inner edge.
+  reportButton: {
+    marginVertical: -2,
+    marginRight: -4,
   },
   headerMeta: {
     flexDirection: 'row',

@@ -91,11 +91,11 @@ import { CalendarBlank } from 'phosphor-react-native';
 import { Feather } from 'phosphor-react-native';
 import { Scales } from 'phosphor-react-native';
 import { Fire } from 'phosphor-react-native';
-// Report a bug (GUR-242). The *Icon aliases are the non-deprecated exports.
+// Report a bug (GUR-242; the highlighter for its session context, GUR-277). The *Icon aliases are the non-deprecated exports.
 import { FlagIcon as Flag } from 'phosphor-react-native';
 import { PaperclipIcon as Paperclip } from 'phosphor-react-native';
 import { BugIcon as Bug } from 'phosphor-react-native';
-import { PulseIcon as Pulse } from 'phosphor-react-native';
+import { PulseIcon as Pulse, HighlighterIcon as Highlighter } from 'phosphor-react-native';
 // Admin Issues tab (GUR-271).
 import { FlaskIcon as Flask } from 'phosphor-react-native';
 import { GaugeIcon as Gauge } from 'phosphor-react-native';
@@ -209,6 +209,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   'paperclip': Paperclip,   // "This turn is attached"
   'bug': Bug,               // Home: Report a bug
   'pulse': Pulse,           // admin: a trace / the turn
+  'highlighter': Highlighter, // admin: a highlight in a report's session context (GUR-277)
 
   // Admin Issues tab (GUR-271)
   'flask': Flask,                 // an eval case

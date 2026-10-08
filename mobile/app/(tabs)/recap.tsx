@@ -9,8 +9,11 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { setTabBarHidden } from './_layout';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
+import ReportButton from '../../components/report/ReportButton';
+import { setReportIds, setReportStep } from '../../services/report-context';
 import { OrganicBackground } from '../../components/ui';
 import Icon from '../../components/ui/Icon';
 import GlassButton from '../../components/ui/GlassButton';
@@ -115,6 +118,8 @@ export default function RecapScreen() {
   const { state, fetchMetrics } = useMetrics();
   const router = useRouter();
   const { isDark, colors } = useTheme();
+  // Beta accounts get the Report button on every Recap view (GUR-277), like Home's Beta card.
+  const { isBeta } = useAdminAccess();
   const displayMetrics = state.metrics;
 
   // ── Core State ──────────────────────────────────────────────────
@@ -565,6 +570,36 @@ export default function RecapScreen() {
     setViewState('celebration');
   }, []);
 
+  // ── Report a bug: the step and journey on screen (GUR-277) ──────
+  // From the view this render actually shows: a stage whose data is missing
+  // falls through to the entry screen below, so it reports as the entry. No
+  // step while loading. A past recap in the journal reports its own journey.
+  const reportStep =
+    viewState === 'loading' ? null
+    : viewState === 'archive' ? 'journal'
+    : viewState === 'detail' && selectedJourneyId ? 'past-recap'
+    : viewState === 'snapshot' && snapshot ? 'stage-1'
+    : viewState === 'questions' && questions.length > 0 ? 'stage-2'
+    : viewState === 'socratic' ? 'stage-3'
+    : viewState === 'commitment' ? 'commitment'
+    : viewState === 'celebration' ? 'celebration'
+    : viewState === 'audio' && journey ? 'stage-4'
+    : 'entry';
+  const reportJourneyId = viewState === 'detail' && selectedJourneyId ? selectedJourneyId : journey?.journey_id;
+  useFocusEffect(
+    useCallback(() => {
+      setReportStep('recap', reportStep);
+      setReportIds('recap', { recap_journey_id: reportJourneyId });
+    }, [reportStep, reportJourneyId]),
+  );
+
+  // On the full-screen stages the progress ring owns the top right and there is
+  // no header row, so the Report button sits under the ring (frame 27:7).
+  const renderReportUnderRing = () =>
+    isBeta ? <ReportButton screen="recap" style={styles.reportUnderRing} /> : null;
+  // Stage 4 and the audio stage put it just left of Done.
+  const stageReportButton = isBeta ? <ReportButton screen="recap" /> : null;
+
   // ── Render Journey Stages ───────────────────────────────────────
 
   // In light mode, let AppBackground show through instead of a solid fill
@@ -650,6 +685,7 @@ export default function RecapScreen() {
           />
         </View>
         {renderPauseControl()}
+        {renderReportUnderRing()}
         <SnapshotStage snapshot={snapshot} onContinue={handleSnapshotComplete} />
       </SafeAreaView>
     );
@@ -668,6 +704,7 @@ export default function RecapScreen() {
           />
         </View>
         {renderPauseControl()}
+        {renderReportUnderRing()}
         <QuestionsStage
           questions={questions}
           responses={responses}
@@ -692,6 +729,7 @@ export default function RecapScreen() {
           />
         </View>
         {renderPauseControl()}
+        {renderReportUnderRing()}
         <SocraticStage
           onSendMessage={handleSocraticMessage}
           onComplete={handleSocraticComplete}
@@ -714,6 +752,7 @@ export default function RecapScreen() {
           />
         </View>
         {renderPauseControl()}
+        {renderReportUnderRing()}
         <CommitmentScreen
           onSave={handleCommitmentSave}
         />
@@ -739,6 +778,8 @@ export default function RecapScreen() {
           onViewConstellation={insights.length > 0 ? handleViewConstellation : undefined}
           onBackToHome={handleCelebrationDismiss}
         />
+        {/* Report a bug (GUR-277): plain top right, over the overlay. */}
+        {isBeta ? <ReportButton screen="recap" style={styles.reportTopRight} /> : null}
       </SafeAreaView>
     );
   }
@@ -764,6 +805,7 @@ export default function RecapScreen() {
           error={audioStatus === 'failed' ? "We couldn't generate your conversation right now." : null}
           onFinish={handleTextRecapFinish}
           onDismiss={handleTextRecapFinish}
+          reportButton={stageReportButton}
         />
       );
     }
@@ -778,6 +820,7 @@ export default function RecapScreen() {
           script={audioScript}
           textOnly={false}
           onDismiss={handleTextRecapFinish}
+          reportButton={stageReportButton}
         />
       );
     }
@@ -801,14 +844,18 @@ export default function RecapScreen() {
         }]}>
           <View style={styles.headerRow}>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.recap }]}>Recap</Text>
-            <TouchableOpacity
-              style={styles.archiveButton}
-              onPress={() => setViewState('archive')}
-              accessibilityRole="button"
-              accessibilityLabel="Open learning journal"
-            >
-              <Text style={styles.archiveButtonText}>Journal</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {/* Report a bug (GUR-277, frame 27:7): left of Journal. */}
+              {isBeta ? <ReportButton screen="recap" style={styles.reportBesideJournal} /> : null}
+              <TouchableOpacity
+                style={styles.archiveButton}
+                onPress={() => setViewState('archive')}
+                accessibilityRole="button"
+                accessibilityLabel="Open learning journal"
+              >
+                <Text style={styles.archiveButtonText}>Journal</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Reflect on your reading since your last recap</Text>
         </View>
@@ -1069,6 +1116,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#E2E8F0',
   },
+  // Report a bug (GUR-277). Stages 1-3 and Commitment: the 44pt target under
+  // the ring, centered on it, in the right margin Guru's bubbles never reach.
+  reportUnderRing: {
+    position: 'absolute',
+    top: 112,
+    right: Spacing.lg,
+    zIndex: 100,
+  },
+  // Celebration: where the ring sits on the other stages, over the overlay (zIndex 1000).
+  reportTopRight: {
+    position: 'absolute',
+    top: 56,
+    right: Spacing.lg,
+    zIndex: 1001,
+  },
   // Loading
   loadingContainer: {
     flex: 1,
@@ -1108,6 +1170,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  // The 44pt target in the 40pt title row: the header keeps its height.
+  reportBesideJournal: {
+    marginVertical: -2,
   },
   title: {
     ...Typography.displaySmall,

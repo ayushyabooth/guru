@@ -64,6 +64,8 @@ interface WebViewReaderProps {
   onBack: () => void;
   onRelatedArticleClick: (articleId: string) => void;
   isSaved: boolean;
+  /** Report a bug (GUR-277): the toolbar shows it left of the bookmark. The reader passes it for beta accounts only. */
+  reportButton?: React.ReactNode;
 }
 
 export interface Highlight {
@@ -84,6 +86,7 @@ export default function WebViewReader({
   onBack,
   onRelatedArticleClick,
   isSaved,
+  reportButton,
 }: WebViewReaderProps) {
   const webViewRef = useRef<WebView>(null);
 
@@ -274,6 +277,7 @@ export default function WebViewReader({
         isSaved={isSaved}
         onSave={handleSave}
         onUnsave={handleUnsave}
+        reportButton={reportButton}
       />
 
       {/* Annotation Rail on right edge */}

@@ -31,6 +31,8 @@ interface AudioPlayerStageProps {
   script?: ScriptSegment[];
   textOnly?: boolean;  // True when no audio is available (ElevenLabs fallback)
   onDismiss: () => void;
+  /** Report a bug (GUR-277): shown just left of Done. The Recap screen passes it for beta accounts only. */
+  reportButton?: React.ReactNode;
 }
 
 export default function AudioPlayerStage({
@@ -40,6 +42,7 @@ export default function AudioPlayerStage({
   script,
   textOnly = false,
   onDismiss,
+  reportButton,
 }: AudioPlayerStageProps) {
   const { colors, isDark } = useTheme();
   const GM = isDark ? DarkGlassMaterials : GlassMaterials;
@@ -196,15 +199,23 @@ export default function AudioPlayerStage({
 
   const progressPct = durationMs > 0 ? positionMs / durationMs : 0;
 
+  // Done, with the Report button just left of it when the screen passes one (GUR-277).
+  const renderDone = () => (
+    <View style={styles.headerActions}>
+      {reportButton ? <View style={styles.reportSlot}>{reportButton}</View> : null}
+      <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
+        <Text style={styles.dismissText}>Done</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   // ─── Text-only mode ─────────────────────────────────────────
   if (textOnly && script && script.length > 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Your Recap</Text>
-          <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissText}>Done</Text>
-          </TouchableOpacity>
+          {renderDone()}
         </View>
 
         <View style={styles.textRecapHeader}>
@@ -253,9 +264,7 @@ export default function AudioPlayerStage({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Audio Recap</Text>
-        <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-          <Text style={styles.dismissText}>Done</Text>
-        </TouchableOpacity>
+        {renderDone()}
       </View>
 
       {/* Host orbs */}
@@ -414,6 +423,15 @@ const styles = StyleSheet.create({
     ...Typography.headlineMedium,
     color: RingColors.recap.light,
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  // Report a bug (GUR-277): the 44pt target takes no more height than Done.
+  reportSlot: {
+    marginVertical: -5,
   },
   dismissButton: {
     paddingHorizontal: Spacing.md,

@@ -1,17 +1,23 @@
 /**
  * Report a bug (beta, GUR-242): the tester's side.
  *
- *   POST /reports  { category, expected, screen?, trace_id?, session_id?, client? }
+ *   POST /reports  { category, expected, screen?, trace_id?, session_id?, client?, context? }
  *                  -> { id, reference, status: "saved" }
  *
  * The server saves the report and answers at once; filing to Linear and the
  * triage run after the response. Beta only, decided on the server: 403 for
  * any other account, so hiding the entry point is a UI hint, not the security.
  * The call goes through authedFetch, the single 401 -> login path.
+ *
+ * Every report carries the session's context (GUR-277): the screen and its
+ * step, the ids on it, the trail of screens and the failed calls, from
+ * services/report-context.ts. Home's card, the turn flag and the Report button
+ * all send it without asking for it.
  */
 import { Platform } from 'react-native';
 import { API_BASE_URL } from '../constants/config';
 import { authedFetch } from '../utils/authed-fetch';
+import { ReportContext, getReportContext } from './report-context';
 
 // ─── Categories ──────────────────────────────────────────────────────────
 
@@ -72,7 +78,10 @@ export interface ReportPayload {
   category: ReportCategory;
   /** What the user expected, in their words. Required and non-empty. */
   expected: string;
-  /** Where the report came from: "home", or "guru/<mode>" for a turn (e.g. "guru/catch-up"), "guru" if the mode is unknown. */
+  /**
+   * Where the report came from: "home", or "guru/<mode>" for a turn (e.g. "guru/catch-up"), "guru" if the mode is
+   * unknown, or the screen of a Report button: "catchup", "divein", "recap" or "article".
+   */
   screen?: string | null;
   /** The agent turn the report is about (the `trace_id` of its done or error event). */
   trace_id?: string | null;
@@ -95,6 +104,15 @@ function uuidOrUndefined(value: string | null | undefined): string | undefined {
   return value && UUID_RE.test(value) ? value : undefined;
 }
 
+/** The session's context at the moment of sending. A fault in the collector never costs the report itself. */
+function contextNow(): ReportContext | undefined {
+  try {
+    return getReportContext();
+  } catch {
+    return undefined;
+  }
+}
+
 export async function sendReport(payload: ReportPayload): Promise<ReportReceipt> {
   const body = {
     category: payload.category,
@@ -103,6 +121,7 @@ export async function sendReport(payload: ReportPayload): Promise<ReportReceipt>
     trace_id: uuidOrUndefined(payload.trace_id),
     session_id: uuidOrUndefined(payload.session_id),
     client: payload.client || Platform.OS,
+    context: contextNow(),
   };
 
   let res: Response;

@@ -25,6 +25,8 @@ interface TextPodcastStageProps {
   error?: string | null;
   onFinish: () => void;
   onDismiss: () => void;
+  /** Report a bug (GUR-277): shown just left of every Done. The Recap screen passes it for beta accounts only. */
+  reportButton?: React.ReactNode;
 }
 
 const STICKY_THRESHOLD = 180;
@@ -35,6 +37,7 @@ export default function TextPodcastStage({
   error = null,
   onFinish,
   onDismiss,
+  reportButton,
 }: TextPodcastStageProps) {
   const { isDark } = useTheme();
   const [stickyVisible, setStickyVisible] = useState(false);
@@ -76,6 +79,16 @@ export default function TextPodcastStage({
     if (next !== stickyVisible) setStickyVisible(next);
   };
 
+  // Done, with the Report button just left of it when the screen passes one (GUR-277).
+  const renderDone = () => (
+    <View style={styles.headerActions}>
+      {reportButton ? <View style={styles.reportSlot}>{reportButton}</View> : null}
+      <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
+        <Text style={[styles.doneText, { color: RingColors.recap.light }]}>Done</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   // ── Loading state ───────────────────────────────────────────
   if (isLoading) {
     return (
@@ -84,9 +97,7 @@ export default function TextPodcastStage({
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
             Your Recap
           </Text>
-          <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
-            <Text style={[styles.doneText, { color: RingColors.recap.light }]}>Done</Text>
-          </TouchableOpacity>
+          {renderDone()}
         </View>
         <View style={styles.centerContainer}>
           <Animated.View
@@ -111,9 +122,7 @@ export default function TextPodcastStage({
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
             Your Recap
           </Text>
-          <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
-            <Text style={[styles.doneText, { color: RingColors.recap.light }]}>Done</Text>
-          </TouchableOpacity>
+          {renderDone()}
         </View>
         <View style={styles.centerContainer}>
           <Text style={[styles.errorTitle, { color: bodyTextColor }]}>
@@ -165,11 +174,7 @@ export default function TextPodcastStage({
           <Text style={[styles.stickyTitle, { color: RingColors.recap.light }]}>
             Your Recap
           </Text>
-          <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
-            <Text style={[styles.doneText, { color: RingColors.recap.light }]}>
-              Done
-            </Text>
-          </TouchableOpacity>
+          {renderDone()}
         </View>
       )}
 
@@ -183,11 +188,7 @@ export default function TextPodcastStage({
           <Text style={[styles.headerTitle, { color: RingColors.recap.light }]}>
             Your Recap
           </Text>
-          <TouchableOpacity style={styles.donePill} onPress={onDismiss}>
-            <Text style={[styles.doneText, { color: RingColors.recap.light }]}>
-              Done
-            </Text>
-          </TouchableOpacity>
+          {renderDone()}
         </View>
 
         {/* Host orbs */}
@@ -285,6 +286,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...Typography.headlineMedium,
     fontWeight: '700',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  // Report a bug (GUR-277): the 44pt target takes no more height than Done.
+  reportSlot: {
+    marginVertical: -9,
   },
   donePill: {
     paddingHorizontal: Spacing.md,

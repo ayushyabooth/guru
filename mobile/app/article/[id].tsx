@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, ScrollView, TextInput, Animated } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
+import ReportButton from '../../components/report/ReportButton';
+import { setReportIds } from '../../services/report-context';
 import WebViewReader, { OverlayArticleData } from '../../components/Reader/WebViewReader';
 import { RelatedArticle } from '../../components/Reader/RelatedArticles';
 import { API_BASE_URL } from '../../constants/config';
@@ -107,6 +110,16 @@ export default function ArticleDetailScreen() {
   const { id, highlightQuote, askQuote, source, section } = useLocalSearchParams();
   const router = useRouter();
   const { isDark, colors: themeColors } = useTheme();
+
+  // Report a bug (GUR-277): beta accounts get the Report button in the nav bar,
+  // and every report sent while this article is open names it.
+  const { isBeta } = useAdminAccess();
+  const reportArticleId = typeof id === 'string' ? id : undefined;
+  useFocusEffect(
+    useCallback(() => {
+      setReportIds('article', { article_id: reportArticleId });
+    }, [reportArticleId]),
+  );
 
   // Theme-aware color aliases
   const TC = isDark ? DarkThemeColors : {
@@ -509,6 +522,7 @@ export default function ArticleDetailScreen() {
         onBack={handleBack}
         onRelatedArticleClick={(artId: string) => handleRelatedArticleClick(artId)}
         isSaved={isSaved}
+        reportButton={isBeta ? <ReportButton screen="article" /> : null}
       />
     );
   }
@@ -550,7 +564,11 @@ export default function ArticleDetailScreen() {
         <Text style={[styles.headerTitle, { color: TC.textPrimary }]} numberOfLines={1}>
           {overlayArticle.source}
         </Text>
-        <View style={{ width: 80 }} />
+        {/* The right slot stays 80pt wide so the title stays centered. Report a bug
+            (GUR-277, frame 27:7) sits at its right end, for beta accounts. */}
+        <View style={styles.headerRightSlot}>
+          {isBeta ? <ReportButton screen="article" /> : null}
+        </View>
       </View>
 
       {/* ── Thin Tier: Article-opened reading banner ───────────────────── */}
@@ -1051,6 +1069,11 @@ const styles = StyleSheet.create({
     flex: 1,
     ...Typography.labelLarge,
     textAlign: 'center',
+  },
+  headerRightSlot: {
+    width: 80,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
 
   // Thin-tier banner

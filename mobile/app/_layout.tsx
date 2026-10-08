@@ -3,6 +3,9 @@ import React from 'react';
 import { Platform, View, Text, TouchableOpacity, StyleSheet, AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
+import { usePathname } from 'expo-router';
+import { ReportSheetHost } from '../components/report/ReportButton';
+import { recordReportScreen, reportScreenFromPath } from '../services/report-context';
 
 // Suppress noisy "Unexpected text node" warnings from React Native Web
 if (Platform.OS === 'web') {
@@ -168,6 +171,19 @@ const errorBoundaryStyles = StyleSheet.create({
   },
 });
 
+/**
+ * Report a bug (GUR-277): puts each screen the user lands on at the top of the
+ * report's trail. Its own component, so a route change re-renders only this,
+ * not the providers. Renders nothing.
+ */
+function ReportScreenRecorder() {
+  const pathname = usePathname();
+  useEffect(() => {
+    recordReportScreen(reportScreenFromPath(pathname));
+  }, [pathname]);
+  return null;
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Orbitron_400Regular,
@@ -307,6 +323,9 @@ export default function RootLayout() {
           <TimeTrackingProvider>
             <DiveInProvider userId="default">
               <ThemeAwareNav />
+              {/* Report a bug (GUR-277): the screen trail, and the one sheet every screen's Report button opens. */}
+              <ReportScreenRecorder />
+              <ReportSheetHost />
             </DiveInProvider>
           </TimeTrackingProvider>
         </ThemeProvider>

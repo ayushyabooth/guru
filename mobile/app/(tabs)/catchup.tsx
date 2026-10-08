@@ -16,6 +16,8 @@ import {
   getDarkBackdropBlur,
 } from '../../constants/liquidGlass';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAdminAccess } from '../../hooks/useAdminAccess';
+import ReportButton from '../../components/report/ReportButton';
 
 const ACCENT_COLOR = '#38BDF8';
 
@@ -26,6 +28,8 @@ export default function CatchupScreen() {
   const [isAuthError, setIsAuthError] = useState(false);
   const router = useRouter();
   const { isDark, colors } = useTheme();
+  // Beta accounts get the Report button in the header (GUR-277), like Home's Beta card.
+  const { isBeta } = useAdminAccess();
 
   // Staggered header entrance
   const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -191,7 +195,11 @@ export default function CatchupScreen() {
           { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] },
         ]}
       >
-        <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Catch-up</Text>
+        <View style={styles.headerTitleRow}>
+          <Text accessibilityRole="header" style={[styles.headerTitle, { color: colors.textPrimary }]}>Catch-up</Text>
+          {/* Report a bug (GUR-277, frame 27:7): top right of the header card, on the title line. */}
+          {isBeta ? <ReportButton screen="catchup" style={styles.reportButton} /> : null}
+        </View>
         <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>{todayLabel}</Text>
       </Animated.View>
 
@@ -245,9 +253,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
   } as any,
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   headerTitle: {
     ...Typography.displaySmall,
     fontWeight: '700',
+  },
+  // The 44pt target on the 36pt title line: the card keeps its height, and the
+  // circle, not the target, lines up with the card's inner edge.
+  reportButton: {
+    marginVertical: -4,
+    marginRight: -4,
   },
   headerSubtitle: {
     ...Typography.bodyMedium,

@@ -1,10 +1,13 @@
 /**
  * Report a bug sheet (beta, GUR-242): frames 12:27 (the form) and 12:78 (Sent).
  *
- * Two entry points share it:
+ * Three entry points share it:
  * - the Report flag under an agent turn: "Report this turn", with the turn's
  *   trace attached and the attached-turn row;
- * - the Beta card on Home (frame 13:2): "Report a bug", the screen name only.
+ * - the Beta card on Home (frame 13:2): "Report a bug", the screen name only;
+ * - the Report button on the other screens (GUR-277, ReportButton): "Report a
+ *   bug", with that screen. Every report also carries the session's context
+ *   (report-service), whichever entry point sent it.
  *
  * Thick glass over a scrim. Closes on the X, a scrim tap, Escape (web) and back
  * (Android); on web the Modal also traps focus and hands it back on close.
@@ -53,7 +56,10 @@ export interface AttachedTurn {
 export interface ReportSheetProps {
   visible: boolean;
   onClose: () => void;
-  /** Where the report comes from, sent as `screen`: "home", or "guru/<mode>" for a turn (e.g. "guru/catch-up"). */
+  /**
+   * Where the report comes from, sent as `screen`: "home", "guru/<mode>" for a turn (e.g. "guru/catch-up"),
+   * or a Report button's screen ("catchup", "divein", "recap", "article"), which picks the "this screen" copy.
+   */
   screen: string;
   /** The agent turn the report is about. With it the sheet reads "Report this turn". */
   traceId?: string | null;
@@ -62,11 +68,13 @@ export interface ReportSheetProps {
   attached?: AttachedTurn | null;
 }
 
+// One footnote on every entry point (AA, 10/7): since GUR-277 the server attaches the tester's recent
+// activity to every report, whichever entry point sent it, so every sheet says so.
 const COPY = {
   turn: {
     title: 'Report this turn',
     subtitle: "We'll attach what Guru did on this turn, so the team sees exactly what you saw.",
-    footnote: 'Beta testers only. Your words and this turn go to the Guru team.',
+    footnote: 'Beta testers only. Your words, this screen and your recent activity go to the Guru team.',
     sent: "It's with the team, with this turn attached. You don't need to do anything else.",
   },
   // Home (frame 13:2 names the title; the footnote and Sent line drop the turn). From Home the
@@ -74,15 +82,24 @@ const COPY = {
   screen: {
     title: 'Report a bug',
     subtitle: 'Tell us which screen it was on.',
-    footnote: 'Beta testers only. Your words go to the Guru team.',
+    footnote: 'Beta testers only. Your words, this screen and your recent activity go to the Guru team.',
     sent: "It's with the team. You don't need to do anything else.",
   },
   // A Guru turn that failed before its trace reached the app: no turn to attach.
   failedTurn: {
     title: 'Report a bug',
     subtitle: "This turn didn't finish, so tell us what you asked.",
-    footnote: 'Beta testers only. Your words go to the Guru team.',
+    footnote: 'Beta testers only. Your words, this screen and your recent activity go to the Guru team.',
     sent: "It's with the team. You don't need to do anything else.",
+  },
+  // The Report button on any other screen (GUR-277): that screen and the steps
+  // that led to it go with the report, and the server adds the tester's own
+  // activity from the half hour before.
+  here: {
+    title: 'Report a bug',
+    subtitle: "We'll attach this screen and the steps that led here, so the team sees what you saw.",
+    footnote: 'Beta testers only. Your words, this screen and your recent activity go to the Guru team.',
+    sent: "It's with the team, with this screen attached. You don't need to do anything else.",
   },
 };
 
@@ -130,7 +147,13 @@ export default function ReportSheet({ visible, onClose, screen, traceId, session
   const reduced = useReducedMotion();
 
   const isTurn = !!traceId;
-  const copy = isTurn ? COPY.turn : screen === 'home' ? COPY.screen : COPY.failedTurn;
+  const copy = isTurn
+    ? COPY.turn
+    : screen === 'home'
+      ? COPY.screen
+      : screen === 'guru' || screen.startsWith('guru/')
+        ? COPY.failedTurn
+        : COPY.here;
 
   const [category, setCategory] = useState<ReportCategory | null>(null);
   const [expected, setExpected] = useState('');

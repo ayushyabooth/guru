@@ -15,6 +15,8 @@ interface WebViewToolbarProps {
   isSaved: boolean;
   onSave: () => void;
   onUnsave: () => void;
+  /** Report a bug (GUR-277): shown just left of the bookmark, for beta accounts. */
+  reportButton?: React.ReactNode;
 }
 
 export default function WebViewToolbar({
@@ -24,6 +26,7 @@ export default function WebViewToolbar({
   isSaved,
   onSave,
   onUnsave,
+  reportButton,
 }: WebViewToolbarProps) {
   const insets = useSafeAreaInsets();
 
@@ -44,19 +47,22 @@ export default function WebViewToolbar({
           {source}
         </Text>
 
-        <TouchableOpacity
-          onPress={isSaved ? onUnsave : onSave}
-          style={styles.iconButton}
-          accessibilityLabel={isSaved ? 'Unsave article' : 'Save article'}
-          accessibilityRole="button"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon
-            name={isSaved ? 'bookmark' : 'bookmark-outline'}
-            size={22}
-            color="#FFFFFF"
-          />
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {reportButton}
+          <TouchableOpacity
+            onPress={isSaved ? onUnsave : onSave}
+            style={styles.iconButton}
+            accessibilityLabel={isSaved ? 'Unsave article' : 'Save article'}
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={22}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Progress bar */}
@@ -89,6 +95,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // The bookmark, with the Report button (GUR-277) to its left when there is one.
+  actions: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   source: {
