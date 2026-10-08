@@ -831,8 +831,11 @@ def test_the_edge_cases_are_ten_judged_live_cases_each_with_a_scenario_and_a_rub
              "EDGE-08": "robustness", "EDGE-09": "robustness", "EDGE-10": "multi-turn"}
     for cid in EDGE:
         c = BY_ID[cid]
-        assert (c["tier"], c["judge"], c["runs"], c["label"], c["area"]) == ("T2", True, 2, "GREEN", areas[cid]), cid
-        assert c["must"] and c["why"] and c["expect"] and "fix" in c and c["fix"] is None and not c.get("exact"), cid
+        assert (c["tier"], c["judge"], c["runs"], c["area"]) == ("T2", True, 2, areas[cid]), cid
+        # They started GREEN; their first live run (10/7) relabeled the ones that failed. A red one names its fix.
+        assert c["label"] == "GREEN" or c["label"].startswith("RED change "), cid
+        assert (c["fix"] is None) == (c["label"] == "GREEN"), cid
+        assert c["must"] and c["why"] and c["expect"] and not c.get("exact"), cid
         assert cid in scenarios.SCENARIOS and cid in RUBRICS["cases"], cid
     assert {cid for cid, *_ in EDGE_RUNS} == set(EDGE)  # every case has its wiring below
 
