@@ -27,6 +27,8 @@ For an eval, also name its kind: a scripted case (a fake model misbehaves on pur
 - **How I'll know:** the unit test, the eval case.
 - **Linear:** the issue, if there is one.
 
+**Point the owner to the running app.** The web app on `localhost:8081` runs from this checkout and reloads on save, so an app change shows there as soon as it's written (a tab refresh at most). It talks to the production API, so a backend change shows there only once the deploy is live. Whenever a visible change can be seen, say exactly where and how, in one line: "On localhost:8081: <the taps to see it>." Say plainly when a part will only work after the deploy. If nothing answers on `localhost:8081`, start it in the background from `mobile/` (`npx expo start --web --port 8081`) and say so.
+
 **Defaults, used without comment:** no Linear issue given, create one in GURU-dev. A small visible change (one or two screens): draw it in the empty phone frame on the Live changes page of the Guru Figma file. A bigger feature: a new page named after it.
 
 ## 0. Start the feature
@@ -79,7 +81,7 @@ The full agent suite already ran after the last agent edit (the hook does that),
 - The new eval case and the case this change flips, by name: `make evals CASE=<ids>`.
 - The speed case, if the change could touch latency: `make evals LIVE=1 CASE=PERF-01`. For a prompt or agent-behavior change, also the live cases it touches, with the judge's dimension scores.
 - One line with the hook's last full-suite result and its count. Don't rerun the full suite, and don't run `make ci`, `make test-app` or `make typecheck-app` here: CI does.
-- A visible change: the owner shows the running app next to the frame. Don't drive a browser for it.
+- A visible change: point the owner to `localhost:8081` with the taps to see it, next to the frame. The owner shows it. Don't drive a browser for it.
 
 Say in one line what ran, and that CI runs the rest on the push.
 
@@ -89,7 +91,7 @@ Say in one line what ran, and that CI runs the rest on the push.
 Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, then the backend checks. The hook already ran the agent suite after the last edit, and CI runs everything on the push, so don't run `make ci`. Keep the deploy watch running in the background, and while it builds, run the standing live judge check: `make evals LIVE=1 CASE=QA-03,PLAN-07,STEP-07 RUNS=2 JOBS=6` (about 35 seconds), show the judge's dimension scores, then `make evals-calibrate REPORT=1`. When a visible change is already on screen locally, the web deploy can follow later: say so in one line.
 
 ## 7. Use it, then close
-- Once the deploy is live, ask the owner for one turn in the app that uses the change, then show that turn's trace naming the new build (`make traces DAYS=1`).
+- Once the deploy is live, tell the owner what to do on `localhost:8081` to use the change end to end, then show that turn's trace naming the new build (`make traces DAYS=1`).
 - Offer, in one line, to show the report loop: a report filed from that answer, then `make reports`.
 - Close the Linear issues with the build SHA, then:
 `python3 .claude/hooks/feature_state.py done`
