@@ -82,6 +82,7 @@ The full agent suite already ran after the last agent edit (the hook does that),
 - The speed case, if the change could touch latency: `make evals LIVE=1 CASE=PERF-01`. For a prompt or agent-behavior change, also the live cases it touches, with the judge's dimension scores.
 - One line with the hook's last full-suite result and its count. Don't rerun the full suite, and don't run `make ci`, `make test-app` or `make typecheck-app` here: CI does.
 - A visible change: point the owner to `localhost:8081` with the taps to see it, next to the frame. The owner shows it. Don't drive a browser for it.
+- Don't build test infrastructure during a feature run: no test server, no second copy of the app, no browser automation. If a check would need one, say so in one line and ask.
 
 Say in one line what ran, and that CI runs the rest on the push.
 
