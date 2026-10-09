@@ -41,6 +41,7 @@ In this file "I" am the repo owner and "the user" is whoever uses the app. Where
 8. Keep `TOOLS` and `SYSTEM_STATIC` byte-stable. Both sit in the cached prefix, so anything per-user or time-based goes in the second system block, or the prompt cache misses on every turn.
 9. Cut text the model or the user will read with `_trunc` (sentence boundary), never `text[:n]`. The hard slices still in `agent.py` are known debt: fix one in its own commit.
 10. An HTTP error from a tool's route goes back to the model as `{"error": ...}` so it can adapt. A tool that raises ends the whole turn (a known gap), so a new tool checks its input and returns an error instead of raising.
+11a. A turn's message can carry the story it asks about (`input.article_id`, `input.article_title`, GUR-318): the route adds an `ATTACHED STORY` text block before the user's own words in that user message, so it stays in history for follow-ups and never touches the cached prefix. A malformed id is dropped. The prompt line for it sits in `SYSTEM_STATIC`; QA-04 covers it.
 11. After `get_catchup_feed` the server streams the mini headline cards itself, and the prompt tells the model not to. Change both or neither.
 12. If the model keeps breaking a prompt rule at the moment it calls a tool, move the rule into that tool's description.
 13. Change the agent's model with `AGENT_MODEL`, never in code. A new limit gets a named constant next to `MAX_ITERS`.
