@@ -89,7 +89,7 @@ Say in one line what ran, and that CI runs the rest on the push.
 **Stop:** "Verified. Ship it?"
 
 ## 6. Ship
-Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, then the backend checks. The hook already ran the agent suite after the last edit, and CI runs everything on the push, so don't run `make ci`. Keep the deploy watch running in the background, and while it builds, run the standing live judge check: `make evals LIVE=1 CASE=QA-03,PLAN-07,STEP-07 RUNS=2 JOBS=6` (about 35 seconds), show the judge's dimension scores, then `make evals-calibrate REPORT=1`. When a visible change is already on screen locally, the web deploy can follow later: say so in one line.
+Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, then the backend checks. The hook already ran the agent suite after the last edit, and CI runs everything on the push, so don't run `make ci`. Keep the deploy watch running in the background. While it builds, don't start anything new: say what the owner can already see on `localhost:8081`, and wait. When a visible change is already on screen locally, the web deploy can follow later: say so in one line.
 
 ## 7. Use it, then close
 - Once the deploy is live, tell the owner what to do on `localhost:8081` to use the change end to end, then show that turn's trace naming the new build (`make traces DAYS=1`).
