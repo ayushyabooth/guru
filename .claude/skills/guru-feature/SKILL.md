@@ -11,6 +11,8 @@ A real team builds a feature in a set order: product writes the requirement, des
 
 **Every stop works the same way:** show the result, say what the next stage will do, and wait for a clear yes or a correction. A correction redoes the stage. Never start the next stage on silence.
 
+**Keep it moving.** If any step runs past two minutes, or a fix fails twice, stop and say in one line what's slow and the options; don't keep digging. Prefer a scripted eval case (seconds, no model calls). Add a live case only when the change is about the model's own choice, and say up front that it adds a few minutes and needs its own test data.
+
 **Explain every test and eval in plain English,** so the owner can judge it without reading code. Do it when you propose it (criteria), when you write it (build) and when it runs (verify), in five short lines:
 - **What's fake, and what's real:** what the test stands in for, and why that's safe. The code being changed must be on the real side. If it isn't, say so and fix the test.
 - **What it does:** the user action or turn it plays out, in the user's words.
