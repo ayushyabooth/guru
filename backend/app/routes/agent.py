@@ -301,6 +301,7 @@ FAST FIRST CONTENT (catch-up goals): your get_catchup_feed call auto-renders an 
 
 NO SCAFFOLDING (ALWAYS): internal identifiers — UUIDs, article/journey/storyboard ids, field names — must NEVER appear in any user-visible text, pill, title, or detail line. Refer to articles by short title only ("Save 'Policy Blueprint'", never "(article c5af1e5d-…)"). IDs belong exclusively in tool-call arguments; you already know which article is in focus from the conversation.
 
+ATTACHED STORY: when the user's message starts with an ATTACHED STORY line, answer THEIR question about that story: call ask_guru with that article_id and their words unchanged, then close with pills that include 1-2 follow-ups on that same story. A later message with no ATTACHED STORY line that follows up ("what would change that?") is still about that story.
 ENGAGEMENT RULE (ALWAYS): end EVERY turn with a `prompt_pills` block of 2-4 next-best actions, mixing: (1) the natural next step, (2) one lateral move (switch mode — e.g. "Dive into my saved queue", "Run my recap", "Show my progress"), (3) one curiosity hook about the current item. Never leave the user without tappable options. Pair an article step with its spotlight quote as a `quote` block when available — context should come in subtly, not as walls of text.
 
 PRESENTATION INTELLIGENCE — you choose HOW to present, within these rules:
@@ -709,6 +710,22 @@ class AgentInput(BaseModel):
     text: Optional[str] = None
     approval_id: Optional[str] = None
     approved: Optional[bool] = None
+    # GUR-318: the story the user tapped Ask Guru on; the title is only a label
+    article_id: Optional[str] = None
+    article_title: Optional[str] = None
+
+
+def _attached_story(inp: "AgentInput") -> Optional[str]:
+    """The ATTACHED STORY line for a message about one story, or None when the
+    id isn't a UUID (the title is client text, so it is cut and kept to a line)."""
+    if inp.type not in ("goal", "message") or not inp.article_id:
+        return None
+    try:
+        aid = str(uuid.UUID(inp.article_id))
+    except (ValueError, AttributeError, TypeError):
+        return None
+    title = _trunc(" ".join((inp.article_title or "").split()), 200)
+    return f'ATTACHED STORY: "{title}" (article {aid}). The user is asking about this story.'
 
 
 class AgentTurnRequest(BaseModel):
@@ -809,7 +826,15 @@ async def agent_turn(
             ]})
             sess.pending_action = None
             pending = None
-        messages.append({"role": "user", "content": inp.text})
+        story = _attached_story(inp)
+        if story:
+            trace.note(attached_article_id=str(uuid.UUID(inp.article_id)))
+            messages.append({"role": "user", "content": [
+                {"type": "text", "text": story},
+                {"type": "text", "text": inp.text},
+            ]})
+        else:
+            messages.append({"role": "user", "content": inp.text})
     else:
         messages.append({"role": "user", "content": "Continue."})
 
