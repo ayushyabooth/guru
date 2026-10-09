@@ -73,17 +73,20 @@ A change that fits in one sitting needs only its one Linear issue. Bigger work g
 - The smallest diff. Run the unit test again and show it green. Loop until every criterion passes and the running app matches the frames.
 - Behind the scenes: the stage gate checks the state file before each edit, and each edit to the agent, its tracing, its access checks or ingestion reruns `make test-agent` through `.claude/hooks/agent_tests.py`, so a failure comes straight back.
 
-## 5. Verify
+## 5. Verify: two minutes, only what's new
+The full agent suite already ran after the last agent edit (the hook does that), and CI runs every suite again on the push, with Railway deploying only when they pass. So verify runs only what's new:
 - The new unit test, green.
-- `make test-agent`: the whole gating suite. Read out the count.
-- `make evals`: the offline cases. Name the case this change flips. For cases that need the live model (a prompt or agent-behavior change, or a speed case), also `make evals LIVE=1 CASE=<those cases>`: the LLM judge grades the behavior runs too. Show its dimension scores, then `make evals-calibrate REPORT=1` for whether it gates yet.
-- A visible change: a screenshot of the running app next to each approved frame, dark and light. Name any difference you chose to keep.
-- If the change touches a journey, offer a persona run. Don't start one unasked: they take 10 to 20 minutes.
+- The new eval case and the case this change flips, by name: `make evals CASE=<ids>`.
+- The speed case, if the change could touch latency: `make evals LIVE=1 CASE=PERF-01`. For a prompt or agent-behavior change, also the live cases it touches, with the judge's dimension scores.
+- One line with the hook's last full-suite result and its count. Don't rerun the full suite, and don't run `make ci`, `make test-app` or `make typecheck-app` here: CI does.
+- A visible change: the owner shows the running app next to the frame. Don't drive a browser for it.
+
+Say in one line what ran, and that CI runs the rest on the push.
 
 **Stop:** "Verified. Ship it?"
 
 ## 6. Ship
-Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, then the backend checks. The gate suite and the offline evals already ran in verify, and CI runs everything on the push, so don't rerun `make ci`. Keep the deploy watch running in the background, and while it builds, run the standing live judge check: `make evals LIVE=1 CASE=QA-03,PLAN-07,STEP-07 RUNS=2 JOBS=6` (about 35 seconds), show the judge's dimension scores, then `make evals-calibrate REPORT=1`. When a visible change is already on screen locally, the web deploy can follow later: say so in one line.
+Run the `guru-ship` skill: the pre-push checklist out loud (what the restart does, the schema change, the rollback), the push only on the owner's go, then the backend checks. The hook already ran the agent suite after the last edit, and CI runs everything on the push, so don't run `make ci`. Keep the deploy watch running in the background, and while it builds, run the standing live judge check: `make evals LIVE=1 CASE=QA-03,PLAN-07,STEP-07 RUNS=2 JOBS=6` (about 35 seconds), show the judge's dimension scores, then `make evals-calibrate REPORT=1`. When a visible change is already on screen locally, the web deploy can follow later: say so in one line.
 
 ## 7. Use it, then close
 - Once the deploy is live, ask the owner for one turn in the app that uses the change, then show that turn's trace naming the new build (`make traces DAYS=1`).
