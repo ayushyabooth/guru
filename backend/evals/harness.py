@@ -165,11 +165,13 @@ class Harness:
         return False
 
     # ── one turn ──
-    async def turn(self, text=None, *, input_type=None, approved=None, approval_id=None) -> Turn:
+    async def turn(self, text=None, *, input_type=None, approved=None, approval_id=None,
+                   article_id=None, article_title=None) -> Turn:
         input_type = input_type or ("goal" if self.session_id is None else "message")
         body = agent.AgentTurnRequest(
             session_id=self.session_id,
-            input=agent.AgentInput(type=input_type, text=text, approved=approved, approval_id=approval_id))
+            input=agent.AgentInput(type=input_type, text=text, approved=approved, approval_id=approval_id,
+                                   article_id=article_id, article_title=article_title))
         marks = (len(self.tool_calls), len(self.api_calls), len(self._requests), len(self._responses),
                  len(self.db.traces), len(self._stops))
         t0 = time.perf_counter()

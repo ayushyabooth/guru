@@ -172,6 +172,21 @@
   exact: true
   label: GREEN
 
+- id: QA-04
+  tier: T2
+  area: response quality
+  runs: 3
+  title: My own question about an attached story (GUR-318)
+  expect: 'The user taps Ask Guru on a story card, so the story ("Nvidia''s New Export Rules Squeeze China Data-Center Sales") rides with their message, and asks "Is this bullish or bearish for AMD?". The agent calls ask_guru for that story with the user''s words unchanged, answers that question from the story (the licence hits AMD too; AMD''s China exposure is about half of Nvidia''s), and closes with pills that include a follow-up on the same story.'
+  grader: ask_guru article and question, pills
+  judge: true
+  must:
+  - Answers whether it is bullish or bearish for AMD, not a general summary of the story
+  - Grounded in the story (the licence also covers AMD; AMD's China exposure is about half), with no AMD revenue figure invented
+  - Closing pills include at least one follow-up on this same story
+  label: GREEN
+  why: New with GUR-318. Before it, Ask Guru sent a canned "What should I take away" question and the user's own question had no way to carry the story.
+
 - id: PLAN-07
   tier: T2
   area: tool use

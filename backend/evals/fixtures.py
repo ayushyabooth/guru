@@ -306,3 +306,29 @@ NOTES_LAST_WEEK = {"notes": [
 def notes_last_week(method, path, params=None, json_body=None):
     """EDGE-10: the user's recent notes are last week's two."""
     return (200, NOTES_LAST_WEEK) if method == "GET" and path == "/api/v1/me/notes" else None
+
+
+# ── QA-04 (GUR-318): the user's own question about an attached story ─────────
+# Its own story with a UUID id (an attached story must carry one). The article says the licence hits both
+# chipmakers and that AMD's China exposure is about half of Nvidia's, so the user's AMD question has a
+# grounded answer; an AMD revenue figure is not in it, so one in the answer is an invention.
+ATTACHED_STORY = ("3f2b8c1e-5d4a-4e6b-9c7d-1a2b3c4d5e6f", "Nvidia's New Export Rules Squeeze China Data-Center Sales",
+                  "Reuters")
+ATTACHED_QUESTION = "Is this bullish or bearish for AMD?"
+_ATTACHED_BODY = ("New US licensing rules cut the H20 line Nvidia built for Chinese customers. Analysts expect a 6 to 8 "
+                  "percent hit to Nvidia's data-center revenue next quarter. AMD's MI308, also sold into China, needs "
+                  "the same licence, so neither chipmaker gains share there. AMD's China exposure is roughly half of "
+                  "Nvidia's, and the piece gives no AMD revenue figure.")
+
+
+def attached_story(method, path, params=None, json_body=None):
+    aid, title, source = ATTACHED_STORY
+    if method == "GET" and path == f"/api/v1/articles/{aid}/deep":
+        return 200, {"id": aid, "title": title, "source": source, "content": _ATTACHED_BODY,
+                     "summary": "New licensing rules cut Nvidia's China-only H20 line."}
+    if method == "POST" and path == "/api/v1/socratic/chat" and (json_body or {}).get("article_id") == aid:
+        return 200, {"response": "Mildly bullish for AMD relative to Nvidia, not outright: the licence hits AMD's MI308 "
+                                 "too, so neither gains China share, but AMD's China exposure is about half of "
+                                 "Nvidia's, so the same rule costs it less.",
+                     "follow_up_prompts": ["What would change that?", "How big is AMD's China exposure?"]}
+    return None

@@ -401,6 +401,24 @@ async def qa_03(h):
             f"missing: {', '.join(missing) if missing else 'turn errored'}", [t], None)
 
 
+@scenario("QA-04")
+async def qa_04(h):
+    """GUR-318: Ask Guru on a story attaches it; the user's own words go to ask_guru for that story."""
+    aid, title, _ = fixtures.ATTACHED_STORY
+    with _serving(fixtures.attached_story):
+        await h.turn("Catch me up")
+        t = await h.turn(fixtures.ATTACHED_QUESTION, article_id=aid, article_title=title)
+    on_story = [c[1] for c in t.tool_calls if c[0] == "ask_guru" and c[1].get("article_id") == aid]
+    exact = [i for i in on_story if (i.get("question") or "").strip() == fixtures.ATTACHED_QUESTION]
+    ok = bool(exact) and _ends_with_pills(t) and t.error is None
+    why = [] if ok else ["no ask_guru on the attached story" if not on_story else
+                         "" if exact else f"the question was rewritten: {on_story[0].get('question')!r}",
+                         "" if _ends_with_pills(t) else "no pills at the end",
+                         "the turn errored" if t.error else ""]
+    return (ok, "ask_guru on the attached story with the user's words, ended with pills" if ok else
+            "; ".join(w for w in why if w), [t], None)
+
+
 @scenario("PLAN-07")
 async def plan_07(h):
     t = await h.turn("Delete all my notes")

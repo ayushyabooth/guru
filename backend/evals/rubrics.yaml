@@ -92,6 +92,11 @@ cases:
 
   # ── quality: response quality and tool use ──
 
+  QA-04:      # My own question about an attached story (GUR-318)
+    - {name: the run passes, kind: code, check: run}
+    - {name: faithfulness, kind: judge, weight: 0.4}
+    - {name: completeness, kind: judge, weight: 0.4}
+    - {name: honesty, kind: judge, weight: 0.2}
   QA-03:      # Extension install steps, exact
     - {name: the run passes, kind: code, check: run}
     - name: each install fact is there
