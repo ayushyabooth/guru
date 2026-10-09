@@ -66,7 +66,7 @@ const MODES: { label: string; text: string; mode: JourneyMode }[] = [
 ];
 
 type TurnInput =
-  | { type: 'goal' | 'message'; text: string }
+  | { type: 'goal' | 'message'; text: string; article_id?: string; article_title?: string }
   | { type: 'decision'; approval_id: string; approved: boolean };
 
 // R17 (founder): the journey SURVIVES leaving the tab — dive into an article,
@@ -166,6 +166,9 @@ export default function GuruAgentScreen() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [input, setInput] = useState('');
+  // GUR-318: the story Ask Guru attached to the composer, sent with the next message
+  const [attached, setAttached] = useState<{ article_id: string; title: string } | null>(null);
+  const inputRef = useRef<TextInput>(null);
   const [blobState, setBlobState] = useState<BlobState>('idle');
   // R26: time window for the two time-scoped entry chips (default today).
   const [entryWindow, setEntryWindow] = useState<'today' | 'week'>('today');
@@ -320,13 +323,13 @@ export default function GuruAgentScreen() {
     setTurnEnds(prev => ({ ...prev, [lastKey]: end }));
   };
 
-  const sendTurn = async (turnInput: TurnInput, echo?: string) => {
+  const sendTurn = async (turnInput: TurnInput, echo?: string, about?: string) => {
     if (busy) return;
     setBusy(true);
     setBlobState('thinking');
     setStatus('thinking…');
     const startKey = keyRef.current; // this turn's blocks get keys after it
-    if (echo) append({ type: 'user_echo', text: echo });
+    if (echo) append({ type: 'user_echo', text: echo, ...(about ? { about } : {}) });
     let sawOutcome = false;
     // GUR-242: set by done or error. A turn that ends any other way (a non-2xx
     // before the stream, a failed fetch, a stream that just closes) still gets a
@@ -407,7 +410,19 @@ export default function GuruAgentScreen() {
     pinnedRef.current = true;
     // A journey STARTS here — classify the goal to set the heartbeat mode.
     if (blocks.length === 0) modeRef.current = classifyGoal(t);
-    sendTurn({ type: blocks.length === 0 ? 'goal' : 'message', text: t }, t);
+    const story = attached;
+    setAttached(null);
+    sendTurn(
+      { type: blocks.length === 0 ? 'goal' : 'message', text: t,
+        ...(story ? { article_id: story.article_id, article_title: story.title } : {}) },
+      t, story?.title,
+    );
+  };
+
+  const onAskAbout = (story: { article_id: string; title: string }) => {
+    bumpActivity();
+    setAttached(story);
+    inputRef.current?.focus();
   };
 
   const onDecision = (approvalId: string, approved: boolean) => {
@@ -443,18 +458,32 @@ export default function GuruAgentScreen() {
 
   const intentBar = (
     <View style={{
-      flexDirection: 'row', alignItems: 'center', gap: 8,
       marginHorizontal: 16, marginBottom: 88,
       backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
-      borderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.10)',
-      borderWidth: 1, borderRadius: 24, paddingLeft: 16, paddingRight: 6, paddingVertical: 6,
+      borderColor: attached ? 'rgba(99,102,241,0.70)' : (isDark ? 'rgba(255,255,255,0.14)' : 'rgba(15,23,42,0.10)'),
+      borderWidth: 1, borderRadius: 24, paddingLeft: 12, paddingRight: 6, paddingVertical: 6,
       ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } as any : {}),
     }}>
+      {attached && (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, maxWidth: '92%',
+          marginTop: 2, marginBottom: 2, paddingLeft: 10, paddingRight: 4, paddingVertical: 3, borderRadius: 12,
+          backgroundColor: 'rgba(99,102,241,0.18)', borderColor: 'rgba(99,102,241,0.45)', borderWidth: 1,
+        }} accessibilityLabel={`Asking about ${attached.title}`}>
+          <Text style={{ color: isDark ? '#A5B4FC' : '#6366F1', fontSize: 11 }}>Asking about</Text>
+          <Text numberOfLines={1} style={{ color: isDark ? '#E0E7FF' : '#3730A3', fontSize: 11, fontWeight: '700', flexShrink: 1 }}>{attached.title}</Text>
+          <Pressable {...tapProps(() => setAttached(null))} accessibilityRole="button" accessibilityLabel="Remove story" hitSlop={8} style={{ paddingHorizontal: 4 }}>
+            <Text style={{ color: isDark ? '#A5B4FC' : '#6366F1', fontSize: 12, fontWeight: '700' }}>✕</Text>
+          </Pressable>
+        </View>
+      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
       <TextInput
+        ref={inputRef}
         value={input}
         onChangeText={(t) => { bumpActivity(); setInput(t); }}
         onSubmitEditing={() => onSend(input)}
-        placeholder={blocks.length === 0 ? '…or type any goal or question' : busy ? 'Interrupt or redirect…' : 'Ask, redirect, or set a new goal…'}
+        placeholder={attached ? 'Ask about this story…' : blocks.length === 0 ? '…or type any goal or question' : busy ? 'Interrupt or redirect…' : 'Ask, redirect, or set a new goal…'}
         placeholderTextColor={tSec}
         style={{ flex: 1, color: tPrim, fontSize: 14, paddingVertical: 8, ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}) }}
         accessibilityLabel="Message Guru"
@@ -472,6 +501,7 @@ export default function GuruAgentScreen() {
       >
         <Text style={{ color: input.trim() && !busy ? '#fff' : tSec, fontSize: 16 }}>↑</Text>
       </Pressable>
+      </View>
     </View>
   );
 
@@ -570,7 +600,7 @@ export default function GuruAgentScreen() {
           const end = isBeta && b._key ? turnEnds[b._key] : undefined;
           return (
             <React.Fragment key={b._key}>
-              <BlockRenderer block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
+              <BlockRenderer block={b} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} onAskAbout={onAskAbout} />
               {end ? <ReportFlag {...tapProps(() => openReport(end))} /> : null}
             </React.Fragment>
           );

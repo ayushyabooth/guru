@@ -42,6 +42,8 @@ interface Props {
   onSend: (text: string) => void;
   onDecision: (approvalId: string, approved: boolean) => void;
   onOpenArticle: (id: string, url?: string, quote?: string) => void;
+  /** GUR-318: Ask Guru on a story attaches it to the composer; nothing is sent. */
+  onAskAbout?: (story: { article_id: string; title: string }) => void;
 }
 
 // R19: internal ids must never reach the user's eyes. The system prompt
@@ -52,7 +54,7 @@ export function stripScaffolding(s: string): string {
   return (s || '').replace(UUID_RE, '').replace(/\(\s*\)/g, '').replace(/ {2,}/g, ' ').trim();
 }
 
-export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpenArticle }: Props) {
+export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpenArticle, onAskAbout }: Props) {
   const tPrim = isDark ? '#F1F5F9' : '#0F172A';
   const tSec = isDark ? '#94A3B8' : '#475569';
   const glass = {
@@ -73,6 +75,9 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
       return (
         <View style={{ alignSelf: 'flex-end', maxWidth: '85%', backgroundColor: 'rgba(99,102,241,0.20)', borderColor: 'rgba(129,140,248,0.35)', borderWidth: 1, borderRadius: 16, borderBottomRightRadius: 5, paddingHorizontal: 13, paddingVertical: 9, marginBottom: 10 }}>
           <Text style={{ color: isDark ? '#C7D2FE' : '#4338CA', fontSize: 13.5 }}>{stripScaffolding(block.text)}</Text>
+          {!!block.about && (
+            <Text numberOfLines={1} style={{ color: isDark ? '#A5B4FC' : '#6366F1', fontSize: 11, marginTop: 3, textAlign: 'right' }}>about  {block.about}</Text>
+          )}
         </View>
       );
 
@@ -178,7 +183,7 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
               </TouchableOpacity>
             )}
             {acts.includes('ask') && (
-              <TouchableOpacity style={pill('rgba(99,102,241,0.18)', '#A5B4FC')} onPress={() => onSend(`What should I take away from "${block.title}" (article ${block.article_id})?`)} accessibilityRole="button">
+              <TouchableOpacity style={pill('rgba(99,102,241,0.18)', '#A5B4FC')} onPress={() => onAskAbout?.({ article_id: block.article_id, title: block.title })} accessibilityRole="button" accessibilityLabel={`Ask Guru about ${block.title}`}>
                 <Text style={pillTxt(isDark ? '#A5B4FC' : '#6366F1')}>Ask Guru</Text>
               </TouchableOpacity>
             )}
@@ -198,7 +203,7 @@ export default function BlockRenderer({ block, isDark, onSend, onDecision, onOpe
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
           {(block.items || []).slice(0, 3).map((item: any, i: number) => (
             <View key={i} style={{ width: 250, marginRight: 10 }}>
-              <BlockRenderer block={{ ...item, type: 'article_card' }} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} />
+              <BlockRenderer block={{ ...item, type: 'article_card' }} isDark={isDark} onSend={onSend} onDecision={onDecision} onOpenArticle={onOpenArticle} onAskAbout={onAskAbout} />
             </View>
           ))}
         </ScrollView>
